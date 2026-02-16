@@ -1,0 +1,199 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+import time
+import twccommon
+import twc.dsmarshal
+import twcWx.dataUtil as wxDataUtil
+dsm = twc.dsmarshal
+import twc
+
+class Product(twc.products.Product):
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        data = self.getData().data
+
+        pages = 0
+        myDuration = 0
+
+        for valid, fcst in data.fcstList:
+            if valid:
+                pages = pages + 1
+
+        if pages > 0:
+            myDuration = optimal * pages
+
+        return myDuration
+
+
+    def _loadData(self):
+        params = self.getParams()
+        data = twc.Data()
+        data.bulletins = []
+
+        y,m,d,H,M,S,dow,doy,dst = time.localtime(time.time())
+        periods = []
+        for i in range(2,5):
+            periods.append(time.mktime((y,m,d+i,0,0,0,0,0,-1)))
+
+        data.fcstList = []
+        for startTime in periods:
+            key = 'dailyFcst.%s.%d' % (params.coopId, startTime)
+            fcst = dsm.defaultedGet(key)
+
+            if fcst is None:
+                data.fcstList.append((0, None))
+            else:
+                valid = 0
+                defData = twccommon.DefaultedData(fcst)
+
+                # The icon, low, OR high temp must be valid for display:
+                if (fcst.daySkyCondition != None):
+
+                    # Check to make sure we don't get a blank icon:
+                    sci = wxDataUtil.formatSkyCondition(
+                              fcst.daySkyCondition,
+                              'ExtendedForecast')
+
+                    if (sci.iconFile != "BlankIcon"):
+                        valid = 1
+
+                if (fcst.highTemp != None):
+                    valid = 1
+
+                if (fcst.lowTemp != None):
+                    valid = 1
+
+                # Append a valid flag w/ the data so we know
+                # which fcst is valid and which isn't...
+                data.fcstList.append((valid, defData))
+
+        self.updateData(data = data)
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+<%@'_Background.rs'%>
+
+import string
+import time
+import twcWx.dataUtil as wxDataUtil
+
+<%!
+params = prod.getParams()
+data = prod.getData().data
+
+duration = prod.getDuration()
+
+locName = params.locName
+
+fcstList = []
+for valid, fcst in data.fcstList:
+    #if fcst != None:
+    if valid:
+        fcstList.append((1,(fcst.daySkyCondition, fcst.lowTemp, fcst.highTemp)))
+    else:
+        fcstList.append((0,(None, None, None)))
+
+# The offset and slide functionality is not used so it is commented out
+# below.  It is commented out because it may be used later.
+# offset for tornado watch icon
+if params.ldlWarningMode:
+    titleColor = (239,192,49,255)
+else:
+    titleColor = (121,186,242,255)
+%>
+titleColor = <%-titleColor%>
+
+
+def locationHeader(title, location):
+    cr = CompositeRenderable()
+
+    # Title
+    f = TTFont('/rsrc/fonts/Interstate-Bold', 16, shadow=0, t=60)
+    t = Text(f, title)
+    t.setPosition(55, 60)
+    r,g,b,a = titleColor
+    r,g,b,a = renderUtil.rgbaConvert(r,g,b,a)
+    t.setColor(r,g,b,a)
+    cr.addItem(t)
+
+    # Location
+    f = TTFont('/rsrc/fonts/Interstate-Bold', 25, shadow=0, t=80)
+    t = Text(f, location)
+    t.setPosition(55, 37)
+    r,g,b,a = renderUtil.rgbaConvert(212,212,212,255)
+    t.setColor(r,g,b,a)
+    cr.addItem(t)
+
+    return cr
+
+grSet = []
+y,m,d,H,M,S,dow,doy,dst = time.localtime(time.time())
+i = 1
+for valid, fcst in <%-fcstList%>:
+    skyCond, lowTemp, highTemp = fcst
+
+    i = i + 1
+    # If this fcst for this page was deemed invalid,
+    # go to next fcst time period:
+    if not valid:
+        continue
+
+    cr = CompositeRenderable()
+
+    # Header
+    tm = time.mktime((y,m,d+i, 12,0,0,0,0,-1))
+    hdrText = string.upper(time.strftime("%A FORECAST", time.localtime(tm)))
+    hdr = locationHeader(hdrText, <%-locName%>)
+    cr.addItem(hdr)
+
+
+    r,g,b,a = renderUtil.rgbaConvert(212,212,212,255)
+    f = TTFont('/rsrc/fonts/Interstate-BlackCondensed', 25, shadow=0, t=20)
+    nrf = TTFont('/rsrc/fonts/Interstate-Black', 25, shadow=0, t=20)
+
+    #if ((skyCond != None) and (lowTemp != None) and (highTemp != None)):
+
+    # Sky condition
+    if (skyCond != None):
+        sc = wxDataUtil.formatSkyCondition(skyCond, "ExtendedForecast")
+        gr = Icon(twc.findRsrc('/icons/tiny/%s' % sc.iconFile, "mv"))
+        gr.setPosition(320, 29)
+        w,h = gr.size()
+        gr.setSize(w*0.8, h*0.8)
+        cr.addItem(gr)
+
+    # Temps:
+    tempStr = ""
+
+    if (lowTemp != None):
+        tempStr = tempStr + "%d\260" % lowTemp
+    # Low/High or /High
+    if (highTemp != None):
+        tempStr = tempStr + "/%d\260" % highTemp
+    # Low/
+    else:
+        tempStr = tempStr + "/"
+
+    t = Text(f, tempStr)
+    t.setPosition(379,37)
+    t.setColor(r,g,b,a)
+    cr.addItem(t)
+    grSet.append([cr])
+
+renderUtil.sequenceOnPage(p, grSet[:3], <%-duration%>/3, repeat=1)
+
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

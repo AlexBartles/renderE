@@ -1,0 +1,1044 @@
+# uncompyle6 version 3.9.3
+# Python bytecode version base 2.2 (60717)
+# Decompiled from: Python 3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]
+# Embedded file name: RenderScript.py
+# Compiled at: 2007-01-12 11:17:28
+
+import rendereglobals as rg
+from . import _renderd
+import os
+
+class ObjectWrapper:
+
+    def __init__(self):
+        raise RuntimeError('Instantiated abstract class: ' + self.__name__)
+
+    def __del__(self):
+        pass
+
+
+class Layer(ObjectWrapper):
+
+    def __init__(self):
+        self.pages = []
+        self.timer = 0
+        self.totals = []
+        self.pa = 0
+        return
+
+    def addPage(self, page):
+        self.pages.append((page, page.duration()))
+        if len(self.totals) == 0:
+            self.totals.append(page.duration())
+        else:
+            self.totals.append(page.duration()+self.totals[-1])
+
+
+class Page(ObjectWrapper):
+
+    def __init__(self, duration=0):
+        """duration == 0 means page plays forever"""
+        self._duration = duration
+        self.started = False
+        self.ended = False
+        self._elements = []
+        self._onStartCommands = []
+        self._onFrameCommands = []
+        self._onEndCommands = []
+
+    def addItem(self, item):
+        if isinstance(item, PageCommand):
+            frame = item.activeFrame()
+            if frame == 0:
+                return self.addOnStartCommand(item)
+            elif frame == self._duration - 1:
+                return self.addOnEndCommand(item)
+            else:
+                return self.addOnFrameCommand(item, frame)
+        else:
+            #res = _renderd.Page_addItem(self, item)
+            res = 1
+            self._elements.append(item)
+            return res
+
+    def addOnStartCommand(self, cmd):
+        res = _renderd.Page_addOnBeginCommand(self, cmd)
+        self._onStartCommands.append(cmd)
+        return res
+
+    def addOnFrameCommand(self, cmd, activeFrame, forceAtEnd=0):
+        res = _renderd.Page_addOnFrameCommand(self, activeFrame, cmd, forceAtEnd)
+        self._onFrameCommands.append([cmd, activeFrame, forceAtEnd])
+        return res
+
+    def addOnEndCommand(self, cmd):
+        res = _renderd.Page_addOnEndCommand(self, cmd)
+        self._onEndCommands.append(cmd)
+        return res
+
+    def elements(self):
+        return self._elements
+
+    def onStartCommands(self):
+        return self._onStartCommands
+
+    def onFrameCommands(self):
+        return self._onFrameCommands
+
+    def onEndCommands(self):
+        return self._onEndCommands
+
+    def duration(self):
+        return self._duration
+
+
+class Font(ObjectWrapper):
+
+    def __init__(self, pointsize):
+        self.pointsize = pointsize
+
+    def pointSize(self):
+        return self.pointsize
+
+    def tracking(self):
+        return 0
+
+    def leading(self):
+        return _renderd.Font_getLeading(self)
+
+    def stringSize(self, str):
+        bn = self.font.size(str)
+        return bn
+
+    def stringWidth(self, str):
+        (w, h) = self.stringSize(str)
+        return w
+
+    def stringHeight(self, str):
+        (w, h) = self.stringSize(str)
+        return h
+
+
+class TTFont(Font):
+
+    def __init__(self, name, pointSize, shadow=1, sr=0.08, sg=0.08, sb=0.08, sa=1.0, sx=1, sy=2, t=0, l=None, evict=0):
+        self.shadow = shadow
+        self.scol = (sr, sg, sb, sa)
+        self.sx = sx*1
+        self.sy = sy*1
+        Font.__init__(self, pointSize)
+        if l == None:
+            l = pointSize
+        _renderd.createTTFont(self, name, pointSize, shadow, sr, sg, sb, sa, sx, sy, t / 2, l, evict)
+
+
+class TTOutlineFont(Font):
+
+    def __init__(self, name, pointSize, thickness=1, t=0, l=None, evict=0):
+        if l == None:
+            l = pointSize
+        Font.__init__(self, pointSize)
+        _renderd.createTTOutlineFont(self, name, pointSize, thickness, t / 2, l, evict)
+
+
+class Renderable(ObjectWrapper):
+
+    def setAnimationState(self, animate):
+        return _renderd.Renderable_setAnimationState(self, animate)
+
+    def animationState(self):
+        return _renderd.Renderable_getAnimationState(self)
+
+    def setVisibility(self, visible):
+        self.visible = visible
+        return _renderd.Renderable_setVisibility(self, visible)
+
+    def visibility(self):
+        return self.visible
+
+
+class PageCommand(Renderable):
+
+    def __init__(self, activeFrame=0):
+        self._activeFrame = activeFrame
+
+    def activeFrame(self):
+        return self._activeFrame
+
+
+class CreateNamedLayer(PageCommand):
+
+    def __init__(self, activeFrame, lname, depth, repeat=0, autoDestroy=1):
+        PageCommand.__init__(self, activeFrame)
+        _renderd.createCreateNamedLayer(self, lname, depth, repeat, autoDestroy)
+
+
+class DestroyNamedLayer(PageCommand):
+
+    def __init__(self, activeFrame, lname):
+        PageCommand.__init__(self, activeFrame)
+        _renderd.createDestroyNamedLayer(self, lname)
+
+
+class SetLayer(PageCommand):
+
+    def __init__(self, activeFrame, lname, layer):
+        PageCommand.__init__(self, activeFrame)
+        _renderd.createSetLayer(self, lname, layer)
+
+
+class AppendLayer(PageCommand):
+
+    def __init__(self, activeFrame, lname, layer):
+        PageCommand.__init__(self, activeFrame)
+        _renderd.createAppendLayer(self, lname, layer)
+
+
+class RemoveLayer(PageCommand):
+
+    def __init__(self, activeFrame, lname):
+        PageCommand.__init__(self, activeFrame)
+        _renderd.createRemoveLayer(self, lname)
+
+
+class ActivateLayer(PageCommand):
+
+    def __init__(self, activeFrame, lname):
+        PageCommand.__init__(self, activeFrame)
+        _renderd.createActivateLayer(self, lname)
+
+
+class DeactivateLayer(PageCommand):
+
+    def __init__(self, activeFrame, lname):
+        PageCommand.__init__(self, activeFrame)
+        _renderd.createDeactivateLayer(self, lname)
+
+
+class SelectInputSource(PageCommand):
+
+    def __init__(self, activeFrame, src):
+        PageCommand.__init__(self, activeFrame)
+        _renderd.createSelectInputSource(self, src, activeFrame)
+
+
+class LoadPresentation(PageCommand):
+
+    def __init__(self, activeFrame, fileName):
+        PageCommand.__init__(self, activeFrame)
+        _renderd.createLoadPresentation(self, fileName)
+
+
+class ActivateGpiPin(PageCommand):
+
+    def __init__(self, activeFrame, pin):
+        PageCommand.__init__(self, activeFrame)
+        _renderd.createActivateGpiPin(self, pin)
+
+
+class DeactivateGpiPin(PageCommand):
+
+    def __init__(self, activeFrame, pin):
+        PageCommand.__init__(self, activeFrame)
+        _renderd.createDeactivateGpiPin(self, pin)
+
+
+class RenderCommand(ObjectWrapper):
+    pass
+
+
+class CreateNamedLayerCmd(RenderCommand):
+
+    def __init__(self, lname, depth, repeat=0, autoDestroy=1):
+        _renderd.createCreateNamedLayer(self, lname, depth, repeat, autoDestroy)
+
+
+class DestroyNamedLayerCmd(RenderCommand):
+
+    def __init__(self, lname):
+        _renderd.createDestroyNamedLayer(self, lname)
+
+
+class SetNamedLayerViewPortCmd(RenderCommand):
+
+    def __init__(self, lname, x, y, w, h, sx=1, sy=1, tx=0, ty=0):
+        _renderd.createSetNamedLayerViewPort(self, lname, x, y, w, h, sx, sy, tx, ty)
+
+
+class SetLayerCmd(RenderCommand):
+
+    def __init__(self, lname, layer):
+        self.lname = lname
+        self.layer = layer
+
+
+class AppendLayerCmd(RenderCommand):
+
+    def __init__(self, lname, layer):
+        _renderd.createAppendLayer(self, lname, layer)
+
+
+class RemoveLayerCmd(RenderCommand):
+
+    def __init__(self, lname):
+        _renderd.createRemoveLayer(self, lname)
+
+
+class ActivateLayerCmd(RenderCommand):
+
+    def __init__(self, lname):
+        _renderd.createActivateLayer(self, lname)
+
+
+class DeactivateLayerCmd(RenderCommand):
+
+    def __init__(self, lname):
+        _renderd.createDeactivateLayer(self, lname)
+        
+
+
+class SelectInputSourceCmd(RenderCommand):
+
+    def __init__(self, src, activeFrame=0):
+        _renderd.createSelectInputSource(self, src, activeFrame)
+        
+
+
+class LoadPresentationCmd(RenderCommand):
+
+    def __init__(self, fileName):
+        _renderd.createLoadPresentation(self, fileName)
+        
+
+
+class ActivateGpiPinCmd(RenderCommand):
+
+    def __init__(self, pin):
+        _renderd.createActivateGpiPin(self, pin)
+        
+
+
+class DeactivateGpiPinCmd(RenderCommand):
+
+    def __init__(self, pin):
+        _renderd.createDeactivateGpiPin(self, pin)
+        
+
+
+class ModifyNamedLayerCmd(RenderCommand):
+
+    def __init__(self, name, newName, depth, repeat, autoDestroy):
+        _renderd.createModifyNamedLayer(self, name, newName, depth, repeat, autoDestroy)
+        
+
+
+class ReplaceLayerCmd(RenderCommand):
+
+    def __init__(self, name, layer):
+        _renderd.createReplaceLayer(self, name, layer)
+        
+
+
+class SignalEventCmd(RenderCommand):
+
+    def __init__(self, type, params, channel='SystemEventChannel'):
+        _renderd.createSignalEvent(self, type, params, channel)
+        
+
+
+class GraphicRenderable(Renderable):
+
+    def __init__(self):
+        self.position = (0, 0)
+        self._size = (0, 0)
+        self.effects = []
+        self.sequencer = None
+        self.visible = True
+        self.setTransitionable(1)
+        
+        self._color = (1, 1, 1, 1)
+    
+    def size(self):
+        return self._size
+        
+    def addGraphicEffect(self, effect):
+        self.effects.append(effect)
+    
+    def addEffectSequencer(self, seq, repeat, loopLimit):
+        self.effects.append(seq)
+    
+
+    def setTransitionable(self, val):
+        self._transitionable = val
+        
+
+    def transitionable(self):
+        return self._transitionable
+        return
+
+    def setPosition(self, x, y):
+        self.position = (x, y)
+        return
+
+    def position(self):
+        return self.position
+        return
+
+    def setSize(self, w, h):
+        self._size = (w, h)
+        return
+
+    def size(self):
+        return self._size
+
+    def setColor(self, r=0, g=0, b=0, a=1):
+        self._color = (r, g, b, a)
+        return
+
+    def color(self):
+        return self._color
+        return
+
+
+class Box(GraphicRenderable):
+
+    def __init__(self):
+        super().__init__()
+        return
+        
+
+
+class Clock(GraphicRenderable):
+    LEFT = 0
+    RIGHT = 1
+    CENTER = 2
+
+    def __init__(self, font, format, lcase_ampm=1, justification=LEFT, timezone='', timezoneDisplay=''):
+        """Specify the font and format used to display the time.
+        format is a string in the format expected by the strftime c-lib func.
+        timezone is a string used to set the TZ environment variable for alternate timezones.
+        timzoneDisplay is the string value that will replace '<z>' within the format string.
+        """
+        GraphicRenderable.__init__(self)
+        _renderd.createClock(self, font, format, lcase_ampm, justification, timezone, timezoneDisplay)
+        
+
+
+class TimeCode(GraphicRenderable):
+
+    def __init__(self, font):
+        GraphicRenderable.__init__(self)
+        _renderd.createTimeCode(self, font)
+        
+
+from io import BytesIO
+class Text(GraphicRenderable):
+
+    def __init__(self, font : TTFont, str):
+        GraphicRenderable.__init__(self)
+        self.fnt = font
+        self.s = str
+        self.lasts = self.s
+        self.bounds = None
+        self.cachedimg = None
+        self.cachedtex = None
+        self.buf = BytesIO()
+        self.ascent = self.fnt.font.get_ascent()
+        self.descent = self.fnt.font.get_descent()
+        #sz = self.fnt.font.size(self.s)
+        #text = rg.pg.Surface((sz[0], sz[1]))
+        
+        self.textbase : rg.pg.Surface = self.fnt.font.render(self.s, True, (255, 255, 255))
+        self.textbase = rg.pg.transform.smoothscale_by(self.textbase, (1, 0.91))
+        self._lastcol = tuple(list(self._color))
+        self._textsize = self.textbase.size
+        self._size = self.textbase.size
+
+    def font(self):
+        return self.fnt
+        return
+
+    def str(self):
+        return self.s
+        return
+
+    def setBoundingBoxSize(self, w, h):
+        self.bounds = (w, h)
+        
+
+
+class Marquee(Text):
+
+    def __init__(self, font, str, step=2, repeat=1):
+        GraphicRenderable.__init__(self)
+        _renderd.createMarquee(self, font, str, step, repeat)
+        self.fnt = font
+        self.s = str
+        return
+
+    def setSpeed(self, step):
+        return _renderd.Marquee_setSpeed(self, step)
+        return
+
+
+class QTMovie(GraphicRenderable):
+
+    def __init__(self, name, evict=0):
+        GraphicRenderable.__init__(self)
+        _renderd.createQTMovie(self, name, evict)
+        return
+
+    def getNumFrames(self):
+        return _renderd.QTMovie_getNumFrames(self)
+        return
+
+    def setLooping(self, looping):
+        return _renderd.QTMovie_setLooping(self, looping)
+        return
+
+
+class Icon(GraphicRenderable):
+
+    def __init__(self, name, evict=0):
+        GraphicRenderable.__init__(self)
+        _renderd.createIcon(self, name, evict)
+        return
+
+
+class Image(GraphicRenderable):
+    pass
+
+
+class JPEG_Image(Image):
+
+    def __init__(self, name, evict=0, x1=0, y1=0, x2=1, y2=1):
+        Image.__init__(self)
+        _renderd.createImage(self, name, evict, x1, y1, x2, y2)
+        return
+
+
+class TIFF_Image(Image):
+
+    def __init__(self, name, evict=0, x1=0, y1=0, x2=1, y2=1):
+        Image.__init__(self)
+        _renderd.createImage(self, name, evict, x1, y1, x2, y2)
+        return
+
+
+class CompositedImage(Image):
+
+    def __init__(self):
+        Image.__init__(self)
+        _renderd.createCompositedImage(self)
+        return
+
+    def addItem(self, gr):
+        _renderd.CompositedImage_addItem(self, gr)
+        return
+
+
+class ClipboardImage(Image):
+
+    def __init__(self):
+        GraphicRenderable.__init__(self)
+        _renderd.createClipboardImage(self)
+        return
+
+
+class VectorImage(GraphicRenderable):
+    """A image made up of points, lines, and curves."""
+
+    def __init__(self, name, lineThickness=1, evict=0):
+        GraphicRenderable.__init__(self)
+        _renderd.createVectorImage(self, name, lineThickness, evict)
+        return
+
+
+class CompositeRenderable(GraphicRenderable):
+
+    def __init__(self, debug=False):
+        GraphicRenderable.__init__(self)
+        self.rtex = rg.rl.load_render_texture(720, 480)
+        self.ftex = rg.rl.load_render_texture(720, 480)
+        self.size = (720, 480)
+        self.items = []
+        self.debug = debug
+        return
+
+    def addItem(self, child):
+        self.items.append(child)
+        return
+
+
+class ScrollingCompositeRenderable(CompositeRenderable):
+
+    def __init__(self, step=2, spacing=2, repeat=1):
+        GraphicRenderable.__init__(self)
+        _renderd.createScrollingCompositeRenderable(self, step, spacing, repeat)
+        return
+
+    def setSpeed(self, step):
+        _renderd.ScrollingCompositeRenderable_setSpeed(self, step)
+        return
+
+    def setSpacing(self, spacing):
+        _renderd.ScrollingCompositeRenderable_setSpacing(self, spacing)
+        return
+
+    def setBoundingBoxSize(self, w, h):
+        _renderd.ScrollingCompositeRenderable_setBoundingBoxSize(self, w, h)
+        return
+
+    def getBoundingBoxSize(self):
+        return _renderd.ScrollingCompositeRenderable_getBoundingBoxSize(self)
+        return
+
+
+class Polygon(GraphicRenderable):
+
+    def __init__(self):
+        GraphicRenderable.__init__(self)
+        self.vertices = []
+        self.leftmost = 0
+        self.rightmost = 0
+        self.topmost = 0
+        self.bottommost = 0
+        return
+
+    def addVertex(self, x, y, r=1, g=1, b=1, a=1):
+        self.vertices.append((rg.rl.Vector3(x, y, -rg.zzz), r, g, b, a))
+        if x < self.leftmost:
+            self.leftmost = x
+        if y > self.topmost:
+            self.topmost = y
+        if x > self.rightmost:
+            self.rightmost = x
+        if y < self.bottommost:
+            self.bottommost = y
+        self.size = (abs(self.rightmost-self.leftmost), abs(self.topmost-self.bottommost))
+        return
+
+
+class RichText(CompositeRenderable):
+
+    def __init__(self, textItemList):
+        CompositeRenderable.__init__(self)
+        w = 0
+        h = 0
+        tempList = []
+        for item in textItemList:
+            (strText, font, color) = item
+            (r, g, b, a) = color
+            gr = Text(font, strText)
+            gr.setColor(r, g, b, a)
+            gr.setPosition(w, 0)
+            (wgr, hgr) = gr.size()
+            tempList.append(gr)
+            w += wgr
+            if hgr > h:
+                h = hgr
+
+        self.setSize(w, h)
+        for item in tempList:
+            self.addItem(item)
+
+        return
+
+
+class Video(GraphicRenderable):
+
+    def __init__(self):
+        GraphicRenderable.__init__(self)
+        _renderd.createVideo(self)
+        return
+
+
+class Effect(ObjectWrapper):
+
+    def setTarget(self, target):
+        _renderd.Effect_setTarget(self, target)
+        return
+
+
+class GraphicEffect(Effect):
+    def setTarget(self, target):
+        target.addGraphicEffect(self)
+
+
+class NullEffect(GraphicEffect):
+
+    def __init__(self, target=None):
+        if target != None:
+            self.setTarget(target)
+        return
+
+
+class Bounce(GraphicEffect):
+
+    def __init__(self, target=None, dx=0, dy=0, x=0, y=0, h=720, w=480):
+        self.frame = 0
+        self.frozen = False
+        self.dx = dx
+        self.dy = dy
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+        if target != None:
+            self.setTarget(target)
+        return
+
+
+class Slider(GraphicEffect):
+
+    def __init__(self, target=None, dx=0, dy=0):
+        self.frame = 0
+        self.frozen = False
+        self.dx = dx
+        self.dy = dy
+        if target != None:
+            self.setTarget(target)
+        return
+
+
+class Sizer(GraphicEffect):
+
+    def __init__(self, target=None, percentX=1, percentY=1):
+        self.percentX = percentX
+        self.percentY = percentY
+        if target != None:
+            self.setTarget(target)
+        return
+
+
+class Strobe(GraphicEffect):
+
+    def __init__(self, target=None, variance=0.49, step=0.01):
+        self.frame = 0
+        self.frozen = False
+        self.variance = variance
+        self.step = step
+        if target != None:
+            self.setTarget(target)
+        return
+
+
+class Fader(GraphicEffect):
+    def __init__(self, target=None, startAlpha=0, endAlpha=1, frames=30):
+        self.frame = 0
+        self.frozen = False
+        self.startAlpha = startAlpha
+        self.endAlpha = endAlpha
+        self.frames = frames
+        if target != None:
+            self.setTarget(target)
+        return
+
+
+class Rotate(GraphicEffect):
+
+    def __init__(self, target=None, angle=1, x=0, y=0, xr=0, yr=0, zr=0):
+        self.frame = 0
+        self.frozen = False
+        self.angle = angle
+        self.x = x
+        self.y = y
+        self.xr = xr
+        self.yr = yr
+        self.zr = zr
+        if target != None:
+            self.setTarget(target)
+        return
+
+
+class Clipper(GraphicEffect):
+    CP_LEFT = 0
+    CP_RIGHT = 1
+    CP_TOP = 2
+    CP_BOTTOM = 3
+
+    def __init__(self, target=None, left=None, right=None, top=None, bottom=None):
+        _renderd.createClipper(self)
+        if target != None:
+            self.setTarget(target)
+        if left != None:
+            self.clip(self.CP_LEFT, left)
+        if right != None:
+            self.clip(self.CP_RIGHT, right)
+        if top != None:
+            self.clip(self.CP_TOP, top)
+        if bottom != None:
+            self.clip(self.CP_BOTTOM, bottom)
+        return
+
+    def clip(self, plane, pos, step=0.0):
+        _renderd.Clipper_clip(self, plane, pos, step)
+        return
+
+
+class Snapshot(GraphicEffect):
+
+    def __init__(self, target=None):
+        _renderd.createSnapshot(self)
+        if target != None:
+            self.setTarget(target)
+        return
+
+
+class SetText(GraphicEffect):
+
+    def __init__(self, str, target=None):
+        self.s = str
+        self.fired = False
+        if target != None:
+            self.setTarget(target)
+        return
+
+
+class PropertyEffect(GraphicEffect):
+    pass
+
+
+class SetColor(PropertyEffect):
+
+    def __init__(self, target=None, r=0, g=0, b=0, a=1):
+        self.r = r
+        self.g = g
+        self.b = b
+        self.a = a
+        self.fired = False
+        if target != None:
+            self.setTarget(target)
+        return
+
+
+class SetColorScale(PropertyEffect):
+
+    def __init__(self, target=None, r=0, g=0, b=0, a=1):
+        self.r = r
+        self.g = g
+        self.b = b
+        self.a = a
+        if target != None:
+            self.setTarget(target)
+        return
+
+
+class SetSize(PropertyEffect):
+
+    def __init__(self, target=None, w=1, h=1):
+        self.w = w
+        self.h = h
+        self.fired = False
+        if target != None:
+            self.setTarget(target)
+        return
+
+
+class SetSizeScale(PropertyEffect):
+
+    def __init__(self, target=None, w=1, h=1):
+        self.w = w
+        self.h = h
+        if target != None:
+            self.setTarget(target)
+        return
+
+
+class SetPosition(PropertyEffect):
+
+    def __init__(self, target=None, x=0, y=0):
+        self.x = x
+        self.y = y
+        if target != None:
+            self.setTarget(target)
+        return
+
+
+class SetRotationAngle(PropertyEffect):
+
+    def __init__(self, target=None, angle=1):
+        self.angle = angle
+        self.fired = False
+        if target != None:
+            self.setTarget(target)
+        return
+
+
+class SetAnimationState(Effect):
+
+    def __init__(self, target=None, state=1):
+        _renderd.createSetAnimationState(self, state)
+        if target != None:
+            self.setTarget(target)
+        return
+
+
+class SetVisibility(Effect):
+
+    def __init__(self, target=None, visible=1):
+        self.visible = visible
+        self.fired = False
+        if target != None:
+            self.setTarget(target)
+        return
+
+
+class AudioRenderable(Renderable):
+    BLEND_OVERWRITE = 0
+    BLEND_MIX = 1
+    BLEND_ADD = 2
+
+    def setVolLevel(self, level):
+        return _renderd.AudioRenderable_setVolLevel(self, level)
+        return
+
+    def setMixLevel(self, level):
+        return _renderd.AudioRenderable_setMixLevel(self, level)
+        return
+
+    def setBlendType(self, type):
+        return _renderd.AudioRenderable_setBlendType(self, type)
+        return
+
+
+class Audio(AudioRenderable):
+
+    def __init__(self):
+        _renderd.createAudio(self)
+        return
+
+
+class AudioClip(AudioRenderable):
+
+    def __init__(self, name, evict=0, duration_limit=0, loop_limit=1):
+        _renderd.createAudioClip(self, name, evict, duration_limit, loop_limit)
+        return
+
+    def setLoopLimit(self, limit):
+        _renderd.AudioClip_setLoopLimit(self, limit)
+        return
+
+    def duration(self):
+        return _renderd.AudioClip_getDuration(self)
+        return
+
+    def size(self):
+        return _renderd.AudioClip_getSize(self)
+        return
+
+
+class NullAudioClip(AudioRenderable):
+
+    def __init__(self, duration_limit=0):
+        _renderd.createNullAudioClip(self, duration_limit)
+        return
+
+    def duration(self):
+        return _renderd.NullAudioClip_getDuration(self)
+        return
+
+    def size(self):
+        return _renderd.NullAudioClip_getSize(self)
+        return
+
+
+class MP3_AudioClip(AudioRenderable):
+
+    def __init__(self, name, evict=0, duration_limit=0, loop_limit=1):
+        _renderd.createAudioMP3Clip(self, name, evict, duration_limit, loop_limit)
+        return
+
+    def setLoopLimit(self, limit):
+        _renderd.AudioMP3Clip_setLoopLimit(self, limit)
+        return
+
+    def duration(self):
+        return _renderd.AudioMP3Clip_getDuration(self)
+        return
+
+
+class AudioEffect(Effect):
+    def setTarget(self, target):
+        target.addAudioEffect(self)
+
+
+class EffectSequencer(Renderable):
+
+    def __init__(self, target, repeat=0, loopLimit=0):
+        self.effects = []
+        self.activeeffects = []
+        self.timer = -1 #first frame is time 0 but 1 gets added first
+        self.total = 0
+        self.repeat = repeat
+        self.loopLimit = loopLimit
+        target.addEffectSequencer(self, repeat, loopLimit)
+        return
+
+    def addEffect(self, effect, duration):
+        self.effects.append((effect, duration))
+        self.total += duration
+        return
+
+
+class ImageSequencer(Renderable):
+
+    def __init__(self, repeat=0):
+        self.repeat = repeat
+        self.images = []
+        return
+
+    def addImage(self, imageFile, duration):
+        self.images.append((imageFile, duration))
+        return
+
+
+class AudioSequencer(AudioRenderable):
+
+    def __init__(self, repeat=0):
+        self.repeat = repeat
+        self.audio = []
+        return
+
+    def addItem(self, child):
+        self.audio.append(child)
+        return
+
+    def duration(self):
+        return sum([e.duration() for e in self.audio])
+        return
+
+    def size(self):
+        return _renderd.AudioSequencer_getSize(self)
+        return
+
+
+class AudioFader(AudioEffect):
+
+    def __init__(self, target=None, startMixLevel=0, endMixLevel=1, frames=30):
+        _renderd.createAudioFader(self, startMixLevel, endMixLevel, frames)
+        if target != None:
+            self.setTarget(target)
+        return
+
+
+class AudioEffectSequencer(Renderable):
+
+    def __init__(self, target, repeat=0):
+        _renderd.createAudioEffectSequencer(self, target, repeat)
+        return
+
+    def addEffect(self, effect, duration):
+        _renderd.AudioEffectSequencer_addEffect(self, effect, duration)
+        return
+
+
+class AudioNullEffect(AudioEffect):
+
+    def __init__(self, target=None):
+        _renderd.createAudioNullEffect(self)
+        if target != None:
+            self.setTarget(target)
+        return
+
+

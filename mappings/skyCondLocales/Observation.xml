@@ -1,0 +1,378 @@
+<root>
+<record key="4400" iconFile="BlankIcon" textModifier=""></record>
+<record key="4480" iconFile="BlankIcon" textModifier="Windy"></record>
+<record key="1500" iconFile="BlowSn" textModifier="Blowing*Snow"></record>
+<record key="1501" iconFile="BlowSn" textModifier="Drifting*Snow"></record>
+<record key="1509" iconFile="BlowSn" textModifier="Blowing Snow*Nearby"></record>
+<record key="1570" iconFile="BlowSn" textModifier="Blowing Snow,*Windy, Fog"></record>
+<record key="1571" iconFile="BlowSn" textModifier="Drifting Snow,*Windy, Fog"></record>
+<record key="1579" iconFile="BlowSn" textModifier="Blowing Snow*Nearby, Windy,*Fog"></record>
+<record key="1580" iconFile="BlowSn" textModifier="Blowing Snow,*Fog"></record>
+<record key="1581" iconFile="BlowSn" textModifier="Drifting Snow,*Fog"></record>
+<record key="1589" iconFile="BlowSn" textModifier="Blowing Snow*Nearby, Fog"></record>
+<record key="1590" iconFile="BlowSn" textModifier="Blowing Snow,*Windy"></record>
+<record key="1591" iconFile="BlowSn" textModifier="Drifting Snow,*Windy"></record>
+<record key="1599" iconFile="BlowSn" textModifier="Blowing Snow*Nearby, Windy"></record>
+<record key="2600" iconFile="Cld" textModifier="Cloudy"></record>
+<record key="2430" iconFile="CldWnd" textModifier="Windy"></record>
+<record key="2450" iconFile="CldWnd" textModifier="Windy,*Fog"></record>
+<record key="2460" iconFile="CldWnd" textModifier="Windy,*Fog"></record>
+<record key="2470" iconFile="CldWnd" textModifier="Windy"></record>
+<record key="2690" iconFile="CldWnd" textModifier="Cloudy,*Windy"></record>
+<record key="2890" iconFile="CldWnd" textModifier="Mostly Cloudy,*Windy"></record>
+<record key="2800" iconFile="DMc" textModifier="Mostly*Cloudy"></record>
+<record key="3000" iconFile="DPc" textModifier="Partly*Cloudy"></record>
+<record key="900" iconFile="Drz" textModifier="Drizzle"></record>
+<record key="901" iconFile="Drz" textModifier="Light*Drizzle"></record>
+<record key="990" iconFile="Drz" textModifier="Drizzle,*Windy"></record>
+<record key="991" iconFile="Drz" textModifier="Light*Drizzle, Windy"></record>
+<record key="1101" iconFile="Drz" textModifier="Light*Rain Shower"></record>
+<record key="910" iconFile="DrzFog" textModifier="Drizzle and*Fog"></record>
+<record key="980" iconFile="DrzFog" textModifier="Drizzle and*Fog, Windy"></record>
+<record key="1171" iconFile="DrzFog" textModifier="Light*Rain Shower,*Windy, Fog"></record>
+<record key="1181" iconFile="DrzFog" textModifier="Light*Rain Shower,*Fog"></record>
+<record key="1271" iconFile="DrzFog" textModifier="Light Rain*Windy, Fog"></record>
+<record key="1281" iconFile="DrzFog" textModifier="Light Rain,*Fog"></record>
+<record key="2681" iconFile="DrzFog" textModifier="Showers*Nearby, Fog"></record>
+<record key="2686" iconFile="DrzFog" textModifier="Showers*Nearby, Windy,*Fog"></record>
+<record key="2781" iconFile="DrzFog" textModifier="Showers*Nearby, Fog"></record>
+<record key="2786" iconFile="DrzFog" textModifier="Showers*Nearby, Windy,*Fog"></record>
+<record key="2881" iconFile="DrzFog" textModifier="Showers*Nearby, Fog"></record>
+<record key="2886" iconFile="DrzFog" textModifier="Showers*Nearby, Windy,*Fog"></record>
+<record key="2000" iconFile="Fog" textModifier="Fog"></record>
+<record key="2001" iconFile="Fog" textModifier="Patchy*Fog"></record>
+<record key="2002" iconFile="Fog" textModifier="Mist"></record>
+<record key="2021" iconFile="Fog" textModifier="Shallow*Fog"></record>
+<record key="2022" iconFile="Fog" textModifier="Patchy*Fog"></record>
+<record key="2081" iconFile="Fog" textModifier="Shallow Fog,*Windy"></record>
+<record key="2082" iconFile="Fog" textModifier="Patchy Fog,*Windy"></record>
+<record key="2090" iconFile="Fog" textModifier="Fog,*Windy"></record>
+<record key="2091" iconFile="Fog" textModifier="Patchy Fog,*Windy"></record>
+<record key="2092" iconFile="Fog" textModifier="Mist,*Windy"></record>
+<record key="4470" iconFile="Fog" textModifier="Fog,*Windy"></record>
+<record key="4490" iconFile="Fog" textModifier="Fog"></record>
+<record key="800" iconFile="FrzDrz" textModifier="Freezing Drizzle"></record>
+<record key="801" iconFile="FrzDrz" textModifier="Light Freezing*Drizzle"></record>
+<record key="810" iconFile="FrzDrz" textModifier="Drizzle,*Freezing Drizzle"></record>
+<record key="815" iconFile="FrzDrz" textModifier="Drizzle,*Frz. Drizzle,*Windy"></record>
+<record key="820" iconFile="FrzDrz" textModifier="Drizzle,*Frz. Drizzle,*Fog"></record>
+<record key="825" iconFile="FrzDrz" textModifier="Drizzle,*Frz. Drizzle,*Windy, Fog"></record>
+<record key="870" iconFile="FrzDrz" textModifier="Freezing*Drizzle, Fog"></record>
+<record key="871" iconFile="FrzDrz" textModifier="Light Freezing*Drizzle, Fog"></record>
+<record key="880" iconFile="FrzDrz" textModifier="Freezing*Drizzle, Windy,*Fog"></record>
+<record key="881" iconFile="FrzDrz" textModifier="Light Freezing*Drizzle, Windy,*Fog"></record>
+<record key="890" iconFile="FrzDrz" textModifier="Freezing*Drizzle, Windy"></record>
+<record key="891" iconFile="FrzDrz" textModifier="Light Freezing*Drizzle, Windy"></record>
+<record key="1001" iconFile="FrzDrz" textModifier="Light*Freezing Rain"></record>
+<record key="1071" iconFile="FrzDrz" textModifier="Light*Freezing Rain,*Fog"></record>
+<record key="1081" iconFile="FrzDrz" textModifier="Light*Freezing Rain,*Windy, Fog"></record>
+<record key="1091" iconFile="FrzDrz" textModifier="Light*Freezing Rain,*Windy"></record>
+<record key="1211" iconFile="FrzDrz" textModifier="Light*Freezing Rain,*Sleet"></record>
+<record key="1216" iconFile="FrzDrz" textModifier="Light*Freezing Rain,*Sleet, Fog"></record>
+<record key="1221" iconFile="FrzDrz" textModifier="Light*Freezing Rain,*Sleet, Windy"></record>
+<record key="1226" iconFile="FrzDrz" textModifier="Light*Frz. Rain, Sleet*Windy, Fog"></record>
+<record key="1231" iconFile="FrzDrz" textModifier="Light Rain,*Freezing Rain"></record>
+<record key="1236" iconFile="FrzDrz" textModifier="Light Rain,*Freezing Rain,*Fog"></record>
+<record key="1241" iconFile="FrzDrz" textModifier="Light Rain,*Freezing Rain,*Windy"></record>
+<record key="1246" iconFile="FrzDrz" textModifier="Light Rain,*Freezing Rain,*Windy, Fog"></record>
+<record key="610" iconFile="FrzRa" textModifier="Sleet and*Freezing Rain"></record>
+<record key="640" iconFile="FrzRa" textModifier="Sleet,*Freezing Rain,*Windy, Fog"></record>
+<record key="660" iconFile="FrzRa" textModifier="Sleet,*Freezing Rain,*Fog"></record>
+<record key="680" iconFile="FrzRa" textModifier="Sleet,*Freezing Rain,*Windy"></record>
+<record key="802" iconFile="FrzRa" textModifier="Heavy Freezing*Drizzle"></record>
+<record key="872" iconFile="FrzRa" textModifier="Heavy Freezing*Drizzle, Fog"></record>
+<record key="882" iconFile="FrzRa" textModifier="Heavy Freezing*Drizzle, Windy,*Fog"></record>
+<record key="892" iconFile="FrzRa" textModifier="Heavy Freezing*Drizzle, Windy"></record>
+<record key="1000" iconFile="FrzRa" textModifier="Freezing*Rain"></record>
+<record key="1002" iconFile="FrzRa" textModifier="Heavy*Freezing Rain"></record>
+<record key="1010" iconFile="FrzRa" textModifier="Rain,*Freezing Rain"></record>
+<record key="1040" iconFile="FrzRa" textModifier="Rain,*Freezing Rain,*Windy, Fog"></record>
+<record key="1050" iconFile="FrzRa" textModifier="Rain,*Freezing Rain,*Windy"></record>
+<record key="1060" iconFile="FrzRa" textModifier="Rain,*Freezing Rain,*Fog"></record>
+<record key="1070" iconFile="FrzRa" textModifier="Freezing Rain,*Fog"></record>
+<record key="1072" iconFile="FrzRa" textModifier="Heavy*Freezing Rain,*Fog"></record>
+<record key="1080" iconFile="FrzRa" textModifier="Freezing Rain,*Windy, Fog"></record>
+<record key="1082" iconFile="FrzRa" textModifier="Heavy*Freezing Rain,*Windy, Fog"></record>
+<record key="1090" iconFile="FrzRa" textModifier="Freezing Rain,*Windy"></record>
+<record key="1092" iconFile="FrzRa" textModifier="Heavy*Freezing Rain,*Windy"></record>
+<record key="1210" iconFile="FrzRa" textModifier="Freezing Rain,*Sleet"></record>
+<record key="1212" iconFile="FrzRa" textModifier="Heavy*Freezing Rain,*Sleet"></record>
+<record key="1215" iconFile="FrzRa" textModifier="Freezing Rain,*Sleet, Fog"></record>
+<record key="1217" iconFile="FrzRa" textModifier="Heavy*Freezing Rain,*Sleet, Fog"></record>
+<record key="1220" iconFile="FrzRa" textModifier="Freezing Rain,*Sleet, Windy"></record>
+<record key="1222" iconFile="FrzRa" textModifier="Heavy*Freezing Rain,*Sleet, Windy"></record>
+<record key="1225" iconFile="FrzRa" textModifier="Freezing Rain,*Sleet, Windy,*Fog"></record>
+<record key="1227" iconFile="FrzRa" textModifier="Heavy*Frz. Rain, Sleet,*Windy, Fog"></record>
+<record key="1230" iconFile="FrzRa" textModifier="Rain,*Freezing Rain"></record>
+<record key="1232" iconFile="FrzRa" textModifier="Heavy Rain,*Freezing Rain"></record>
+<record key="1235" iconFile="FrzRa" textModifier="Rain,*Freezing Rain,*Fog"></record>
+<record key="1237" iconFile="FrzRa" textModifier="Heavy Rain,*Freezing Rain,*Fog"></record>
+<record key="1240" iconFile="FrzRa" textModifier="Rain,*Freezing Rain,*Windy"></record>
+<record key="1242" iconFile="FrzRa" textModifier="Heavy Rain,*Freezing Rain,*Windy"></record>
+<record key="1245" iconFile="FrzRa" textModifier="Rain,*Freezing Rain,*Windy, Fog"></record>
+<record key="1247" iconFile="FrzRa" textModifier="Heavy Rain,*Freezing Rain,*Windy, Fog"></record>
+<record key="2100" iconFile="Haze" textModifier="Haze"></record>
+<record key="2190" iconFile="Haze" textModifier="Haze,*Windy"></record>
+<record key="2510" iconFile="Haze" textModifier="Ice*Crystals"></record>
+<record key="2570" iconFile="Haze" textModifier="Ice Crystals,*Windy, Fog"></record>
+<record key="2580" iconFile="Haze" textModifier="Ice Crystals,*Fog"></record>
+<record key="2590" iconFile="Haze" textModifier="Ice Crystals,*Windy"></record>
+<record key="1202" iconFile="HvyRa" textModifier="Heavy*Rain"></record>
+<record key="1282" iconFile="HvyRa" textModifier="Heavy Rain,*Fog"></record>
+<record key="1602" iconFile="HvySn" textModifier="Heavy*Snow"></record>
+<record key="1672" iconFile="HvySn" textModifier="Heavy Snow,*Fog"></record>
+<record key="711" iconFile="LtMix" textModifier="Light Snow,*Freezing Rain"></record>
+<record key="716" iconFile="LtMix" textModifier="Light Snow,*Freezing Rain,*Windy"></record>
+<record key="761" iconFile="LtMix" textModifier="Light Snow,*Freezing Rain,*Fog"></record>
+<record key="766" iconFile="LtMix" textModifier="Light Snow,*Freezing Rain,*Windy, Fog"></record>
+<record key="902" iconFile="LtRa" textModifier="Heavy*Drizzle"></record>
+<record key="992" iconFile="LtRa" textModifier="Heavy*Drizzle, Windy"></record>
+<record key="1100" iconFile="LtRa" textModifier="Rain*Shower"></record>
+<record key="1180" iconFile="LtRa" textModifier="Rain Shower,*Fog"></record>
+<record key="1191" iconFile="LtRa" textModifier="Light*Rain Shower,*Windy"></record>
+<record key="1201" iconFile="LtRa" textModifier="Light*Rain"></record>
+<record key="2680" iconFile="LtRa" textModifier="Showers*Nearby"></record>
+<record key="2685" iconFile="LtRa" textModifier="Showers*Nearby, Windy"></record>
+<record key="701" iconFile="LtSn" textModifier="Light Snow*and Sleet"></record>
+<record key="706" iconFile="LtSn" textModifier="Light Snow and*Sleet, Windy"></record>
+<record key="751" iconFile="LtSn" textModifier="Light Snow and*Sleet, Fog"></record>
+<record key="756" iconFile="LtSn" textModifier="Light Snow and*Sleet, Windy,*Fog"></record>
+<record key="1400" iconFile="LtSn" textModifier="Snow*Shower"></record>
+<record key="1470" iconFile="LtSn" textModifier="Snow Shower,*Windy, Fog"></record>
+<record key="1480" iconFile="LtSn" textModifier="Snow Shower,*Fog"></record>
+<record key="1490" iconFile="LtSn" textModifier="Snow Shower,*Windy"></record>
+<record key="1601" iconFile="LtSn" textModifier="Light*Snow"></record>
+<record key="1671" iconFile="LtSn" textModifier="Light Snow,*Fog"></record>
+<record key="1810" iconFile="LtSn" textModifier="Snow*Shower"></record>
+<record key="1860" iconFile="LtSn" textModifier="Snow Shower,*Fog"></record>
+<record key="1861" iconFile="LtSn" textModifier="Snow Shower,*Windy, Fog"></record>
+<record key="1870" iconFile="LtSn" textModifier="Snow Shower,*Windy"></record>
+<record key="3400" iconFile="MSun" textModifier="Fair"></record>
+<record key="710" iconFile="Mix" textModifier="Snow,*Freezing Rain"></record>
+<record key="715" iconFile="Mix" textModifier="Snow,*Freezing Rain,*Windy"></record>
+<record key="720" iconFile="Mix" textModifier="Wintry*Mix"></record>
+<record key="725" iconFile="Mix" textModifier="Wintry Mix,*Windy"></record>
+<record key="730" iconFile="Mix" textModifier="Thunder,*Wintry Mix"></record>
+<record key="735" iconFile="Mix" textModifier="Thunder,*Wintry Mix,*Windy"></record>
+<record key="760" iconFile="Mix" textModifier="Snow,*Freezing Rain,*Fog"></record>
+<record key="765" iconFile="Mix" textModifier="Snow,*Freezing Rain,*Windy, Fog"></record>
+<record key="770" iconFile="Mix" textModifier="Wintry Mix,*Fog"></record>
+<record key="775" iconFile="Mix" textModifier="Wintry Mix,*Windy, Fog"></record>
+<record key="780" iconFile="Mix" textModifier="Thunder,*Wintry Mix,*Fog"></record>
+<record key="785" iconFile="Mix" textModifier="Thunder,*Wintry Mix,*Windy, Fog"></record>
+<record key="3100" iconFile="NClr" textModifier="Clear"></record>
+<record key="3190" iconFile="NClrWnd" textModifier="Clear,*Windy"></record>
+<record key="3300" iconFile="NMClr" textModifier="Fair"></record>
+<record key="2700" iconFile="NMc" textModifier="Mostly*Cloudy"></record>
+<record key="2790" iconFile="NMc" textModifier="Mostly Cloudy,*Windy"></record>
+<record key="2900" iconFile="NPc" textModifier="Partly*Cloudy"></record>
+<record key="2990" iconFile="NPcWnd" textModifier="Partly Cloudy,*Windy"></record>
+<record key="3390" iconFile="NPcWnd" textModifier="Fair,*Windy"></record>
+<record key="2780" iconFile="NSctSh" textModifier="Showers*Nearby"></record>
+<record key="2785" iconFile="NSctSh" textModifier="Showers*Nearby,Windy"></record>
+<record key="2980" iconFile="NSctSh" textModifier="Showers*Nearby"></record>
+<record key="2981" iconFile="NSctSh" textModifier="Showers*Nearby, Fog"></record>
+<record key="2985" iconFile="NSctSh" textModifier="Showers*Nearby"></record>
+<record key="2986" iconFile="NSctSh" textModifier="Showers*Nearby, Windy,*Fog"></record>
+<record key="3180" iconFile="NSctSh" textModifier="Showers*Nearby"></record>
+<record key="3181" iconFile="NSctSh" textModifier="Showers*Nearby, Fog"></record>
+<record key="3185" iconFile="NSctSh" textModifier="Showers*Nearby"></record>
+<record key="3186" iconFile="NSctSh" textModifier="Showers*Nearby, Windy,*Fog"></record>
+<record key="3380" iconFile="NSctSh" textModifier="Showers*Nearby"></record>
+<record key="3381" iconFile="NSctSh" textModifier="Showers*Nearby, Fog"></record>
+<record key="3385" iconFile="NSctSh" textModifier="Showers*Nearby"></record>
+<record key="3386" iconFile="NSctSh" textModifier="Showers*Nearby, Windy,*Fog"></record>
+<record key="3090" iconFile="PcWnd" textModifier="Partly Cloudy,*Windy"></record>
+<record key="3490" iconFile="PcWnd" textModifier="Fair,*Windy"></record>
+<record key="1102" iconFile="Ra" textModifier="Heavy*Rain Shower"></record>
+<record key="1182" iconFile="Ra" textModifier="Heavy*Rain Shower,*Fog"></record>
+<record key="1200" iconFile="Ra" textModifier="Rain"></record>
+<record key="1280" iconFile="Ra" textModifier="Rain,*Fog"></record>
+<record key="600" iconFile="RaSlt" textModifier="Rain and*Sleet"></record>
+<record key="650" iconFile="RaSlt" textModifier="Rain and Sleet,*Windy, Fog"></record>
+<record key="670" iconFile="RaSlt" textModifier="Rain and Sleet,*Fog"></record>
+<record key="690" iconFile="RaSlt" textModifier="Rain and Sleet,*Windy"></record>
+<record key="500" iconFile="RaSn" textModifier="Rain and*Snow"></record>
+<record key="570" iconFile="RaSn" textModifier="Rain and Snow,*Windy, Fog"></record>
+<record key="580" iconFile="RaSn" textModifier="Rain and Snow,*Fog"></record>
+<record key="590" iconFile="RaSn" textModifier="Rain and Snow,*Windy"></record>
+<record key="2880" iconFile="SctSh" textModifier="Showers*Nearby"></record>
+<record key="2885" iconFile="SctSh" textModifier="Showers*Nearby, Windy"></record>
+<record key="3080" iconFile="SctSh" textModifier="Showers*Nearby"></record>
+<record key="3081" iconFile="SctSh" textModifier="Showers*Nearby, Fog"></record>
+<record key="3085" iconFile="SctSh" textModifier="Showers*Nearby, Windy"></record>
+<record key="3086" iconFile="SctSh" textModifier="Showers*Nearby, Windy,*Fog"></record>
+<record key="3280" iconFile="SctSh" textModifier="Showers*Nearby"></record>
+<record key="3281" iconFile="SctSh" textModifier="Showers*Nearby, Fog"></record>
+<record key="3285" iconFile="SctSh" textModifier="Showers*Nearby, Windy"></record>
+<record key="3286" iconFile="SctSh" textModifier="Showers*Nearby, Windy,*Fog"></record>
+<record key="3480" iconFile="SctSh" textModifier="Showers*Nearby"></record>
+<record key="3481" iconFile="SctSh" textModifier="Showers*Nearby, Fog"></record>
+<record key="3485" iconFile="SctSh" textModifier="Showers*Nearby, Windy"></record>
+<record key="3486" iconFile="SctSh" textModifier="Showers*Nearby, Windy,*Fog"></record>
+<record key="1701" iconFile="Slt" textModifier="Small Hail"></record>
+<record key="1771" iconFile="Slt" textModifier="Small Hail,*Fog"></record>
+<record key="1781" iconFile="Slt" textModifier="Small Hail,*Windy, Fog"></record>
+<record key="1791" iconFile="Slt" textModifier="Small Hail,*Windy"></record>
+<record key="1800" iconFile="Slt" textModifier="Sleet"></record>
+<record key="1801" iconFile="Slt" textModifier="Light*Sleet"></record>
+<record key="1802" iconFile="Slt" textModifier="Heavy*Sleet"></record>
+<record key="1850" iconFile="Slt" textModifier="Sleet,*Fog"></record>
+<record key="1851" iconFile="Slt" textModifier="Light Sleet,*Fog"></record>
+<record key="1852" iconFile="Slt" textModifier="Heavy Sleet,*Fog"></record>
+<record key="1890" iconFile="Slt" textModifier="Sleet,*Windy"></record>
+<record key="1891" iconFile="Slt" textModifier="Light Sleet,*Windy"></record>
+<record key="1892" iconFile="Slt" textModifier="Heavy Sleet,*Windy"></record>
+<record key="1895" iconFile="Slt" textModifier="Sleet,*Windy, Fog"></record>
+<record key="1896" iconFile="Slt" textModifier="Light Sleet,*Windy, Fog"></record>
+<record key="1897" iconFile="Slt" textModifier="Heavy Sleet,*Windy, Fog"></record>
+<record key="1900" iconFile="Smoke" textModifier="Dust"></record>
+<record key="1901" iconFile="Smoke" textModifier="Blowing*Dust"></record>
+<record key="1902" iconFile="Smoke" textModifier="Blowing*Dust"></record>
+<record key="1910" iconFile="Smoke" textModifier="Sand"></record>
+<record key="1911" iconFile="Smoke" textModifier="Blowing,*Drifting Sand"></record>
+<record key="1912" iconFile="Smoke" textModifier="Blowing*Sand"></record>
+<record key="1919" iconFile="Smoke" textModifier="Blowing Sand*Nearby"></record>
+<record key="1920" iconFile="Smoke" textModifier="Sandstorm"></record>
+<record key="1922" iconFile="Smoke" textModifier="Heavy*Sandstorm"></record>
+<record key="1929" iconFile="Smoke" textModifier="Sandstorm*Nearby"></record>
+<record key="1930" iconFile="Smoke" textModifier="Dust"></record>
+<record key="1931" iconFile="Smoke" textModifier="Duststorm"></record>
+<record key="1932" iconFile="Smoke" textModifier="Heavy*Duststorm"></record>
+<record key="1939" iconFile="Smoke" textModifier="Duststorm*Nearby"></record>
+<record key="1960" iconFile="Smoke" textModifier="Dust,*Windy"></record>
+<record key="1961" iconFile="Smoke" textModifier="Duststorm,*Windy"></record>
+<record key="1962" iconFile="Smoke" textModifier="Heavy*Duststorm,*Windy"></record>
+<record key="1969" iconFile="Smoke" textModifier="Duststorm*Nearby, Windy"></record>
+<record key="1970" iconFile="Smoke" textModifier="Sandstorm,*Windy"></record>
+<record key="1972" iconFile="Smoke" textModifier="Heavy*Sandstorm,*Windy"></record>
+<record key="1979" iconFile="Smoke" textModifier="Sandstorm*Nearby, Windy"></record>
+<record key="1980" iconFile="Smoke" textModifier="Sand,*Windy"></record>
+<record key="1981" iconFile="Smoke" textModifier="Blowing Sand,*Windy"></record>
+<record key="1982" iconFile="Smoke" textModifier="Blowing Sand,* Windy"></record>
+<record key="1989" iconFile="Smoke" textModifier="Blowing Sand*Nearby, Windy"></record>
+<record key="1990" iconFile="Smoke" textModifier="Dust,*Windy"></record>
+<record key="1991" iconFile="Smoke" textModifier="Blowing*Dust, Windy"></record>
+<record key="1992" iconFile="Smoke" textModifier="Blowing*Dust, Windy"></record>
+<record key="2200" iconFile="Smoke" textModifier="Smoke"></record>
+<record key="2290" iconFile="Smoke" textModifier="Smoke,*Windy"></record>
+<record key="2420" iconFile="Smoke" textModifier="Dust"></record>
+<record key="2429" iconFile="Smoke" textModifier="Duststorm*Nearby"></record>
+<record key="2480" iconFile="Smoke" textModifier="Dust,*Windy"></record>
+<record key="2489" iconFile="Smoke" textModifier="Duststorm*Nearby, Windy"></record>
+<record key="700" iconFile="Sn" textModifier="Snow and*Sleet"></record>
+<record key="705" iconFile="Sn" textModifier="Snow and Sleet,*Windy"></record>
+<record key="750" iconFile="Sn" textModifier="Snow and Sleet,*Fog"></record>
+<record key="755" iconFile="Sn" textModifier="Snow and Sleet,*Windy, Fog"></record>
+<record key="1402" iconFile="Sn" textModifier="Heavy*Snow Shower"></record>
+<record key="1482" iconFile="Sn" textModifier="Heavy*Snow Shower,*Fog"></record>
+<record key="1600" iconFile="Sn" textModifier="Snow"></record>
+<record key="1670" iconFile="Sn" textModifier="Snow,*Fog"></record>
+<record key="1310" iconFile="SnFl" textModifier="Snow*Flurries"></record>
+<record key="1311" iconFile="SnFl" textModifier="Light*Snow Flurries"></record>
+<record key="1312" iconFile="SnFl" textModifier="Snow*Showers"></record>
+<record key="1370" iconFile="SnFl" textModifier="Snow Flurries,*Windy, Fog"></record>
+<record key="1371" iconFile="SnFl" textModifier="Light*Snow Flurries,*Windy, Fog"></record>
+<record key="1372" iconFile="SnFl" textModifier="Snow Showers,*Windy, Fog"></record>
+<record key="1380" iconFile="SnFl" textModifier="Snow Flurries,*Fog"></record>
+<record key="1381" iconFile="SnFl" textModifier="Light*Snow Flurries,*Fog"></record>
+<record key="1382" iconFile="SnFl" textModifier="Snow Showers,*Fog"></record>
+<record key="1390" iconFile="SnFl" textModifier="Snow Flurries,*Windy"></record>
+<record key="1391" iconFile="SnFl" textModifier="Light*Snow Flurries,*Windy"></record>
+<record key="1392" iconFile="SnFl" textModifier="Snow Showers,*Windy"></record>
+<record key="1401" iconFile="SnFl" textModifier="Light*Snow Shower"></record>
+<record key="1471" iconFile="SnFl" textModifier="Light*Snow Shower,*Windy, Fog"></record>
+<record key="1481" iconFile="SnFl" textModifier="Light*Snow Shower,*Fog"></record>
+<record key="1491" iconFile="SnFl" textModifier="Light*Snow Shower,*Windy"></record>
+<record key="3200" iconFile="Sun" textModifier="Sunny"></record>
+<record key="3290" iconFile="SunWnd" textModifier="Sunny,*Windy"></record>
+<record key="3540" iconFile="Thun" textModifier="Thunder"></record>
+<record key="3549" iconFile="Thun" textModifier="Thunder"></record>
+<record key="3570" iconFile="Thun" textModifier="Thunder,*Windy, Fog"></record>
+<record key="3579" iconFile="Thun" textModifier="Thunder,*Windy, Fog"></record>
+<record key="3580" iconFile="Thun" textModifier="Thunder,*Fog"></record>
+<record key="3589" iconFile="Thun" textModifier="Thunder,*Fog"></record>
+<record key="3590" iconFile="Thun" textModifier="Thunder,*Windy"></record>
+<record key="3599" iconFile="Thun" textModifier="Thunder,*Windy"></record>
+<record key="3840" iconFile="Thun" textModifier="Thunder"></record>
+<record key="3849" iconFile="Thun" textModifier="Thunder"></record>
+<record key="3870" iconFile="Thun" textModifier="Thunder,*Windy, Fog"></record>
+<record key="3879" iconFile="Thun" textModifier="Thunder,*Windy, Fog"></record>
+<record key="3880" iconFile="Thun" textModifier="Thunder,*Fog"></record>
+<record key="3889" iconFile="Thun" textModifier="Thunder,*Fog"></record>
+<record key="3890" iconFile="Thun" textModifier="Thunder,*Windy"></record>
+<record key="3899" iconFile="Thun" textModifier="Thunder,*Windy"></record>
+<record key="400" iconFile="Ts" textModifier="Thunderstorm"></record>
+<record key="401" iconFile="Ts" textModifier="Light Rain*with Thunder"></record>
+<record key="402" iconFile="Ts" textModifier="Heavy*Thunderstorm"></record>
+<record key="422" iconFile="Ts" textModifier="Strong*Thunderstorm"></record>
+<record key="429" iconFile="Ts" textModifier="Thunderstorm"></record>
+<record key="470" iconFile="Ts" textModifier="Thunderstorm,*Windy, Fog"></record>
+<record key="471" iconFile="Ts" textModifier="Light Rain*with Thunder,*Windy, Fog"></record>
+<record key="472" iconFile="Ts" textModifier="Heavy*Thunderstorm,*Windy, Fog"></record>
+<record key="480" iconFile="Ts" textModifier="Thunderstorm,*Fog"></record>
+<record key="481" iconFile="Ts" textModifier="Light Rain*with Thunder,*Fog"></record>
+<record key="482" iconFile="Ts" textModifier="Heavy*Thunderstorm,*Fog"></record>
+<record key="490" iconFile="Ts" textModifier="Thunderstorm,*Windy"></record>
+<record key="491" iconFile="Ts" textModifier="Light Rain*with Thunder,*Windy"></record>
+<record key="492" iconFile="Ts" textModifier="Heavy*Thunderstorm,*Windy"></record>
+<record key="1700" iconFile="TsSlt" textModifier="Hail"></record>
+<record key="1730" iconFile="TsSlt" textModifier="Thunder and*Hail, Windy"></record>
+<record key="1731" iconFile="TsSlt" textModifier="Thunder and*Small Hail,*Windy"></record>
+<record key="1740" iconFile="TsSlt" textModifier="Thunder*and Hail"></record>
+<record key="1741" iconFile="TsSlt" textModifier="Thunder*and Small Hail"></record>
+<record key="1750" iconFile="TsSlt" textModifier="Thunder*and Hail*Windy, Fog"></record>
+<record key="1751" iconFile="TsSlt" textModifier="Thunder and*Small Hail,*Windy, Fog"></record>
+<record key="1760" iconFile="TsSlt" textModifier="Thunder and*Hail, Fog"></record>
+<record key="1761" iconFile="TsSlt" textModifier="Thunder and*Small Hail,*Fog"></record>
+<record key="1770" iconFile="TsSlt" textModifier="Hail,*Fog"></record>
+<record key="1780" iconFile="TsSlt" textModifier="Hail,*Windy, Fog"></record>
+<record key="1790" iconFile="TsSlt" textModifier="Hail,*Windy"></record>
+<record key="1811" iconFile="TsSlt" textModifier="Snow Shower*and Thunder"></record>
+<record key="1816" iconFile="TsSlt" textModifier="Snow Shower*and Thunder,*Fog"></record>
+<record key="1821" iconFile="TsSlt" textModifier="Snow Shower*and Thunder,*Windy"></record>
+<record key="1826" iconFile="TsSlt" textModifier="Snow Shower*and Thunder,*Windy, Fog"></record>
+<record key="1830" iconFile="TsSlt" textModifier="Sleet and*Thunder, Fog"></record>
+<record key="1831" iconFile="TsSlt" textModifier="Light Sleet*and Thunder,*Fog"></record>
+<record key="1832" iconFile="TsSlt" textModifier="Heavy Sleet*and Thunder,*Fog"></record>
+<record key="1840" iconFile="TsSlt" textModifier="Sleet and*Thunder"></record>
+<record key="1841" iconFile="TsSlt" textModifier="Light Sleet*and Thunder"></record>
+<record key="1842" iconFile="TsSlt" textModifier="Heavy Sleet*and Thunder"></record>
+<record key="1880" iconFile="TsSlt" textModifier="Sleet and*Thunder, Windy"></record>
+<record key="1881" iconFile="TsSlt" textModifier="Light Sleet*and Thunder,*Windy"></record>
+<record key="1882" iconFile="TsSlt" textModifier="Heavy Sleet*and Thunder,*Windy"></record>
+<record key="1885" iconFile="TsSlt" textModifier="Sleet and*Thunder, Windy,*Fog"></record>
+<record key="1886" iconFile="TsSlt" textModifier="Light Sleet*and Thunder,*Windy, Fog"></record>
+<record key="1887" iconFile="TsSlt" textModifier="Heavy Sleet*and Thunder,*Windy, Fog"></record>
+<record key="1640" iconFile="TsSn" textModifier="Snow and*Thunder"></record>
+<record key="1641" iconFile="TsSn" textModifier="Light Snow*with Thunder"></record>
+<record key="1642" iconFile="TsSn" textModifier="Heavy Snow*with Thunder"></record>
+<record key="1660" iconFile="TsSn" textModifier="Snow and*Thunder, Fog"></record>
+<record key="1661" iconFile="TsSn" textModifier="Light Snow*with Thunder,*Fog"></record>
+<record key="1662" iconFile="TsSn" textModifier="Heavy Snow*with Thunder,*Fog"></record>
+<record key="1170" iconFile="WndRa" textModifier="Rain Shower,*Windy, Fog"></record>
+<record key="1172" iconFile="WndRa" textModifier="Heavy*Rain Shower,*Windy, Fog"></record>
+<record key="1190" iconFile="WndRa" textModifier="Rain Shower,*Windy"></record>
+<record key="1192" iconFile="WndRa" textModifier="Heavy*Rain Shower,*Windy"></record>
+<record key="1270" iconFile="WndRa" textModifier="Rain,*Windy, Fog"></record>
+<record key="1272" iconFile="WndRa" textModifier="Heavy Rain,*Windy, Fog"></record>
+<record key="1290" iconFile="WndRa" textModifier="Rain,*Windy"></record>
+<record key="1291" iconFile="WndRa" textModifier="Light Rain,*Windy"></record>
+<record key="1292" iconFile="WndRa" textModifier="Heavy Rain,*Windy"></record>
+<record key="2410" iconFile="WndRa" textModifier="Blowing*Spray"></record>
+<record key="2490" iconFile="WndRa" textModifier="Blowing Spray,*Windy"></record>
+<record key="1472" iconFile="WndSn" textModifier="Heavy*Snow Shower,*Fog"></record>
+<record key="1492" iconFile="WndSn" textModifier="Heavy*Snow Shower,*Windy"></record>
+<record key="1630" iconFile="WndSn" textModifier="Snow and*Thunder, Windy,*Fog"></record>
+<record key="1631" iconFile="WndSn" textModifier="Light Snow*with Thunder,*Windy, Fog"></record>
+<record key="1632" iconFile="WndSn" textModifier="Heavy Snow*with Thunder,*Windy, Fog"></record>
+<record key="1650" iconFile="WndSn" textModifier="Snow and*Thunder, Windy"></record>
+<record key="1651" iconFile="WndSn" textModifier="Light Snow*with Thunder,*Windy"></record>
+<record key="1652" iconFile="WndSn" textModifier="Heavy Snow*with Thunder,*Windy"></record>
+<record key="1680" iconFile="WndSn" textModifier="Snow,*Windy, Fog"></record>
+<record key="1681" iconFile="WndSn" textModifier="Light Snow,*Windy, Fog"></record>
+<record key="1682" iconFile="WndSn" textModifier="Heavy Snow,*Windy, Fog"></record>
+<record key="1690" iconFile="WndSn" textModifier="Snow,*Windy"></record>
+<record key="1691" iconFile="WndSn" textModifier="Light Snow,*Windy"></record>
+<record key="1692" iconFile="WndSn" textModifier="Heavy Snow,*Windy"></record>
+</root>

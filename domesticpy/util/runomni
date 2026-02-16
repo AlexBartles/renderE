@@ -1,0 +1,3 @@
+#!/bin/sh
+
+python "$@" -ORBid omniORB3 -ORBInitRef NameService=corbaname::localhost:4000

@@ -1,0 +1,459 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+import twccommon
+import domestic
+import twc.dsmarshal
+dsm = twc.dsmarshal
+import twc
+from twc import rsutil
+import time
+
+class Product(twc.products.Product):
+
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        if self._hasData:
+            return optimal
+        else:
+            return minimum
+
+
+    def _getDefaultedObs(self,loc):
+        # Usable Observations must have both Temperature and skyCondition
+        obs = dsm.defaultedGet("obs.%s" % loc)
+        if obs == None:
+            return None
+            
+        obx = twccommon.DefaultedData(obs)    
+        if obx.skyCondition == None and obx.temp == None:
+            return None
+            
+        return obx
+
+
+    def _loadData(self):
+        data = self.getData()
+        params = self.getParams()
+        data.locName = params.locName
+
+        vocalLocalSchedule = dsm.defaultedConfigGet("VocalLocalSchedule",
+            twccommon.Data(OffTimes=((19, 3), )))
+        data.playVocal =  rsutil.playVocal(time.time(), 
+            vocalLocalSchedule.OffTimes)
+        try:
+            obsl = []
+            for stn in params.obsStation:
+                obsl.append(self._getDefaultedObs(stn))
+        
+            data.obs = obsl
+            data.valid = (reduce(lambda a, b: a or b, obsl) != None)
+            self._hasData = data.valid
+
+        except:
+            twccommon.Log.logCurrentException("CurrentConditions error:")
+            data.locName = [""]
+            data.obs = [None]
+            self._hasData = data.valid = 0
+        
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+
+<%@'_ProductHeader.rs'%>
+
+<%!
+data = prod.getData()
+
+i = 0
+locName = params.locName[0]
+values = (None, ) * 11
+for obs in data.obs:
+    if obs != None:
+        locName = params.locName[i]
+        values = (
+            obs.skyCondition, obs.temp, obs.humidity,
+            obs.dewpoint, obs.altimeter, obs.visibility,
+            obs.windDirection, obs.windSpeed, 
+            obs.gusts, obs.heatIndex, obs.windChill,
+            obs.pressureTendency)
+        break
+        
+    i += 1   
+
+key = 'Config.' + dsm.getConfigVersion() + '.CurrentConditionsIntroIndex'
+introIdx = dsm.defaultedGet(key)
+# initialize the index
+if introIdx is None:
+    introIdx = 1
+# there are 2 intros to cycle through, 1-2 (not 0-1)   
+introIdx = introIdx % 2
+introIdx += 1
+
+dsm.set(key, introIdx, 0)
+ds.commit()
+    
+%>
+
+import os
+data = <%-prod.getData()%>
+params = <%-prod.getParams()%>
+pduration = <%-prod.getDuration()%>
+
+#  - - - - - - - Loaded - - - - - 
+
+<%@'_Background.rs'%>
+<%@'_Title.rs'%>
+
+import string
+from twc import rsutil
+import time
+import twc.dsmarshal as dsm
+
+
+def addNullToSeq(as, dur, vol=1.0):
+    ac = NullAudioClip(dur)
+    ac.setVolLevel(vol)
+    ac.setBlendType(AudioRenderable.BLEND_MIX)
+    # Add it to the AudioSequencer
+    as.addItem(ac)
+
+
+def addClipToSeq(as, fn, vol=1.0):
+    ac = AudioClip(fn)
+    ac.setVolLevel(vol)
+    ac.setBlendType(AudioRenderable.BLEND_MIX)
+    as.addItem(ac)
+
+
+def center(areaStart, areaWidth, elemWidth):
+    return areaStart + areaWidth/2 - elemWidth/2
+
+ru = renderUtil   # abbreviation
+
+ww = 215
+hh = 282
+xpos =  52
+ypos = 370
+baseline = 89
+
+locBox   = CompositeRenderable()
+iconBox  = CompositeRenderable()
+tabBox   = CompositeRenderable()
+dataBox  = CompositeRenderable()
+    
+# location name with bevel box    
+wwbb = 616
+locBox.addItem(ru.getBevelBox(wwbb, 30))
+    
+r,g,b,a = ru.rgbaConvert(212,212,50)
+ff = TTFont('/rsrc/fonts/Interstate-Bold', 24, t=50)
+tt = Text(ff, <%-locName%>)
+tt.setPosition(11, 8)
+tt.setColor(r,g,b,a)
+locBox.addItem(tt)
+    
+# position the compsite renderable
+locBox.setPosition(xpos, ypos)
+
+# left and right bevel boxes with icon and temp data
+bb = ru.getBevelBox(ww,hh)
+bb.setPosition(0, 0)
+iconBox.addItem(bb)
+
+bb = ru.getBevelBox(wwbb-ww, hh)
+bb.setPosition(0, 0)
+tabBox.addItem(bb)
+
+# SkyBox
+if data.valid:
+    sky, temp, humid, dewpt, press, vis, wdir, wsp, gusts, hi, wc, pressT = <%-values%>
+
+    # LEFT SIDE
+    # Sky Condition Icon
+    r,g,b,a = ru.rgbaConvert(212,212,212)
+    if sky is not None:
+        skyCond = wxDataUtil.formatSkyCondition(sky, 'Observation')
+        gr = Icon(twc.findRsrc('/icons/large/%s' % skyCond.iconFile, "mv"))
+        gr.setPosition(41,149)
+        iconBox.addItem(gr)
+     
+        # Sky Condition Text
+        fontSky = TTFont("/rsrc/fonts/Interstate-Bold", 25, t=40)
+        
+        yOffset = 0
+        textList = skyCond.textModifier.split('*')
+        for txt in textList:
+            gr = Text(fontSky, txt)
+            gr.setPosition(center(0, ww, gr.size()[0]), 133+yOffset)
+            gr.setColor(r, g, b)
+            iconBox.addItem(gr)
+            yOffset = yOffset - 28
+
+    # Temperature
+    if temp is not None:
+        fontTemp = TTFont("/rsrc/fonts/Interstate-BlackCondensed", 65, t=80)
+        gr = Text(fontTemp, "%d"%(temp))
+        gr.setPosition(center(0, ww, gr.size()[0]), 22)
+        gr.setColor(r,g,b,a)
+        iconBox.addItem(gr)
+
+    # RIGHT SIDE
+    # get data for right side of product into useable format
+    dlines = []
+    if humid != None:            
+        dlines.append(('HUMIDITY',   str(humid) + '%',     None,        "" ))
+        
+    if dewpt != None:            
+        dlines.append(('DEW POINT',  str(dewpt) + '\260',  None,        "" ))
+
+    if press != None:
+        press = '%*.*f' % (4, 2, press)
+        dlines.append(('PRESSURE',   str(press),          pressT,  " INCHES" ))
+
+    if vis != None:            
+        if vis == 999:
+            vis      = 'Unlimited'
+            visUnits = ''
+        elif vis == 1:
+            visUnits = ' MILE'
+        else:
+            visUnits = ' MILES'
+        dlines.append(('VISIBILITY', str(vis),             None,  visUnits ))
+        
+    if wdir != None and wsp != None:           
+        windString = dataUtil.formatWindText(wsp, wdir)
+        dlines.append(('WIND',       windString,           None,     "" ))
+        # gusts
+        wndUnits = ''
+        if gusts > 0:
+            wndUnits = ' MPH'
+            sgusts = str(gusts)
+        else:
+            sgusts = 'None'
+        dlines.append(('GUSTS',      sgusts,           None,        wndUnits ))
+        
+    atLabel, atVal = dataUtil.formatApparentTemp(wc, hi) 
+    if atLabel != None:
+        dlines.append((atLabel,      str(atVal) + '\260',  None,        "" ))
+
+    fontLabels = TTFont("/rsrc/fonts/Interstate-Regular", 22, t=60)
+    fontValues = TTFont("/rsrc/fonts/Interstate-Bold", 30, t=100)
+    fontUnits  = TTFont("/rsrc/fonts/Interstate-Bold", 16, t=80)
+
+    r1,g1,b1,a1 = ru.rgbaConvert(212, 212, 212, 255)
+
+    # Build renderables for each line of text in the TabularBox.
+    # When some of the lines are missing, spread the remaining ones evenly.
+    displayableLines = len(dlines)
+    if displayableLines < 6:
+        yOffset = 50
+    else:    
+        yOffset = 40
+    yPos      = 254 
+    wLabelBox = 154     # longest label is "Wind Chill" = 120.7
+
+    for dline in dlines:
+        label, val, pressT, unit = dline
+
+        gr = Text(fontLabels, label)
+
+        # Labels
+        xpos = ru.justifyGR(gr.size()[0], wLabelBox, ru.RIGHT)
+        gr.setPosition(xpos, yPos)
+        gr.setColor(r1, g1, b1, a1)
+        tabBox.addItem(gr)
+
+        # Data Values
+        gr = Text(fontValues, val + ' ')
+        gr.setPosition(0, yPos)
+        gr.setColor(r1, g1, b1, a1)
+        dataBox.addItem(gr)
+
+        xPosAfterVal = gr.size()[0]
+
+        # Units
+        if len(unit) != 0:
+            gr = Text(fontUnits, unit)
+            gr.setPosition(xPosAfterVal, yPos)
+            gr.setColor(r1, g1, b1, a1)
+            dataBox.addItem(gr)
+
+        xPosAfterUnits = xPosAfterVal + gr.size()[0]
+
+        # Pressure Tendency Arrow.  Show Arrow if there _is_ a tendency.
+        if pressT is not None:
+            showArrow, pressureTend = dataUtil.formatPressureTendency(pressT)
+            if showArrow:
+                gr = TIFF_Image(pressureTend)
+                # trial & error numbers to get the arrow lined up
+                ww = gr.size()[0]+2
+                gr.setPosition(xPosAfterUnits+7, yPos-4)
+                gr.setColor(r1,g1,b1,a1)
+                dataBox.addItem(gr)
+            else:
+                pressureTend = ' %s' % (pressureTend)
+                gr = Text(fontValues, pressureTend)
+                gr.setPosition(xPosAfterUnits, yPos)
+                gr.setColor(r1,g1,b1,a1)
+                dataBox.addItem(gr)
+
+        yPos -= yOffset
+
+
+
+
+
+
+    # validate the temperature clip
+    tempValid = 1
+    if (temp > 0) and (temp <= 139):
+        audioClipTemp = '/rsrc/audio/vocalLocal/Temps_Specific/%d.wav' % (temp)
+    elif (temp < 0) and (temp >= -99):
+        audioClipTemp = '/rsrc/audio/vocalLocal/Temps_Specific/M%d.wav' % (abs(temp))
+    elif (temp == 0):
+        audioClipTemp = '/rsrc/audio/vocalLocal/Temps_Specific/Zero.wav'
+    else:
+        twccommon.Log.info('Temp is either None or out of range and has no audio file')
+        tempValid = 0
+
+    # Validate the sky condition
+    if sky is not None:
+        audioClipSky = '/rsrc/audio/vocalLocal/Wx_Phrases_Curr_Cond/%d.wav'% (sky)
+    else:
+        audioClipSky = ''
+
+    if (os.access(audioClipSky, os.R_OK)):
+        skyValid = 1
+    elif sky is not None:
+        twccommon.Log.info("Can't read CurrentCondition audioclip %s" % (audioClipSky))
+        skyValid = 0
+    else:
+        skyValid = 0
+
+
+    #Create the audio 
+    audioValid = 1
+    ac = []
+    if not <%-data.playVocal%>:
+        audioValid = 0
+        fNameForLog = ''
+    elif tempValid and skyValid and params.activeVocal:
+        # Start with a intro clip
+        aFile = 'CC_INTRO%d' % <%-introIdx%>
+        intro = '/rsrc/audio/vocalLocal/Intros_Curr_Cond/%s.wav' % aFile
+        ac.append(AudioClip(intro))
+        ac.append(AudioClip(audioClipTemp))
+        ac.append(AudioClip(audioClipSky))
+        fNameForLog = '%s:%d:%d' % (aFile, temp, sky)
+    elif tempValid and params.activeVocal:
+        aFile = 'CC_INTRO1'
+        intro = '/rsrc/audio/vocalLocal/Intros_Curr_Cond/%s.wav' % aFile
+        ac.append(AudioClip(intro))
+        ac.append(AudioClip(audioClipTemp))
+        fNameForLog = '%s:%d' % (aFile, temp)
+    elif (skyValid or sky is not None) and params.activeVocalCue:
+        aFile = 'CC_DEFAULT%d' % <%-introIdx%>
+        intro = '/rsrc/audio/vocalLocal/Default_Phrases_Curr_Cond/%s.wav' % aFile
+        ac.append(AudioClip(intro))
+        fNameForLog = '%s' % (aFile,)
+    else:
+        twccommon.Log.info('temperature and sky condition are invalid')
+        audioValid = 0
+        fNameForLog = ''
+
+    if audioValid:
+        as = AudioSequencer()
+
+        # Create the intro clip
+        addNullToSeq(as, 8)
+
+        # Add the content to the AudioSequencer
+        for i in range(len(ac)):
+            ac[i].setBlendType(AudioRenderable.BLEND_MIX)
+            ac[i].setVolLevel(1.0)
+            as.addItem(ac[i])
+
+        # Create the exit clip
+        addNullToSeq(as, 15)
+
+        duration = as.duration()
+
+        # check the length of the audio clip?
+        if( as.duration() > pduration ):
+            twccommon.Log.warning('audio clips are too long')
+            twccommon.Log.warning('product duration = %d' % pduration)
+        else:
+            p.addItem(as)
+
+            # Create the effect to fade the Mixlevel from 0.8 to 0 in 1/2 second
+            aes = AudioEffectSequencer(as)
+            aes.addEffect(AudioFader(None, 0.0, 0.8, 8), 8)
+            aes.addEffect(AudioNullEffect(None), duration - 23)
+            aes.addEffect(AudioFader(None, 0.8, 0.0, 15), 15)
+            p.addItem(aes)
+        
+        twccommon.Log.info('|CC|%d|FadeIn:%s:FadeOut:%d|1|' % (pduration,
+                    fNameForLog, duration))
+
+
+
+
+
+
+
+
+
+
+# position the composite renderables
+iconBox.setPosition(52, baseline)
+tabBox.setPosition(267, baseline)
+dataBox.setPosition(453, baseline)
+    
+# transitions
+# add the locBox, iconBox, and tabBox into one Composite Renderable to slide off screen
+slideCR = CompositeRenderable()        
+slideCR.addItem(locBox)
+slideCR.addItem(iconBox)
+slideCR.addItem(tabBox)
+p.addItem(slideCR)
+p.addItem(dataBox)    
+
+# begin loc box
+es = EffectSequencer(slideCR)
+es.addEffect(NullEffect(None), pduration - 10)
+es.addEffect(Slider(None, -72, 0), 10)
+p.addItem(es)
+
+# begin right side data area
+#TODO: Make Clipper work on text!    
+# add clipper for 'reveal' effect    
+#c = Clipper(None, bottom=100)
+#c.clip(Clipper.CP_BOTTOM, pos=hh, step=-10)
+    
+es = EffectSequencer(dataBox)
+#es.addEffect(NullEffect(None), 5)
+#es.addEffect(c, 60)
+es.addEffect(NullEffect(None), pduration - 10)
+es.addEffect(Slider(None, -72, 0), 10)
+p.addItem(es)
+
+    
+if not data.valid:
+    renderTools.dataNotAvailable(page=p, 
+                                 text='Dorian is nice :)',
+                                 displayDuration=pduration)
+
+
+<%@'_ProductFooter.rs'%>
+]]>
+</rs>
+
+</prod>

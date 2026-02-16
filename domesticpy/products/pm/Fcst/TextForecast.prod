@@ -1,0 +1,312 @@
+<prod>
+
+<impl>
+<![CDATA[
+import twc
+import twc.dsmarshal as dsm
+import twc.products
+import time
+import string
+import twcWx.dataUtil as wx
+import twcWx.mapping
+import domestic.dataUtil as dataUtil
+
+class Product(twc.products.Product):
+
+    def _getDesiredPageDurations(self, pageParams):
+
+        durList = []
+        cnt = 0
+        for pp in pageParams:
+            inst, min, max, opt = pp
+            if cnt < len(self.__data.fcstList):
+                durList.append(opt)
+            else:
+                durList.append(0)
+            cnt += 1
+
+        return durList
+
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        if self.__hasData:
+            return optimal
+        else:
+            return 0
+
+    def _getTextMapping(self, code, priority):
+        tm = twc.Data()
+        tm.phrase = wx.getTextMapping(code, "FcstText").text
+        tm.priority = priority
+        return tm
+
+    def _processFcstCode(self, fcstCode):
+        # Breaks the fcstCode down into each sentence of the text phrase
+        if fcstCode is None:
+            return []
+        codes = string.split(fcstCode, ':')
+        wxPhraseFound = 0
+        tempFound = 0
+        phraseList = []
+        
+        for field in codes:
+            if (len(field) == 0):
+                continue
+
+            # Shortform text forecast
+            if (field[0] == 'S'):
+                if (wxPhraseFound == 1):
+                    continue
+                wxPhraseFound = 1
+                priority = 1
+                phraseList.append(self._getTextMapping(field[:5],priority))
+            
+            # Temperature
+            elif (field[0] == 'T'):
+                filter = ["F","S","R"]
+                tempFound = 1
+                priority = 0
+                # Strip the rising/falling/steady portion of the temp, leaving
+                # us with just the pure temp code
+                pos = dataUtil.findfirst(field, filter)
+                if pos == -1:
+                    tempString = field
+                else:
+                    tempString = field[:pos]
+                # replace a - with an M so that negative temps can be found in
+                # the text mapping
+                field = string.replace(tempString, '-', 'M')
+                phraseList.append(self._getTextMapping(field,priority)) 
+
+            # Qualifier
+            elif (field[0] == 'Q'):
+                priority = 3
+                phraseList.append(self._getTextMapping(field,priority))
+
+            # Accumulation
+            elif (field[0] == 'A'):
+                priority = 3
+                phraseList.append(self._getTextMapping(field,priority))
+
+            # Precipitation
+            elif (field[0] == 'P'):
+                priority = 3
+                phraseList.append(self._getTextMapping(field,priority))
+
+            # Winds not included as of yet, commented out so that its easy to
+            # put back in when product changes their mind
+            #elif (field[0] == 'W'):
+            #    if field[:3] == "W99":
+            #        priority = 5
+            #        phraseList.append(self._getTextMapping(field[:5],priority))
+            #    else:
+            #        priority = 5
+            #        phraseList.append(self._getTextMapping(field[:3],priority))
+            #        pos = field.find("R")
+            #        if pos > -1:
+            #            priority = 5
+            #            phraseList.append(self._getTextMapping(field[pos:pos+3],priority))
+
+            # We don't care
+            else:
+                pass
+
+        if (wxPhraseFound != 1):
+            phraseList = []
+
+        return phraseList
+
+    def _loadData(self):
+        params = self.getParams()
+
+        try:
+            # Find out what time it is in localtime
+            curr_time = time.time()
+            y, m, d, H, M, S, wd, day, dst = time.localtime(curr_time)
+
+            times = []
+            if (H < 4):
+                # Start with the 7PM yesterday to 7AM today data.
+                # The window for the start of this data (7PM) begins yesterday
+                # at noon (and extends to midnight).
+                # So, we are looking for the UTC of yesterday at noon.
+                times.append(time.mktime((y,m,d-1,12,0,0,0,0,-1)))
+                times.append(time.mktime((y,m,d,0,0,0,0,0,-1)))
+            elif (H < 16):
+                # Start with the data for 7AM - 7PM today
+                # This will be the UTC data of midnight today
+                times.append(time.mktime((y,m,d,0,0,0,0,0,-1)))
+                times.append(time.mktime((y,m,d,12,0,0,0,0,-1)))
+            else: 
+                # Start with the data for 7PM today to 7AM tomorrow
+                # This will be the UTC data of noon today.
+                times.append(time.mktime((y,m,d,12,0,0,0,0,-1)))
+                times.append(time.mktime((y,m,d+1,0,0,0,0,0,-1)))
+
+            valid = 0
+            data = []
+            for t in times:
+                key = 'textFcst.%s.%d' % (params.coopId, t)
+                fcst = dsm.defaultedGet(key)
+                if fcst != None:
+                    fcst = twc.DefaultedData(fcst)
+                    phraseList = self._processFcstCode(fcst.audioCode)
+                    if len(phraseList) > 0:
+                        res = (int(t), fcst, phraseList)
+                        valid = 1
+                        data.append(res)
+
+            self.updateData(valid=valid, fcstList=data)
+
+        except Exception, e:
+            twc.Log.logCurrentException()
+            self.updateData(valid=0, fcstList=[])
+
+        self.__hasData = valid
+
+]]>        
+</impl>
+
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+import time
+import string
+
+<%!
+data = prod.getData()
+duration = prod.getDuration()
+
+%>
+
+<%@'_Background.rs'%>
+
+def prioritySort(a, b):
+    return cmp(a.priority, b.priority)
+
+def createPhrase(phraseList, fcstFont, w, h):
+    # Phrase list is a list of twc.Data() objects with a priority and phrase
+    # part
+    reqPhrase = ""
+    optPhrase = ""
+    newPhrase = ""
+    phraseList.sort(prioritySort)
+    print phraseList
+    for phraseData in phraseList:
+        if phraseData.priority == 0 or phraseData.priority == 1:
+            reqPhrase += phraseData.phrase + "\n"
+        else:
+            newPhrase += phraseData.phrase + " "
+            testPhrase = renderUtil.paginateText(fcstFont, newPhrase, w, h)
+            if len(testPhrase) > 1:
+                break
+            optPhrase = testPhrase[0]
+    return reqPhrase + optPhrase
+
+fcstList = <%-data.fcstList%>
+
+# Draw the city title
+TBHEIGHT= 21
+yPos = <%-params.layerProps.h%> - TBHEIGHT
+bgCR = CompositeRenderable()
+gr = renderUtil.gradientBox(68,TBHEIGHT,((36,59,89,204),(14,27,96,204)))
+gr.setPosition(0, yPos)
+bgCR.addItem(gr)
+
+gr = Box()
+gr.setSize(384,TBHEIGHT)
+gr.setPosition(68,yPos)
+r,g,b,a = renderUtil.rgbaConvert(14, 27, 96, 204)
+gr.setColor(r,g,b,a)
+bgCR.addItem(gr)
+
+gr = renderUtil.gradientBox(96,TBHEIGHT,((14,27,96,204),(133,195,232,204)))
+gr.setPosition(452, yPos)
+bgCR.addItem(gr)
+
+locNameFont = TTFont("/rsrc/fonts/Interstate-Bold", 16, shadow=0)
+locName = Text(locNameFont, string.upper(<%-params.locName%>))
+r,g,b,a = renderUtil.rgbaConvert(229,229,229,255)
+locName.setColor(r,g,b,a)
+locName.setPosition(74,yPos+5)
+bgCR.addItem(locName)
+
+p.addItem(bgCR)
+es = EffectSequencer(bgCR)
+es.addEffect(SetVisibility(None,0), 28)
+es.addEffect(Fader(None, 1, 0, 1), 1)
+es.addEffect(SetVisibility(None,1), 1)
+es.addEffect(Fader(None, 0, 1, 15), <%-duration%> - 60)
+es.addEffect(Fader(None, 1, 0, 15), 15)
+p.addItem(es)
+
+
+fcstFont = TTFont("/rsrc/fonts/Interstate-Bold", 20, l=20, t=12, shadow=0)
+pageSet = []
+for timeStamp, fcst, phraseList in fcstList:
+    if fcst is not None:
+        # For first page, use the daypart name that comes from the GFC,
+        # otherwise use the day of the week or TONIGHT
+        if len(pageSet) > 0:
+            Y,M,D,h,m,s,wd,jd,dst = time.localtime(timeStamp)
+            if h == 12:
+                daypart = "Tonight"
+            else:
+                wd = time.localtime(timeStamp)[6]
+                daypart = dataUtil.formatDayOfWeek(wd)
+        else:
+            daypart =  fcst.daypartName
+        title = "%s's Forecast" % (daypart)
+
+        try:
+            phrase = createPhrase(phraseList, fcstFont, 420, 40)
+            phrase = "%s: %s" % (title, phrase)
+        except:
+            twccommon.Log.warning("Invalid audioCode: %s for Fcst_TextForecast" % (fcst.audioCode))
+            phrase = "Temporarily unavailable."
+
+        if len(phrase) < 1:
+            phrase = "Temporarily unavailable."
+        fcstGR = Text(fcstFont, phrase)
+        x,y = locName.position()
+        fcstGR.setPosition(x,y-23)
+        r,g,b,a=renderUtil.rgbaConvert(229,229,229)
+        fcstGR.setColor(r,g,b,a)
+        p.addItem(fcstGR)
+
+        pageSet.append(fcstGR)
+
+
+if <%-data.valid%>:
+    durations = <%-prod.getPageDurations()%>
+    if len(pageSet) > 0:
+        es = EffectSequencer(pageSet[0])
+        es.addEffect(SetVisibility(None,0), 43)
+        es.addEffect(Fader(None, 1, 0, 1), 1)
+        es.addEffect(SetVisibility(None,1), 1)
+        es.addEffect(Fader(None, 0, 1, 15), 15)
+        if len(pageSet) > 1:
+            es.addEffect(NullEffect(None), durations[0] - 75)
+            es.addEffect(Fader(None, 1, 0, 15), 15)
+        else:
+            es.addEffect(NullEffect(None), durations[0]-105)
+            es.addEffect(Fader(None, 1, 0, 15), 15)
+        p.addItem(es)
+
+    if len(pageSet) > 1:
+        es = EffectSequencer(pageSet[1])
+        es.addEffect(SetVisibility(None, 0), durations[0]-2)
+        es.addEffect(Fader(None, 1, 0, 1), 1)
+        es.addEffect(SetVisibility(None, 1), 1)
+        es.addEffect(Fader(None, 0, 1, 15), 15)
+        es.addEffect(NullEffect(None), durations[1] - 60)
+        es.addEffect(Fader(None, 1, 0, 15), 15)
+        p.addItem(es)
+
+<%@'_ProductFooter.rs'%>
+
+]]>        
+</rs>
+
+</prod>

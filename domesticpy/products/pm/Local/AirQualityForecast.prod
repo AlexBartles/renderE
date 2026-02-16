@@ -1,0 +1,582 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+import time
+import twccommon
+import twc.dsmarshal
+dsm = twc.dsmarshal
+
+class Product (twc.products.DeactivateableProduct):
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        if self.hasData():
+            return optimal
+        else:
+            return 0    
+
+            
+    def _loadData(self):
+        params = self.getParams()
+        data   = self.getData()
+        tdata  = self.getTestData()
+
+        rawData = {}
+        processedData = twccommon.Data()
+    
+        # determine the day of the forecast:
+        # This is daily forecast data so we know the time in the datastore will
+        # always be for day 'x' at midnight (adjusted for dst). This data's
+        # expiration rules are data driven, so always look for tomorrow's
+        # forecast first.
+        y, m, d, H, M, S, dow, doy, dst = time.localtime(time.time())
+        todayStart    = time.mktime((y, m, d, 0, 0, 0, 0, 0, -1))
+        tomorrowStart = time.mktime((y, m, d+1, 0, 0, 0, 0, 0, -1))
+
+        aqData = {}
+        invalidDataElemCount = 0
+        start = todayStart
+        self._hasAQData = 0
+        # get air quality forecast data
+        if params.aq is not None:
+            for stn in params.aq:
+                d = twccommon.Data()
+                if H >= 0 and H < 16:
+                    start = todayStart
+                    key = 'airQuality.%s.%d' % (stn, start)
+                    aq  = dsm.defaultedGet(key)
+                else:
+                    start = tomorrowStart
+                    key = 'airQuality.%s.%d' % (stn, start)
+                    aq  = dsm.defaultedGet(key)
+                
+                rawData[stn] = aq
+    
+                if aq is None:
+                    d.validLine = 0
+                    d.pollutants = None
+                    d.actionDay = None
+                    aqData[stn] = d
+                else:
+                    aq = twccommon.DefaultedData(aq)
+                    d.validLine = 1
+                    d.pollutants = aq.pollutants[0]
+                    d.actionDay = aq.actionDay
+                    aqData[stn] = d
+
+                # validate data
+                if d.pollutants == None and d.actionDay == None:
+                    invalidDataElemCount += 1
+
+            if invalidDataElemCount != len(params.aq):
+                self._hasAQData = 1
+
+        processedData.aqData = aqData
+        processedData.start  = start
+        processedData.hasData = self._hasAQData
+        
+        self.updateData(ds = rawData)        
+        self.updateTestData(processedData = processedData)
+
+    
+    def hasData(self):
+        return self._hasAQData
+
+]]>
+</impl>
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+
+<%!
+import time
+
+params = prod.getParams()
+tdata  = prod.getTestData()
+data   = tdata.processedData
+    
+output = twccommon.Data()    
+
+# Convert the start time back to figure out the forecast day!
+y, m, d, H, M, S, forecastDay, doy, dst = time.localtime(data.start)
+fcstFor = '%s' % (dataUtil.formatDayOfWeek(forecastDay))
+
+# validate data
+outputMap  = {}
+i = 0
+for stn, d in data.aqData.items():
+    dataElem = twccommon.Data()
+
+    if d.pollutants is not None:
+        pollutant, category = d.pollutants
+        category = min(category, 4)
+        # look up the phrase
+        if category is not None:
+            phrase = dataUtil.formatAirQualityCategory(category, \
+                                                       'No Report Available')
+        else:
+            phrase = ''
+        # format the pollutant
+        if pollutant is not None:    
+            pollutant = dataUtil.formatPrimaryPollutant(pollutant)
+        else:
+            pollutant = ''
+    else:
+        category  = None
+        phrase    = ''
+        pollutant = ''
+
+    dataElem.validLine = d.validLine
+    dataElem.locName   = params.locName[i]
+    dataElem.category  = category
+    dataElem.phrase    = phrase
+    dataElem.pollutant = pollutant
+    dataElem.actionDay = d.actionDay
+    
+    outputMap[stn] = dataElem
+    i += 1
+
+output.outputMap    = outputMap
+output.fcstForLabel = fcstFor
+
+prod.updateData(output = output) 
+    
+%>
+
+<%@'_Background.rs'%>
+<%@'_Title.rs'%>
+
+import twc
+import string
+
+# the following tuple includes the r,g,b,a values for the boxes.
+# index 0 = 'Good', 1 = 'Moderate', 2 = 'Unhealthy for Sensitive
+# Groups', 3 = 'Unhealthy', and 4 = 'Very Unhealthy'.
+airQualColorTupple = (
+    (67, 143, 72, 255),
+    (201, 170, 49, 255),
+    (224, 122, 67, 255),
+    (170, 39, 17, 255),
+    (111, 29, 50, 255)
+)
+params = <%-prod.getParams()%>
+
+# Used to draw the boxes for the different air quality levels.
+def drawBox(x, y, dx, dy, color=(3,39,115,255)):
+    r, g, b, a = color
+    r, g, b, a = renderUtil.rgbaConvert(r, g, b, a)
+    box = Box()
+    box.setColor(r, g, b, a) 
+    box.setSize(dx, dy) 
+    box.setPosition(x, y)
+    return box
+
+def oneSite(p, mainCR, data):
+    # Air Quality Product with interest list of one
+    global airQualColorTupple
+    global params
+
+    r1,g1,b1,a1 = renderUtil.rgbaConvert(212, 212, 212, 255) #white 
+    colors      = airQualColorTupple
+    boxXPos     = 427
+    boxYPos     = 141
+    boxHeight   = 43
+    boxWidth    = 226
+    shadowColor = (20, 20, 20, 153)
+    triXPos     = 406
+    triYPos     = 120
+    triHeight   = 43
+    triWidth    = 32
+    descXPos    = 447
+    descYPos    = 143
+    # the font height and color for the description changes based 
+    # on the level
+    descFontInfo   = (
+            (25, (20, 20, 20, 255)),
+            (22, (20, 20, 20, 255)),
+            (18, (20, 20, 20, 255)),
+            (22, (212, 212, 212, 255)),
+            (19, (212, 212, 212, 255)),
+    )        
+
+    stn, dataElems = data.items()[0]
+    
+    # draw the boxes stacked vertically from bottom to top with shadow
+    # draw shadow
+    cr = CompositeRenderable()
+    gr = drawBox(3, -5, boxWidth, len(colors)*boxHeight, shadowColor)
+    cr.addItem(gr)
+    # draw colored boxes
+    y = 0
+    for color in colors:
+        gr = drawBox(0, y, boxWidth, boxHeight, color)
+        cr.addItem(gr)
+        y += boxHeight 
+    cr.setPosition(boxXPos, boxYPos)
+    mainCR.addItem(cr)
+
+    # draw the arrow to the left of the boxes, slide to correct
+    # position and fade in text to the right of the boxes
+    if dataElems.category is not None:
+        # Place phrase
+        descFontHeight, descFontColor = descFontInfo[dataElems.category]
+        ySliderFrames = dataElems.category * boxHeight + float(boxHeight)/2
+        # draw arrow to the left of and centered to lowest box with shadow
+        r,g,b,a = shadowColor
+        r,g,b,a = renderUtil.rgbaConvert(r,b,g,a)
+        cr = CompositeRenderable()
+        # draw shadow
+        gr = Polygon()
+        gr.addVertex(5, -5, r, g, b, a)
+        gr.addVertex(5, triHeight-5, r, g, b, a)
+        gr.addVertex(5+triWidth, (triHeight/2)-5, r, g, b, a)
+        cr.addItem(gr)
+        # draw triangle
+        gr = Polygon()
+        gr.addVertex(0, 0, r1, g1, b1, a1)
+        gr.addVertex(0, triHeight, r1, g1, b1, a1)
+        gr.addVertex(triWidth, triHeight/2, r1, g1, b1, a1)
+        cr.addItem(gr)
+        cr.setPosition(triXPos, triYPos)
+        mainCR.addItem(cr)
+
+        # Slide arrow to the left of and centered to the desired box
+        es = EffectSequencer(cr)
+        es.addEffect(SetVisibility(None, 0), 1)
+        es.addEffect(Fader(None, 1, 0, 1), 1)
+        es.addEffect(SetVisibility(None, 1), 3)
+        es.addEffect(Fader(None, 0, 1, 5), 5)
+        es.addEffect(Slider(None, 0, ySliderFrames/15), 15)
+        p.addItem(es)
+
+        r,g,b,a = descFontColor
+        r,g,b,a = renderUtil.rgbaConvert(r,g,b,a)
+        descFont = TTFont('/rsrc/fonts/Interstate-Bold', 
+                          descFontHeight, shadow=0)
+        strList = renderUtil.paginateText(descFont, string.upper(dataElems.phrase),
+                                          boxWidth, descFontHeight)
+        # determine where to start drawing the phrase
+        if len(strList) == 1:
+            descYPos = descYPos + ySliderFrames - float(descFontHeight)/2
+            yOffset = 0
+        else:
+            descYPos = descYPos + ySliderFrames - descFontHeight
+            yOffset = descFontHeight
+
+        cr = CompositeRenderable()
+        for str in strList:
+            gr = Text(descFont, str)
+            gr.setPosition(0, yOffset)
+            gr.setColor(r, g, b, a)
+            cr.addItem(gr)
+            yOffset -= descFontHeight
+            mainCR.addItem(cr)
+        cr.setPosition(descXPos, descYPos)
+
+        # Fade in phrase
+        es = EffectSequencer(cr)
+        es.addEffect(SetVisibility(None, 0), 1)
+        es.addEffect(Fader(None, 1, 0, 1), 1)
+        es.addEffect(SetVisibility(None, 1), 18)
+        es.addEffect(Fader(None, 0, 1, 5), 5)
+        p.addItem(es)
+
+    # primary pollutant
+    f = TTFont('/rsrc/fonts/Interstate-Regular', 22, t=30)
+    str = 'Primary pollutant:'
+    gr = Text(f, str)
+    gr.setPosition(62, 260)
+    gr.setColor(r1, g1, b1, a1)
+    mainCR.addItem(gr)
+       
+    f = TTFont('/rsrc/fonts/Interstate-Bold', 30, t=30)
+    str = dataElems.pollutant
+    gr = Text(f, str)
+    gr.setPosition(62, 225)
+    gr.setColor(r1, g1, b1, a1)
+    mainCR.addItem(gr)
+
+    # ozone action day logo
+    if dataElems.actionDay:
+        # add logo
+        gr = TIFF_Image('/rsrc/logos/ozoneActionDayLogo')
+        gr.setPosition(56, 113)
+        mainCR.addItem(gr)
+
+        # add text next to logo
+        f = TTFont('/rsrc/fonts/Interstate-Bold', 16, t=30)
+        str = params.actionDayPhrase
+        gr = Text(f, str)
+        gr.setColor(r1,g1,b1,a1)
+        gr.setPosition(110, 136)
+        mainCR.addItem(gr)
+
+    # place source
+    f = TTFont("/rsrc/fonts/Interstate-Bold", 16, t=90)
+    str = 'SOURCE: EPA'
+    gr = Text(f, str)
+    gr.setColor(r1,g1,b1,a1)
+    gr.setPosition(62, 98)
+    mainCR.addItem(gr)
+
+def threeSite(p, mainCR, data):
+    global airQualColorTupple
+    global params
+
+    # Air Quality Product with interest list of three
+
+    r1,g1,b1,a1 = renderUtil.rgbaConvert(212, 212, 212, 255) #white 
+    colors      = airQualColorTupple
+    yOffset     = 83
+    locNameXPos = 62
+    locNameYPos = 341
+    boxXPos     = 62
+    boxYPos     = 301
+    boxHeight   = 20
+    boxWidth    = 36
+    shadowColor = (20, 20, 20, 153)
+    triXPos     = 52
+    triYPos     = 315
+    triHeight   = 14
+    triWidth    = 21
+    pollutantXPos = 255
+    pollutantYPos = 296
+    descXPos      = 255
+    descYPos      = 316
+    actionLogoXPos = 485
+    actionLogoYPos = 329
+    actionTextXPos = 520
+    actionTextYPos = 341
+    noDataYPos     = 316
+
+    for stn, dataElem in data.items():
+        # place the location name
+        f = TTFont('/rsrc/fonts/Interstate-Bold', 29, t=45)
+        gr = Text(f, dataElem.locName)
+        gr.setPosition(locNameXPos, locNameYPos)
+        gr.setColor(r1, g1, b1, a1)
+        mainCR.addItem(gr)
+    
+        if not dataElem.validLine:
+            # place temporarily unavailable label for location
+            f = TTFont('/rsrc/fonts/Interstate-Bold', 20, t=45)
+            r,g,b,a = renderUtil.rgbaConvert(212, 212, 50, 255)
+            gr = Text(f, 'TEMPORARILY UNAVAILABLE')
+            gr.setPosition(boxXPos, noDataYPos)
+            gr.setColor(r,g,b,a)
+            mainCR.addItem(gr)
+        else:
+            # draw boxes horizontally from left to right with shadow
+            # draw shadow
+            cr = CompositeRenderable()
+            gr = drawBox(2, -3, len(colors)*boxWidth, 3, shadowColor)
+            cr.addItem(gr)
+            gr = drawBox(len(colors)*boxWidth, 0, 2, boxHeight-3, shadowColor)
+            cr.addItem(gr)
+            # draw colored boxes
+            x = 0
+            for color in colors:
+                # make legend at 80% opacity
+                r,g,b,a = color
+                a *= .70
+                color = (r,g,b,a)
+                gr = drawBox(x, 0, boxWidth, boxHeight, color)
+                cr.addItem(gr)
+                x += boxWidth
+            cr.setPosition(boxXPos, boxYPos)
+            mainCR.addItem(cr)
+
+            # draw the arrow above the boxes and slide to correct position 
+            if dataElem.category != None:
+                xSliderFrames = dataElem.category * boxWidth + float(boxWidth)/2
+
+                # draw growing box
+                cr = CompositeRenderable()
+                r,g,b,a = colors[dataElem.category]
+                # shadow
+                gr = drawBox((boxXPos+dataElem.category*boxWidth)+2, boxYPos-3, boxWidth,
+                              boxHeight, shadowColor)
+                cr.addItem(gr)
+                # box
+                gr = drawBox(boxXPos+dataElem.category*boxWidth, boxYPos, boxWidth,
+                             boxHeight, (r,g,b,a))
+                cr.addItem(gr)
+                mainCR.addItem(cr)
+
+                # fade in box
+                es = EffectSequencer(cr)
+                es.addEffect(SetVisibility(None, 0), 1)
+                es.addEffect(Fader(None, 1, 0, 1), 1)
+                es.addEffect(SetVisibility(None, 1), 18)
+                es.addEffect(Fader(None, .7, 1, 5), 5)
+                p.addItem(es)
+                # scale box up - give box viagra
+                es = EffectSequencer(cr)
+                es.addEffect(NullEffect(None), 25)
+                es.addEffect(Sizer(None, .023, .05), 10)
+                p.addItem(es)
+                # slide down and left to keep it cenetered
+                es = EffectSequencer(cr)
+                es.addEffect(NullEffect(None), 25)
+                es.addEffect(Slider(None, -.4, -.5), 10)
+                p.addItem(es)
+
+                # draw arrow above the left-most box with shadow
+                r,g,b,a = shadowColor
+                r,g,b,a = renderUtil.rgbaConvert(r,b,g,a)
+                cr = CompositeRenderable()
+                # draw shadow
+                gr = Polygon()
+                gr.addVertex(3+triWidth/2, -2, r, g, b, a)
+                gr.addVertex(3, triHeight-2, r, g, b, a)
+                gr.addVertex(3+triWidth, triHeight-2, r, g, b, a)
+                cr.addItem(gr)
+                # draw triangle
+                gr = Polygon()
+                gr.addVertex(triWidth/2, 0, r1, g1, b1, a1)
+                gr.addVertex(0, triHeight, r1, g1, b1, a1)
+                gr.addVertex(triWidth, triHeight, r1, g1, b1, a1)
+                cr.addItem(gr)
+                cr.setPosition(triXPos, triYPos)
+                mainCR.addItem(cr)
+    
+                # Slide arrow above and centered to the desired box
+                es = EffectSequencer(cr)
+                es.addEffect(SetVisibility(None, 0), 1)
+                es.addEffect(Fader(None, 1, 0, 1), 1)
+                es.addEffect(SetVisibility(None, 1), 3)
+                es.addEffect(Fader(None, 0, 1, 5), 5)
+                es.addEffect(Slider(None, xSliderFrames/15, 0), 15)
+                p.addItem(es)
+    
+            # place the phrase
+            f = TTFont('/rsrc/fonts/Interstate-Bold', 20, t=70)
+            gr = Text(f, dataElem.phrase)
+            gr.setPosition(descXPos, descYPos)
+            gr.setColor(r1, g1, b1, a1)
+            mainCR.addItem(gr)
+
+            # place the pollutant
+            f = TTFont('/rsrc/fonts/Interstate-Regular', 20, t=30)
+            str = 'Primary pollutant: %s' % (dataElem.pollutant)
+            gr = Text(f, str)
+            gr.setPosition(pollutantXPos, pollutantYPos)
+            gr.setColor(r1, g1, b1, a1)
+            mainCR.addItem(gr)
+
+            # ozone action day logo
+            if dataElem.actionDay:
+                # add logo
+                img = twc.findRsrc('/logos/ozoneActionDayLogo')
+                gr = TIFF_Image(img)
+                gr.setPosition(actionLogoXPos, actionLogoYPos)
+                gr.setSize(32, 32)
+                mainCR.addItem(gr)
+
+                # add text next to logo
+                f = TTFont('/rsrc/fonts/Interstate-Bold', 16, t=10)
+                str = 'Ozone Action Day'
+                gr = Text(f, str)
+                gr.setPosition(actionTextXPos, actionTextYPos)
+                gr.setColor(r1,g1,b1,a1)
+                mainCR.addItem(gr)
+
+
+        locNameYPos   -= yOffset
+        boxYPos       -= yOffset
+        triYPos       -= yOffset
+        descYPos      -= yOffset
+        pollutantYPos -= yOffset
+        actionLogoYPos -= yOffset
+        actionTextYPos -= yOffset
+        noDataYPos    -= yOffset
+
+    # place source
+    f = TTFont("/rsrc/fonts/Interstate-Bold", 16, t=90)
+    str = 'SOURCE: EPA'
+    gr = Text(f, str)
+    gr.setPosition(62, 98)
+    gr.setColor(r1,g1,b1,a1)
+    mainCR.addItem(gr)
+
+    
+data   = <%-output%>
+mainCR = CompositeRenderable()
+p.addItem(mainCR)
+    
+# The following items need to be drawn reguardless of validity of 
+# the product according to mockup Air_Quality_Core_1_NA.tif
+    
+# draw bevel box for under location name
+gr = renderUtil.getBevelBox(616, 30)
+gr.setPosition(52, 370)
+mainCR.addItem(gr)
+
+# draw bevel box for under product
+gr = renderUtil.getBevelBox(616, 282)
+gr.setPosition(52, 88)
+mainCR.addItem(gr)
+
+# draw shaded box that runs through middle of product
+gr = drawBox(56, 202, 609, 82, (3,39,115,102))
+mainCR.addItem(gr)
+
+# these elements must show on page whether there is data or not
+if len(params.aq) == 1:
+    # location name
+    f = TTFont("/rsrc/fonts/Interstate-Bold", 24, t=65)
+    r,g,b,a = renderUtil.rgbaConvert(212, 212, 50, 255)
+    str = params.locName[0]
+    gr = Text(f, str.upper())
+    gr.setPosition(62, 377)
+    gr.setColor(r,g,b,a)
+    mainCR.addItem(gr)
+    
+    # place day name
+    f = TTFont("/rsrc/fonts/Interstate-Bold", 32, t=20)
+    r,g,b,a = renderUtil.rgbaConvert(212, 212, 212, 255)
+    str = '%s:' % (data.fcstForLabel)
+    gr = Text(f, str)
+    gr.setPosition(62, 333)
+    gr.setColor(r,g,b,a)
+    mainCR.addItem(gr)
+    
+    # draw rest of elements if valid data
+    if not <%-prod.hasData()%>:
+        renderTools.dataNotAvailable(page=p, 
+                                     text='Temporarily Unavailable',
+                                     yPos=235,
+                                     displayDuration=params.duration)
+    else:
+        print data.outputMap
+        oneSite(p, mainCR, data.outputMap)
+else:
+    # place day name
+    f = TTFont("/rsrc/fonts/Interstate-Bold", 24, t=60)
+    r,g,b,a = renderUtil.rgbaConvert(212, 212, 50, 255)
+    str = string.upper(data.fcstForLabel)
+    gr = Text(f, str)
+    gr.setPosition(62, 378)
+    gr.setColor(r,g,b,a)
+    mainCR.addItem(gr)
+
+    # draw rest of elements
+    threeSite(p, mainCR, data.outputMap)
+
+# transition   
+es = EffectSequencer(mainCR)
+es.addEffect(Slider(None, -720, 0), 1)
+es.addEffect(Slider(None, 72, 0), 10)
+es.addEffect(NullEffect(None), params.duration - 21)
+es.addEffect(Slider(None, -72, 0), 10)
+p.addItem(es)
+    
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

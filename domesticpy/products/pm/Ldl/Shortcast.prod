@@ -1,0 +1,132 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+import time
+import twccommon
+import twc.dsmarshal
+dsm = twc.dsmarshal
+
+class Product(twc.products.Product):
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        if self._hasData:
+            return optimal
+        else:
+            return 0
+
+    def _loadData(self):
+        params = self.__params
+        y,m,d,H,M,S,dow,doy,dst = time.localtime(time.time())
+        startTime = time.mktime((y,m,d+1,0,0,0,0,0,-1))
+        stn = params.coopId
+        key = 'textFcst.%s.%d' % (stn, startTime)
+        fcst = dsm.defaultedGet(key)
+        if fcst is None:
+            self.__data.shortcast = None
+        else:
+            self.__data.shortcast = twccommon.DefaultedData(fcst)
+
+        key = 'dailyFcst.%s.%d' % (stn,startTime)
+        fcst = dsm.defaultedGet(key)
+        self._hasData = 0
+
+        if (fcst is None):
+            self.__data.fcst = None
+            self._hasData = 0
+        else:
+            self.__data.fcst = twccommon.DefaultedData(fcst)
+            # Either the icon OR high temp must be valid for display:
+            if (self.__data.fcst.daySkyCondition is not None):
+
+                # We're not using the icon, just the text modifier,
+                # so don't bother checking for a blank icon:
+                self._hasData = 1
+
+            if (self.__data.fcst.highTemp is not None):
+                self._hasData = 1
+
+        self.__data.bulletins = []
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+import string
+import time
+
+<%@'_ProductHeader.rs'%>
+<%@'_Background.rs'%>
+
+<%!
+params = prod.getParams()
+data = prod.getData()
+locName = params.locName
+iconCode = data.fcst.daySkyCondition
+highTemp = data.fcst.highTemp
+
+if params.ldlWarningMode:
+    titleColor = (239,192,49,255)
+else:
+    titleColor = (121,186,242,255)
+%>
+titleColor = <%-titleColor%>
+
+
+def locationHeader(title, location):
+    cr = CompositeRenderable()
+
+    # Title
+    f = TTFont('/rsrc/fonts/Interstate-Bold', 16, shadow=0, t=60)
+    t = Text(f, title)
+    t.setPosition(55, 60)
+    r,g,b,a = titleColor
+    r,g,b,a = renderUtil.rgbaConvert(r,g,b,a)
+    t.setColor(r,g,b,a)
+    cr.addItem(t)
+
+    # Location
+    f = TTFont('/rsrc/fonts/Interstate-Bold', 25, shadow=0, t=0)
+    t = Text(f, location)
+    t.setPosition(55, 37)
+    r,g,b,a = renderUtil.rgbaConvert(212,212,212,255)
+    t.setColor(r,g,b,a)
+    cr.addItem(t)
+
+    return cr
+
+cr = CompositeRenderable()
+r,g,b,a = renderUtil.rgbaConvert(212,212,212,255)
+
+# Header
+sci = wxDataUtil.formatSkyCondition(<%-iconCode%>, 'ExtendedForecast')
+
+textMod = sci.textModifier.replace('*', ' ')
+shortcast = ""
+if (textMod != ''):
+    shortcast = "%s. " % (textMod)
+if (<%-highTemp%> != None):
+    shortcast = shortcast + "Hi %d" % (<%-highTemp%>)
+
+y,m,d,H,M,S,dow,doy,dst = time.localtime(time.time())
+tm = time.mktime((y,m,d+1, 0,0,0,0,0,-1))
+
+hdrText = string.upper(time.strftime("%A'S FORECAST", time.localtime(tm)))
+hdrText = string.upper("%s - %s" % (hdrText, <%-locName%>))
+hdr = locationHeader(hdrText, shortcast)
+cr.addItem(hdr)
+
+cr.setPosition(0,0)
+
+p.addItem(cr)
+
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

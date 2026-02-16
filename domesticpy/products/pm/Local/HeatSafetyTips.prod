@@ -1,0 +1,226 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+import time
+import twccommon
+import twc.dsmarshal
+dsm = twc.dsmarshal
+
+class Product(twc.products.DeactivateableProduct):
+
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        if self._hasData:
+            return optimal
+        else:
+            return 0
+
+    def _loadData(self):
+        params = twccommon.DefaultedData(self.getParams())
+        data = self.getData()
+        self._hasData = 0
+        data.locName = ''
+        data.heatIndex = None
+
+        if params.obsStation is not None:
+            obsStn = params.obsStation
+            hIThreshold = params.heatIndexThreshold
+            data.locName = params.locName
+
+            obs = dsm.defaultedGet('obs.%s' % obsStn)
+            if obs:
+                obs = twccommon.DefaultedData(obs)
+                data.heatIndex = obs.heatIndex
+                self._hasData = data.heatIndex >= hIThreshold
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+import domestic.HeatSafetyTipManager
+
+<%@'_ProductHeader.rs'%>
+
+<%!
+
+rangeLen = 1
+durationList = [params.duration]
+tipsList = []
+
+for i in range(rangeLen): 
+    title, tip = domestic.HeatSafetyTipManager.getTip()
+    tipsList.append((title, tip))
+
+%>
+data = <%-prod.getData()%>
+
+<%@'_Background.rs'%>
+<%@'_Title.rs'%>
+
+# create the comp renderables necessary for trasnitions
+locBarCR = CompositeRenderable()
+leftCR   = CompositeRenderable()
+rightCR  = CompositeRenderable()
+    
+# draw bevel box for under location name
+gr = renderUtil.getBevelBox(616, 30)
+gr.setPosition(0, 0)
+locBarCR.addItem(gr)
+    
+# draw bevel box for left side of product
+leftBBWidth = 205    
+gr = renderUtil.getBevelBox(leftBBWidth, 282)
+gr.setPosition(0, 0)
+leftCR.addItem(gr)
+    
+# draw bevel box for right side of product
+rightBBWidth = 411
+rightBBHeight = 282
+gr = renderUtil.getBevelBox(411, 282)
+gr.setPosition(0, 0)
+rightCR.addItem(gr)
+
+r,g,b,a     = renderUtil.rgbaConvert(235,235,235,255) # white
+r1,g1,b1,a1 = renderUtil.rgbaConvert(212,212,50,255)  # yellow
+
+# place the location name
+f = TTFont('/rsrc/fonts/Interstate-Bold', 24, t=50)
+gr = Text(f, data.locName)
+gr.setColor(r1,g1,b1,a1)
+gr.setPosition(11, 7)
+locBarCR.addItem(gr)
+
+# place the heat index label
+f = TTFont('/rsrc/fonts/Interstate-Bold', 22, t=90)
+gr = Text(f, 'CURRENT')
+gr.setColor(r,g,b,a)
+w, h = gr.size()
+xpos = renderUtil.justifyGR(w, leftBBWidth, renderUtil.CENTER)
+gr.setPosition(xpos, 255)
+leftCR.addItem(gr)
+gr = Text(f, 'HEAT INDEX:')
+gr.setColor(r,g,b,a)
+w, h = gr.size()
+xpos = renderUtil.justifyGR(w, leftBBWidth, renderUtil.CENTER)
+gr.setPosition(xpos, 230)
+leftCR.addItem(gr)    
+
+# the gay feels like label    
+f = TTFont('/rsrc/fonts/Interstate-RegularItalic', 28, t=50)    
+gr = Text(f, 'Feels Like')
+gr.setColor(r,g,b,a)
+w, h = gr.size()
+xpos = renderUtil.justifyGR(w, leftBBWidth, renderUtil.CENTER)
+gr.setPosition(xpos, 150)
+leftCR.addItem(gr)
+
+# place the heat index value
+hI = data.heatIndex
+if hI is not None:    
+    f = TTFont('/rsrc/fonts/Interstate-BlackCondensed', 70, t=20)
+    hI = '%s' % (hI)
+    gr = Text(f, hI)
+    gr.setColor(r,g,b,a)
+    w,h = gr.size()
+    xpos = renderUtil.justifyGR(w, leftBBWidth, renderUtil.CENTER)
+    gr.setPosition(xpos, 91)
+    leftCR.addItem(gr)
+    
+    
+# place the heat safety tip
+tipsList = <%-tipsList%>
+crSet = []
+bullet = '\267 '
+rightBBWidth = 395
+rightBBHeight = 282
+tipFontSize = 28
+tipFontLeading = 30
+
+f1 = TTFont('/rsrc/fonts/Interstate-RegularCondensed', 30, t=20)
+f2 = TTFont('/rsrc/fonts/Interstate-Bold', 40, t=0, l=tipFontLeading)
+f3 = TTFont('/rsrc/fonts/Interstate-RegularCondensed', tipFontSize, t=0, l=tipFontLeading)
+for i in range(len(<%-durationList%>)):
+    title, tips = tipsList[i]
+    cr = CompositeRenderable()
+    # place title
+    gr = Text(f1, title)
+    gr.setColor(r1,g1,b1,a1)
+    gr.setPosition(11, 252) # 340-88=252 (adjusted for ypos of composite renderable) 
+    cr.addItem(gr)
+    # place tips
+    hOffset = 0
+    yPos = 222  # 310-88=222 (adjusted for ypos of cr)
+    for tip in tips:
+        # place the bullet
+        gr = Text(f2, bullet)
+        gr.setColor(r,g,b,a)
+        gr.setPosition(11, yPos-hOffset-5)
+        cr.addItem(gr)
+
+        # place the tip
+        strList = renderUtil.paginateText(f3, tip, rightBBWidth-26, rightBBHeight-hOffset)
+        for phrase in strList:
+            gr = Text(f3, phrase)
+            gr.setColor(r,g,b,a)
+            gr.setPosition(26, yPos-hOffset)
+            cr.addItem(gr)
+
+        w,h = gr.size()
+        ff = tipFontLeading - tipFontSize*.88 # fonts are scaled to 88%
+        hOffset += h + ff 
+    
+    cr.setPosition(257+720, 88)
+    crSet.append([cr,])
+
+# transitions
+locBarCR.setPosition(52, 370)
+leftCR.setPosition(52, 88)
+rightCR.setPosition(257, 88)
+p.addItem(locBarCR)
+p.addItem(leftCR)
+p.addItem(rightCR)
+# loc name bar 
+es = EffectSequencer(locBarCR)
+es.addEffect(Slider(None, -720, 0), 1)
+es.addEffect(Slider(None, 72, 0), 10)
+es.addEffect(NullEffect(None), <%-params.duration%> - 21)
+es.addEffect(Slider(None, -72, 0), 10)
+p.addItem(es)
+# left side of product
+es = EffectSequencer(leftCR)
+es.addEffect(Slider(None, -260, 0), 1)
+es.addEffect(Slider(None, 26, 0), 10)
+es.addEffect(NullEffect(None), <%-params.duration%> - 21)
+es.addEffect(Slider(None, -72, 0), 10)
+p.addItem(es)
+# right side     
+es = EffectSequencer(rightCR)
+es.addEffect(Slider(None, 465, 0), 1)
+es.addEffect(Slider(None, -46.5, 0), 10)
+es.addEffect(NullEffect(None), <%-params.duration%> - 21)
+es.addEffect(Slider(None, -72, 0), 10)
+p.addItem(es)
+    
+# right side of product
+for crList in crSet:
+    for cr in crList:
+        es = EffectSequencer(cr)
+        es.addEffect(Slider(None, 720, 0), 1)
+        es.addEffect(Slider(None, -72, 0), 10)
+        es.addEffect(NullEffect(None), <%-params.duration%> - 21)
+        es.addEffect(Slider(None, -72, 0), 10)
+        p.addItem(es)
+    
+renderTools.sequenceOnPage(p, crSet, <%-durationList%>)
+    
+    
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

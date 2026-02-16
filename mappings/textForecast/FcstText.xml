@@ -1,0 +1,1089 @@
+<root>
+<record key='TLBM80' text="Low below minus 80."></record>
+<record key='TLM80' text="Low minus 80."></record>
+<record key='TLM79' text="Low minus 79."></record>
+<record key='TLM78' text="Low minus 78."></record>
+<record key='TLM77' text="Low minus 77."></record>
+<record key='TLM76' text="Low minus 76."></record>
+<record key='TLM75' text="Low minus 75."></record>
+<record key='TLM74' text="Low minus 74."></record>
+<record key='TLM73' text="Low minus 73."></record>
+<record key='TLM72' text="Low minus 72."></record>
+<record key='TLM71' text="Low minus 71."></record>
+<record key='TLM70' text="Low minus 70."></record>
+<record key='TLM69' text="Low minus 69."></record>
+<record key='TLM68' text="Low minus 68."></record>
+<record key='TLM67' text="Low minus 67."></record>
+<record key='TLM66' text="Low minus 66."></record>
+<record key='TLM65' text="Low minus 65."></record>
+<record key='TLM64' text="Low minus 64."></record>
+<record key='TLM63' text="Low minus 63."></record>
+<record key='TLM62' text="Low minus 62."></record>
+<record key='TLM61' text="Low minus 61."></record>
+<record key='TLM60' text="Low minus 60."></record>
+<record key='TLM59' text="Low minus 59."></record>
+<record key='TLM58' text="Low minus 58."></record>
+<record key='TLM57' text="Low minus 57."></record>
+<record key='TLM56' text="Low minus 56."></record>
+<record key='TLM55' text="Low minus 55."></record>
+<record key='TLM54' text="Low minus 54."></record>
+<record key='TLM53' text="Low minus 53."></record>
+<record key='TLM52' text="Low minus 52."></record>
+<record key='TLM51' text="Low minus 51."></record>
+<record key='TLM50' text="Low minus 50."></record>
+<record key='TLM49' text="Low minus 49."></record>
+<record key='TLM48' text="Low minus 48."></record>
+<record key='TLM47' text="Low minus 47."></record>
+<record key='TLM46' text="Low minus 46."></record>
+<record key='TLM45' text="Low minus 45."></record>
+<record key='TLM44' text="Low minus 44."></record>
+<record key='TLM43' text="Low minus 43."></record>
+<record key='TLM42' text="Low minus 42."></record>
+<record key='TLM41' text="Low minus 41."></record>
+<record key='TLM40' text="Low minus 40."></record>
+<record key='TLM39' text="Low minus 39."></record>
+<record key='TLM38' text="Low minus 38."></record>
+<record key='TLM37' text="Low minus 37."></record>
+<record key='TLM36' text="Low minus 36."></record>
+<record key='TLM35' text="Low minus 35."></record>
+<record key='TLM34' text="Low minus 34."></record>
+<record key='TLM33' text="Low minus 33."></record>
+<record key='TLM32' text="Low minus 32."></record>
+<record key='TLM31' text="Low minus 31."></record>
+<record key='TLM30' text="Low minus 30."></record>
+<record key='TLM29' text="Low minus 29."></record>
+<record key='TLM28' text="Low minus 28."></record>
+<record key='TLM27' text="Low minus 27."></record>
+<record key='TLM26' text="Low minus 26."></record>
+<record key='TLM25' text="Low minus 25."></record>
+<record key='TLM24' text="Low minus 24."></record>
+<record key='TLM23' text="Low minus 23."></record>
+<record key='TLM22' text="Low minus 22."></record>
+<record key='TLM21' text="Low minus 21."></record>
+<record key='TLM20' text="Low minus 20."></record>
+<record key='TLM19' text="Low minus 19."></record>
+<record key='TLM18' text="Low minus 18."></record>
+<record key='TLM17' text="Low minus 17."></record>
+<record key='TLM16' text="Low minus 16."></record>
+<record key='TLM15' text="Low minus 15."></record>
+<record key='TLM14' text="Low minus 14."></record>
+<record key='TLM13' text="Low minus 13."></record>
+<record key='TLM12' text="Low minus 12."></record>
+<record key='TLM11' text="Low minus 11."></record>
+<record key='TLM10' text="Low minus 10."></record>
+<record key='TLM9' text="Low minus 9."></record>
+<record key='TLM8' text="Low minus 8."></record>
+<record key='TLM7' text="Low minus 7."></record>
+<record key='TLM6' text="Low minus 6."></record>
+<record key='TLM5' text="Low minus 5."></record>
+<record key='TLM4' text="Low minus 4."></record>
+<record key='TLM3' text="Low minus 3."></record>
+<record key='TLM2' text="Low minus 2."></record>
+<record key='TLM1' text="Low minus 1."></record>
+<record key='TL01' text="Low 0."></record>
+<record key='TL1' text="Low 1."></record>
+<record key='TL2' text="Low 2."></record>
+<record key='TL3' text="Low 3."></record>
+<record key='TL4' text="Low 4."></record>
+<record key='TL5' text="Low 5."></record>
+<record key='TL6' text="Low 6."></record>
+<record key='TL7' text="Low 7."></record>
+<record key='TL8' text="Low 8."></record>
+<record key='TL9' text="Low 9."></record>
+<record key='TL10' text="Low 10."></record>
+<record key='TL11' text="Low 11."></record>
+<record key='TL12' text="Low 12."></record>
+<record key='TL13' text="Low 13."></record>
+<record key='TL14' text="Low 14."></record>
+<record key='TL15' text="Low 15."></record>
+<record key='TL16' text="Low 16."></record>
+<record key='TL17' text="Low 17."></record>
+<record key='TL18' text="Low 18."></record>
+<record key='TL19' text="Low 19."></record>
+<record key='TL20' text="Low 20."></record>
+<record key='TL21' text="Low 21."></record>
+<record key='TL22' text="Low 22."></record>
+<record key='TL23' text="Low 23."></record>
+<record key='TL24' text="Low 24."></record>
+<record key='TL25' text="Low 25."></record>
+<record key='TL26' text="Low 26."></record>
+<record key='TL27' text="Low 27."></record>
+<record key='TL28' text="Low 28."></record>
+<record key='TL29' text="Low 29."></record>
+<record key='TL30' text="Low 30."></record>
+<record key='TL31' text="Low 31."></record>
+<record key='TL32' text="Low 32."></record>
+<record key='TL33' text="Low 33."></record>
+<record key='TL34' text="Low 34."></record>
+<record key='TL35' text="Low 35."></record>
+<record key='TL36' text="Low 36."></record>
+<record key='TL37' text="Low 37."></record>
+<record key='TL38' text="Low 38."></record>
+<record key='TL39' text="Low 39."></record>
+<record key='TL40' text="Low 40."></record>
+<record key='TL41' text="Low 41."></record>
+<record key='TL42' text="Low 42."></record>
+<record key='TL43' text="Low 43."></record>
+<record key='TL44' text="Low 44."></record>
+<record key='TL45' text="Low 45."></record>
+<record key='TL46' text="Low 46."></record>
+<record key='TL47' text="Low 47."></record>
+<record key='TL48' text="Low 48."></record>
+<record key='TL49' text="Low 49."></record>
+<record key='TL50' text="Low 50."></record>
+<record key='TL51' text="Low 51."></record>
+<record key='TL52' text="Low 52."></record>
+<record key='TL53' text="Low 53."></record>
+<record key='TL54' text="Low 54."></record>
+<record key='TL55' text="Low 55."></record>
+<record key='TL56' text="Low 56."></record>
+<record key='TL57' text="Low 57."></record>
+<record key='TL58' text="Low 58."></record>
+<record key='TL59' text="Low 59."></record>
+<record key='TL60' text="Low 60."></record>
+<record key='TL61' text="Low 61."></record>
+<record key='TL62' text="Low 62."></record>
+<record key='TL63' text="Low 63."></record>
+<record key='TL64' text="Low 64."></record>
+<record key='TL65' text="Low 65."></record>
+<record key='TL66' text="Low 66."></record>
+<record key='TL67' text="Low 67."></record>
+<record key='TL68' text="Low 68."></record>
+<record key='TL69' text="Low 69."></record>
+<record key='TL70' text="Low 70."></record>
+<record key='TL71' text="Low 71."></record>
+<record key='TL72' text="Low 72."></record>
+<record key='TL73' text="Low 73."></record>
+<record key='TL74' text="Low 74."></record>
+<record key='TL75' text="Low 75."></record>
+<record key='TL76' text="Low 76."></record>
+<record key='TL77' text="Low 77."></record>
+<record key='TL78' text="Low 78."></record>
+<record key='TL79' text="Low 79."></record>
+<record key='TL80' text="Low 80."></record>
+<record key='TL81' text="Low 81."></record>
+<record key='TL82' text="Low 82."></record>
+<record key='TL83' text="Low 83."></record>
+<record key='TL84' text="Low 84."></record>
+<record key='TL85' text="Low 85."></record>
+<record key='TL86' text="Low 86."></record>
+<record key='TL87' text="Low 87."></record>
+<record key='TL88' text="Low 88."></record>
+<record key='TL89' text="Low 89."></record>
+<record key='TL90' text="Low 90."></record>
+<record key='TL91' text="Low 91."></record>
+<record key='TL92' text="Low 92."></record>
+<record key='TL93' text="Low 93."></record>
+<record key='TL94' text="Low 94."></record>
+<record key='TL95' text="Low 95."></record>
+<record key='TL96' text="Low 96."></record>
+<record key='TL97' text="Low 97."></record>
+<record key='TL98' text="Low 98."></record>
+<record key='TL99' text="Low 99."></record>
+<record key='TL100' text="Low 100."></record>
+<record key='TL101' text="Low 101."></record>
+<record key='TL102' text="Low 102."></record>
+<record key='TL103' text="Low 103."></record>
+<record key='TL104' text="Low 104."></record>
+<record key='TL105' text="Low 105."></record>
+<record key='TLA105' text="Low above 105."></record>
+<record key='THBM60' text="High below minus 60."></record>
+<record key='THM60' text="High minus 60."></record>
+<record key='THM59' text="High minus 59."></record>
+<record key='THM58' text="High minus 58."></record>
+<record key='THM57' text="High minus 57."></record>
+<record key='THM56' text="High minus 56."></record>
+<record key='THM55' text="High minus 55."></record>
+<record key='THM54' text="High minus 54."></record>
+<record key='THM53' text="High minus 53."></record>
+<record key='THM52' text="High minus 52."></record>
+<record key='THM51' text="High minus 51."></record>
+<record key='THM50' text="High minus 50."></record>
+<record key='THM49' text="High minus 49."></record>
+<record key='THM48' text="High minus 48."></record>
+<record key='THM47' text="High minus 47."></record>
+<record key='THM46' text="High minus 46."></record>
+<record key='THM45' text="High minus 45."></record>
+<record key='THM44' text="High minus 44."></record>
+<record key='THM43' text="High minus 43."></record>
+<record key='THM42' text="High minus 42."></record>
+<record key='THM41' text="High minus 41."></record>
+<record key='THM40' text="High minus 40."></record>
+<record key='THM39' text="High minus 39."></record>
+<record key='THM38' text="High minus 38."></record>
+<record key='THM37' text="High minus 37."></record>
+<record key='THM36' text="High minus 36."></record>
+<record key='THM35' text="High minus 35."></record>
+<record key='THM34' text="High minus 34."></record>
+<record key='THM33' text="High minus 33."></record>
+<record key='THM32' text="High minus 32."></record>
+<record key='THM31' text="High minus 31."></record>
+<record key='THM30' text="High minus 30."></record>
+<record key='THM29' text="High minus 29."></record>
+<record key='THM28' text="High minus 28."></record>
+<record key='THM27' text="High minus 27."></record>
+<record key='THM26' text="High minus 26."></record>
+<record key='THM25' text="High minus 25."></record>
+<record key='THM24' text="High minus 24."></record>
+<record key='THM23' text="High minus 23."></record>
+<record key='THM22' text="High minus 22."></record>
+<record key='THM21' text="High minus 21."></record>
+<record key='THM20' text="High minus 20."></record>
+<record key='THM19' text="High minus 19."></record>
+<record key='THM18' text="High minus 18."></record>
+<record key='THM17' text="High minus 17."></record>
+<record key='THM16' text="High minus 16."></record>
+<record key='THM15' text="High minus 15."></record>
+<record key='THM14' text="High minus 14."></record>
+<record key='THM13' text="High minus 13."></record>
+<record key='THM12' text="High minus 12."></record>
+<record key='THM11' text="High minus 11."></record>
+<record key='THM10' text="High minus 10."></record>
+<record key='THM9' text="High minus 9."></record>
+<record key='THM8' text="High minus 8."></record>
+<record key='THM7' text="High minus 7."></record>
+<record key='THM6' text="High minus 6."></record>
+<record key='THM5' text="High minus 5."></record>
+<record key='THM4' text="High minus 4."></record>
+<record key='THM3' text="High minus 3."></record>
+<record key='THM2' text="High minus 2."></record>
+<record key='THM1' text="High minus 1."></record>
+<record key='TH01' text="High 0."></record>
+<record key='TH1' text="High 1."></record>
+<record key='TH2' text="High 2."></record>
+<record key='TH3' text="High 3."></record>
+<record key='TH4' text="High 4."></record>
+<record key='TH5' text="High 5."></record>
+<record key='TH6' text="High 6."></record>
+<record key='TH7' text="High 7."></record>
+<record key='TH8' text="High 8."></record>
+<record key='TH9' text="High 9."></record>
+<record key='TH10' text="High 10."></record>
+<record key='TH11' text="High 11."></record>
+<record key='TH12' text="High 12."></record>
+<record key='TH13' text="High 13."></record>
+<record key='TH14' text="High 14."></record>
+<record key='TH15' text="High 15."></record>
+<record key='TH16' text="High 16."></record>
+<record key='TH17' text="High 17."></record>
+<record key='TH18' text="High 18."></record>
+<record key='TH19' text="High 19."></record>
+<record key='TH20' text="High 20."></record>
+<record key='TH21' text="High 21."></record>
+<record key='TH22' text="High 22."></record>
+<record key='TH23' text="High 23."></record>
+<record key='TH24' text="High 24."></record>
+<record key='TH25' text="High 25."></record>
+<record key='TH26' text="High 26."></record>
+<record key='TH27' text="High 27."></record>
+<record key='TH28' text="High 28."></record>
+<record key='TH29' text="High 29."></record>
+<record key='TH30' text="High 30."></record>
+<record key='TH31' text="High 31."></record>
+<record key='TH32' text="High 32."></record>
+<record key='TH33' text="High 33."></record>
+<record key='TH34' text="High 34."></record>
+<record key='TH35' text="High 35."></record>
+<record key='TH36' text="High 36."></record>
+<record key='TH37' text="High 37."></record>
+<record key='TH38' text="High 38."></record>
+<record key='TH39' text="High 39."></record>
+<record key='TH40' text="High 40."></record>
+<record key='TH41' text="High 41."></record>
+<record key='TH42' text="High 42."></record>
+<record key='TH43' text="High 43."></record>
+<record key='TH44' text="High 44."></record>
+<record key='TH45' text="High 45."></record>
+<record key='TH46' text="High 46."></record>
+<record key='TH47' text="High 47."></record>
+<record key='TH48' text="High 48."></record>
+<record key='TH49' text="High 49."></record>
+<record key='TH50' text="High 50."></record>
+<record key='TH51' text="High 51."></record>
+<record key='TH52' text="High 52."></record>
+<record key='TH53' text="High 53."></record>
+<record key='TH54' text="High 54."></record>
+<record key='TH55' text="High 55."></record>
+<record key='TH56' text="High 56."></record>
+<record key='TH57' text="High 57."></record>
+<record key='TH58' text="High 58."></record>
+<record key='TH59' text="High 59."></record>
+<record key='TH60' text="High 60."></record>
+<record key='TH61' text="High 61."></record>
+<record key='TH62' text="High 62."></record>
+<record key='TH63' text="High 63."></record>
+<record key='TH64' text="High 64."></record>
+<record key='TH65' text="High 65."></record>
+<record key='TH66' text="High 66."></record>
+<record key='TH67' text="High 67."></record>
+<record key='TH68' text="High 68."></record>
+<record key='TH69' text="High 69."></record>
+<record key='TH70' text="High 70."></record>
+<record key='TH71' text="High 71."></record>
+<record key='TH72' text="High 72."></record>
+<record key='TH73' text="High 73."></record>
+<record key='TH74' text="High 74."></record>
+<record key='TH75' text="High 75."></record>
+<record key='TH76' text="High 76."></record>
+<record key='TH77' text="High 77."></record>
+<record key='TH78' text="High 78."></record>
+<record key='TH79' text="High 79."></record>
+<record key='TH80' text="High 80."></record>
+<record key='TH81' text="High 81."></record>
+<record key='TH82' text="High 82."></record>
+<record key='TH83' text="High 83."></record>
+<record key='TH84' text="High 84."></record>
+<record key='TH85' text="High 85."></record>
+<record key='TH86' text="High 86."></record>
+<record key='TH87' text="High 87."></record>
+<record key='TH88' text="High 88."></record>
+<record key='TH89' text="High 89."></record>
+<record key='TH90' text="High 90."></record>
+<record key='TH91' text="High 91."></record>
+<record key='TH92' text="High 92."></record>
+<record key='TH93' text="High 93."></record>
+<record key='TH94' text="High 94."></record>
+<record key='TH95' text="High 95."></record>
+<record key='TH96' text="High 96."></record>
+<record key='TH97' text="High 97."></record>
+<record key='TH98' text="High 98."></record>
+<record key='TH99' text="High 99."></record>
+<record key='TH100' text="High 100."></record>
+<record key='TH101' text="High 101."></record>
+<record key='TH102' text="High 102."></record>
+<record key='TH103' text="High 103."></record>
+<record key='TH104' text="High 104."></record>
+<record key='TH105' text="High 105."></record>
+<record key='TH106' text="High 106."></record>
+<record key='TH107' text="High 107."></record>
+<record key='TH108' text="High 108."></record>
+<record key='TH109' text="High 109."></record>
+<record key='TH110' text="High 110."></record>
+<record key='TH111' text="High 111."></record>
+<record key='TH112' text="High 112."></record>
+<record key='TH113' text="High 113."></record>
+<record key='TH114' text="High 114."></record>
+<record key='TH115' text="High 115."></record>
+<record key='TH116' text="High 116."></record>
+<record key='TH117' text="High 117."></record>
+<record key='TH118' text="High 118."></record>
+<record key='TH119' text="High 119."></record>
+<record key='TH120' text="High 120."></record>
+<record key='TH121' text="High 121."></record>
+<record key='TH122' text="High 122."></record>
+<record key='TH123' text="High 123."></record>
+<record key='TH124' text="High 124."></record>
+<record key='TH125' text="High 125."></record>
+<record key='TH126' text="High 126."></record>
+<record key='TH127' text="High 127."></record>
+<record key='TH128' text="High 128."></record>
+<record key='TH129' text="High 129."></record>
+<record key='TH130' text="High 130."></record>
+<record key='THA130' text="High above 130."></record>
+<record key='Q600' text="Warm."></record>
+<record key='Q602' text="Very warm."></record>
+<record key='Q604' text="Hot."></record>
+<record key='Q605' text="Very hot."></record>
+<record key='Q606' text="Continued warm."></record>
+<record key='Q608' text="Continued very warm."></record>
+<record key='Q610' text="Continued hot."></record>
+<record key='Q611' text="Continued very hot."></record>
+<record key='Q615' text="Near record high temperatures."></record>
+<record key='Q616' text="Record high temperatures expected."></record>
+<record key='Q700' text="Cold."></record>
+<record key='Q705' text="Continued cold."></record>
+<record key='Q706' text="Very cold."></record>
+<record key='Q707' text="Continued very cold."></record>
+<record key='Q710' text="Cooler near the bay."></record>
+<record key='Q715' text="Cooler near the lakeshore."></record>
+<record key='Q716' text="Warmer near the lakeshore."></record>
+<record key='Q717' text="Not as cold near the lakeshore."></record>
+<record key='Q720' text="Cooler at the coast."></record>
+<record key='Q725' text="Cooler at the beaches."></record>
+<record key='Q730' text="Near record low temperatures."></record>
+<record key='Q731' text="Record low temperatures expected."></record>
+<record key='Q733' text="Continued bitterly cold."></record>
+<record key='Q735' text="Bitterly cold."></record>
+<record key='Q740' text="Colder in some valley locations."></record>
+<record key='Q800' text="Humid."></record>
+<record key='Q801' text="Continued humid."></record>
+<record key='Q802' text="Warm and humid."></record>
+<record key='Q804' text="Hot and humid."></record>
+<record key='Q806' text="Hazy, hot, and humid."></record>
+<record key='Q808' text="Muggy."></record>
+<record key='Q811' text="Continued warm and humid."></record>
+<record key='Q814' text="Continued hot and humid."></record>
+<record key='Q818' text="Continued hazy, hot, and humid."></record>
+<record key='Q820' text="More humid."></record>
+<record key='Q825' text="Less humid."></record>
+<record key='Q905' text="Areas of dense fog."></record>
+<record key='Q910' text="Areas of dense morning fog."></record>
+<record key='Q915' text="Areas of morning fog with some patchy drizzle."></record>
+<record key='Q920' text="Areas of fog with some patchy drizzle."></record>
+<record key='Q922' text="Areas of fog with some patchy freezing drizzle."></record>
+<record key='Q923' text="Areas of fog with some patchy freezing drizzle early."></record>
+<record key='Q924' text="Areas of fog with some patchy freezing drizzle late."></record>
+<record key='Q925' text="Hazy."></record>
+<record key='Q930' text="Dense fog near the coast."></record>
+<record key='Q935' text="Low clouds and fog lingering along the coast."></record>
+<record key='Q940' text="Low clouds and fog developing along the coast."></record>
+<record key='Q945' text="Dense fog in some valleys."></record>
+<record key='Q950' text="Areas of dense fog developing late."></record>
+<record key='Q955' text="Areas of dense fog developing."></record>
+<record key='Q965' text="Areas of fog developing with patchy drizzle possible."></record>
+<record key='Q1005' text="Stronger winds in and below canyons and passes."></record>
+<record key='Q1006' text="Winds 15-25 mph in and below canyons and passes."></record>
+<record key='Q1007' text="Winds 25-40 mph in and below canyons and passes."></record>
+<record key='Q1008' text="Winds 35-50 mph in and below canyons and passes."></record>
+<record key='Q1009' text="Winds 40-60 mph in and below canyons and passes."></record>
+<record key='Q1010' text="Stronger winds in mountain passes and near ridge tops."></record>
+<record key='Q1015' text="Coastal flooding possible at high tide."></record>
+<record key='Q1017' text="Some blowing and drifting snow."></record>
+<record key='Q1020' text="Blowing snow with local ground blizzards."></record>
+<record key='Q1021' text="Winds could occasionally gust over 40 mph."></record>
+<record key='Q1022' text="Winds could occasionally gust over 50 mph."></record>
+<record key='Q1023' text="Winds could occasionally gust over 60 mph."></record>
+<record key='Q1024' text="Winds could occasionally gust over 80 mph."></record>
+<record key='Q1025' text="Winds could occasionally gust over 100 mph."></record>
+<record key='Q1026' text="Tropical storm force winds expected."></record>
+<record key='Q1027' text="Winds could occasionally gust over 70 mph."></record>
+<record key='Q1028' text="Winds could occasionally gust to hurricane force."></record>
+<record key='Q1030' text="Hurricane force winds expected."></record>
+<record key='Q1035' text="Wind gusts could reach 125 mph."></record>
+<record key='Q1040' text="Wind gusts could reach 140 mph."></record>
+<record key='Q1045' text="Wind gusts could reach 150 mph."></record>
+<record key='Q1050' text="Winds could occasionally gust over 40 mph late."></record>
+<record key='Q1052' text="Winds could occasionally gust over 50 mph late."></record>
+<record key='Q1054' text="Winds could occasionally gust over 60 mph late."></record>
+<record key='Q1056' text="Winds could occasionally gust over 70 mph late."></record>
+<record key='Q1058' text="Winds could occasionally gust over 100 mph late."></record>
+<record key='Q1060' text="Winds could occasionally gust over 40 mph early."></record>
+<record key='Q1062' text="Winds could occasionally gust over 50 mph early."></record>
+<record key='Q1064' text="Winds could occasionally gust over 60 mph early."></record>
+<record key='Q1066' text="Winds could occasionally gust over 70 mph early."></record>
+<record key='Q1068' text="Winds could occasionally gust over 100 mph early."></record>
+<record key='Q2010' text="Not as cold."></record>
+<record key='Q2015' text="Turning warmer."></record>
+<record key='Q2020' text="Warmer."></record>
+<record key='Q2025' text="Much warmer."></record>
+<record key='Q2503' text="Cooler."></record>
+<record key='Q2504' text="Cooler and less humid."></record>
+<record key='Q2505' text="Colder."></record>
+<record key='Q2510' text="Not as hot."></record>
+<record key='Q2513' text="Not as warm."></record>
+<record key='Q2515' text="Turning cooler."></record>
+<record key='Q2520' text="Turning colder."></record>
+<record key='Q2525' text="Much colder."></record>
+<record key='Q3005' text="Scattered frost possible."></record>
+<record key='Q3010' text="Widespread frost likely."></record>
+<record key='Q3015' text="Hard freeze expected."></record>
+<record key='Q4005' text="Areas of blowing dust."></record>
+<record key='Q4007' text="Locally strong thunderstorm winds with blowing dust."></record>
+<record key='Q4010' text="Visibilities reduced by smoke."></record>
+<record key='Q5000' text="Slight chance of a shower through the evening."></record>
+<record key='Q5001' text="Slight chance of a shower late."></record>
+<record key='Q5002' text="A shower is possible early."></record>
+<record key='Q5003' text="Chance of a morning shower."></record>
+<record key='Q5006' text="Patchy drizzle possible through the evening."></record>
+<record key='Q5007' text="Patchy drizzle possible late."></record>
+<record key='Q5009' text="Patchy morning drizzle possible."></record>
+<record key='Q5012' text="Patchy drizzle possible."></record>
+<record key='Q5015' text="Slight chance of a rain shower."></record>
+<record key='Q5020' text="Chance of a shower or thunderstorm through the evening."></record>
+<record key='Q5025' text="Chance of a morning shower or thunderstorm."></record>
+<record key='Q5030' text="Drizzle ending."></record>
+<record key='Q5035' text="Showers tapering off."></record>
+<record key='Q5040' text="Rain or showers ending."></record>
+<record key='Q5043' text="Localized flooding is possible in washes."></record>
+<record key='Q5044' text="Localized flooding is likely in washes."></record>
+<record key='Q5045' text="Flooding possible in poor drainage areas."></record>
+<record key='Q5046' text="Localized flooding is expected."></record>
+<record key='Q5047' text="Significant flooding is expected."></record>
+<record key='Q5048' text="Flooding is possible in flood proned areas."></record>
+<record key='Q5049' text="Flooding is likely in flood proned areas."></record>
+<record key='Q5050' text="Locally heavy rainfall possible."></record>
+<record key='Q5053' text="Locally heavier rainfall possible."></record>
+<record key='Q5056' text="Rain and snow melt may lead to flooding."></record>
+<record key='Q5060' text="Total storm rainfall approaching 4 inches locally."></record>
+<record key='Q5063' text="Total storm rainfall approaching 6 inches locally."></record>
+<record key='Q5066' text="Total storm rainfall approaching 8 inches locally."></record>
+<record key='Q5070' text="Total storm rainfall approaching 10 inches locally."></record>
+<record key='Q5075' text="Total storm rainfall exceeding 10 inches locally."></record>
+<record key='Q7003' text="Snow levels rising above 10,000 feet."></record>
+<record key='Q7005' text="Snow levels rising above 8000 feet."></record>
+<record key='Q7010' text="Snow levels rising above 7000 feet."></record>
+<record key='Q7015' text="Snow levels rising above 6000 feet."></record>
+<record key='Q7020' text="Snow levels rising above 5000 feet."></record>
+<record key='Q7025' text="Snow levels rising above 4000 feet."></record>
+<record key='Q7030' text="Snow levels rising above 3000 feet."></record>
+<record key='Q7035' text="Snow levels rising above 2500 feet."></record>
+<record key='Q7040' text="Snow levels rising above 2000 feet."></record>
+<record key='Q7045' text="Snow levels rising above 1500 feet."></record>
+<record key='Q7050' text="Snow levels rising above 1000 feet."></record>
+<record key='Q7055' text="Snow levels rising above 500 feet."></record>
+<record key='Q7203' text="Snow levels above 10,000 feet."></record>
+<record key='Q7205' text="Snow levels above 8000 feet."></record>
+<record key='Q7206' text="Snow will accumulate 3-6 inches above 8000 feet."></record>
+<record key='Q7207' text="Snow will accumulate 6-12 inches above 8000 feet."></record>
+<record key='Q7208' text="Snow will accumulate a foot or more above 8000 feet."></record>
+<record key='Q7210' text="Snow levels above 7000 feet."></record>
+<record key='Q7211' text="Snow will accumulate 3-6 inches above 7000 feet."></record>
+<record key='Q7212' text="Snow will accumulate 6-12 inches above 7000 feet."></record>
+<record key='Q7213' text="Snow will accumulate a foot or more above 7000 feet."></record>
+<record key='Q7215' text="Snow levels above 6000 feet."></record>
+<record key='Q7220' text="Snow levels above 5000 feet."></record>
+<record key='Q7225' text="Snow levels above 4000 feet."></record>
+<record key='Q7230' text="Snow levels above 3000 feet."></record>
+<record key='Q7235' text="Snow levels above 2500 feet."></record>
+<record key='Q7240' text="Snow levels above 2000 feet."></record>
+<record key='Q7245' text="Snow levels above 1500 feet."></record>
+<record key='Q7250' text="Snow levels above 1000 feet."></record>
+<record key='Q7255' text="Snow levels above 500 feet."></record>
+<record key='Q7260' text="Snow levels near the valley floors."></record>
+<record key='Q7265' text="Snow levels near sea level."></record>
+<record key='Q7405' text="Snow may mix in at higher elevations."></record>
+<record key='Q7410' text="Snow in the mountains."></record>
+<record key='Q7500' text="Snow levels lowering below 10,000 feet."></record>
+<record key='Q7505' text="Snow levels lowering below 8000 feet."></record>
+<record key='Q7510' text="Snow levels lowering below 7000 feet."></record>
+<record key='Q7515' text="Snow levels lowering below 6000 feet."></record>
+<record key='Q7520' text="Snow levels lowering below 5000 feet."></record>
+<record key='Q7525' text="Snow levels lowering below 4000 feet."></record>
+<record key='Q7530' text="Snow levels lowering below 3000 feet."></record>
+<record key='Q7535' text="Snow levels lowering below 2500 feet."></record>
+<record key='Q7540' text="Snow levels lowering below 2000 feet."></record>
+<record key='Q7545' text="Snow levels lowering below 1500 feet."></record>
+<record key='Q7550' text="Snow levels lowering below 1000 feet."></record>
+<record key='Q7555' text="Snow levels lowering below 500 feet."></record>
+<record key='Q7560' text="Snow levels lowering to the valley floors."></record>
+<record key='Q7565' text="Snow may reach the coast in some areas."></record>
+<record key='Q7605' text="Precipitation ending."></record>
+<record key='Q7606' text="Sprinkles or flurries possible early."></record>
+<record key='Q7607' text="Sprinkles or flurries possible late."></record>
+<record key='Q7608' text="Flurries or freezing drizzle possible early."></record>
+<record key='Q7609' text="Flurries or freezing drizzle possible late."></record>
+<record key='Q7610' text="Patchy freezing drizzle possible."></record>
+<record key='Q7611' text="Patchy freezing drizzle possible early."></record>
+<record key='Q7612' text="Patchy freezing drizzle possible late."></record>
+<record key='Q7615' text="Areas of freezing rain possible."></record>
+<record key='Q7616' text="Areas of freezing rain possible early."></record>
+<record key='Q7617' text="Areas of freezing rain possible late."></record>
+<record key='Q7618' text="Some mixed winter precipitation possible early."></record>
+<record key='Q7619' text="Some mixed winter precipitation possible late."></record>
+<record key='Q7620' text="Some mixed winter precipitation possible."></record>
+<record key='Q7621' text="Some rain may mix in late."></record>
+<record key='Q7622' text="Some rain may mix in early."></record>
+<record key='Q7623' text="Some rain or sleet may mix in late."></record>
+<record key='Q7624' text="Some rain or sleet may mix in early."></record>
+<record key='Q7625' text="Sprinkles or flurries possible."></record>
+<record key='Q7626' text="Patchy fog and freezing drizzle possible."></record>
+<record key='Q7627' text="Flurries or freezing drizzle possible."></record>
+<record key='Q7628' text="Sprinkles or flurries possible early."></record>
+<record key='Q7629' text="Sprinkles or flurries possible late."></record>
+<record key='Q7630' text="A shower of rain or wet snow possible."></record>
+<record key='Q7631' text="A shower of rain or wet snow possible early."></record>
+<record key='Q7632' text="A shower of rain or wet snow possible late."></record>
+<record key='Q7633' text="Flurries or snow showers possible late."></record>
+<record key='Q7634' text="Flurries or snow showers possible early."></record>
+<record key='Q7635' text="Rain may freeze on some surfaces."></record>
+<record key='Q7636' text="Wet snow may mix in late."></record>
+<record key='Q7637' text="Wet snow may mix in early."></record>
+<record key='Q7638' text="Some sleet may mix in late."></record>
+<record key='Q7639' text="Some sleet may mix in early."></record>
+<record key='Q7640' text="Rain may start as a period of freezing rain."></record>
+<record key='Q7641' text="Rain may freeze on elevated surfaces."></record>
+<record key='Q7642' text="Some icing possible."></record>
+<record key='Q7643' text="Significant icing possible."></record>
+<record key='Q7644' text="Significant icing likely."></record>
+<record key='Q7645' text="Ice accumulation may cause damage."></record>
+<record key='Q7646' text="Some sleet or freezing rain possible."></record>
+<record key='Q7647' text="Some sleet or freezing rain possible early."></record>
+<record key='Q7648' text="Some sleet or freezing rain possible late."></record>
+<record key='Q7705' text="Heavier amounts in persistent snowbands."></record>
+<record key='Q7710' text="Heavier amounts in favored snowbelt locales."></record>
+<record key='Q7715' text="Brief whiteouts in intense snow squalls."></record>
+<record key='Q7725' text="Thunder possible."></record>
+<record key='Q7730' text="Snowbands shifting southward."></record>
+<record key='Q7735' text="Snowbands shifting northward."></record>
+<record key='Q7740' text="Rapidly changing weather conditions across the area."></record>
+<record key='Q7805' text="Snow showers and flurries ending."></record>
+<record key='Q7810' text="Snow ending."></record>
+<record key='Q7812' text="A few flurries are possible."></record>
+<record key='Q7813' text="A few flurries possible late."></record>
+<record key='Q7814' text="A few flurries possible early."></record>
+<record key='Q7815' text="A few flurries or snow showers possible."></record>
+<record key='Q7817' text="Flurries or snow showers possible late."></record>
+<record key='Q7818' text="Flurries or snow showers possible early."></record>
+<record key='Q7820' text="Some lingering morning flurries or snow showers."></record>
+<record key='Q7825' text="Some lingering evening flurries or snow showers."></record>
+<record key='Q7840' text="Precipitation may start as rain."></record>
+<record key='Q7845' text="Some rain may mix in."></record>
+<record key='Q7847' text="Some rain may mix in late."></record>
+<record key='Q7848' text="Some rain may mix in early."></record>
+<record key='Q7850' text="Some rain or sleet may mix in."></record>
+<record key='Q7852' text="Some rain or sleet may mix in late."></record>
+<record key='Q7853' text="Some rain or sleet may mix in early."></record>
+<record key='Q7855' text="Wet snow may mix in."></record>
+<record key='Q7857' text="Wet snow may mix in late."></record>
+<record key='Q7858' text="Wet snow may mix in early."></record>
+<record key='Q7860' text="Precipitation may start as wet snow."></record>
+<record key='Q7865' text="Precipitation may start as some sleet or wet snow."></record>
+<record key='Q7866' text="Some sleet may mix in late."></record>
+<record key='Q7867' text="Some sleet may mix in early."></record>
+<record key='Q7868' text="A burst of heavy snow expected early."></record>
+<record key='Q7869' text="A burst of heavy snow expected later on."></record>
+<record key='Q7870' text="Some sleet may mix in."></record>
+<record key='Q7871' text="A burst of heavy snow is expected."></record>
+<record key='Q7872' text="Total storm accumulations 1-3 inches."></record>
+<record key='Q7873' text="Snow may mix in north and west of the city."></record>
+<record key='Q7874' text="Snowfall rates of an inch or more per hour."></record>
+<record key='Q7875' text="Total storm accumulations 2-4 inches."></record>
+<record key='Q7876' text="Total storm accumulations 3-6 inches."></record>
+<record key='Q7879' text="Total storm accumulations 5-8 inches."></record>
+<record key='Q7882' text="Total storm accumulations 8-12 inches."></record>
+<record key='Q7885' text="Total storm accumulations 12-18 inches."></record>
+<record key='Q7888' text="Total storm accumulations 16-24 inches."></record>
+<record key='Q7891' text="Total storm accumulations 20-30 inches."></record>
+<record key='Q7894' text="Total storm accumulations approaching 3 feet."></record>
+<record key='Q7897' text="Total storm accumulations exceeding 3 feet."></record>
+<record key='Q7898' text="A burst of heavy snow expected later on."></record>
+<record key='Q7899' text="A burst of heavy snow expected early."></record>
+<record key='Q8000' text="A stray thunderstorm is possible through the evening."></record>
+<record key='Q8001' text="A stray shower or thunderstorm is possible."></record>
+<record key='Q8002' text="Any lingering showers or thunderstorms will end."></record>
+<record key='Q8003' text="Thunder possible."></record>
+<record key='Q8004' text="A stray thunderstorm is possible."></record>
+<record key='Q8005' text="A stray shower or thunderstorm is possible early."></record>
+<record key='Q8006' text="A stray afternoon or evening thunderstorm is possible."></record>
+<record key='Q8007' text="Storms will have lightning and gusty winds, but little rain."></record>
+<record key='Q8008' text="Storms may produce some hail."></record>
+<record key='Q8009' text="A stray shower or thunderstorm is possible late."></record>
+<record key='Q8010' text="A few storms may be severe."></record>
+<record key='Q8011' text="A few storms may be severe late."></record>
+<record key='Q8012' text="A few storms may be severe early."></record>
+<record key='Q8013' text="Thunder is possible early."></record>
+<record key='Q8014' text="Thunder is possible late."></record>
+<record key='Q8015' text="Storms could contain frequent lightning."></record>
+<record key='Q8025' text="Storms will produce frequent lightning."></record>
+<record key='Q8027' text="Heavy downpours and frequent lightning with storms."></record>
+<record key='Q8030' text="Storms could contain damaging winds."></record>
+<record key='Q8040' text="Damaging winds with some storms."></record>
+<record key='Q8045' text="Storms could contain large hail."></record>
+<record key='Q8055' text="Large hail in some storms."></record>
+<record key='Q8060' text="Storms could contain tornadoes."></record>
+<record key='Q8070' text="Tornadoes likely in some storms."></record>
+<record key='Q8075' text="Storms may produce large hail and strong winds."></record>
+<record key='A1001' text="No significant snow accumulations."></record>
+<record key='A1011' text="Snow accumulations less than one inch."></record>
+<record key='A1021' text="Snowfall around one inch."></record>
+<record key='A1022' text="About one inch of snow expected."></record>
+<record key='A1031' text="Snow accumulating 1 to 2 inches."></record>
+<record key='A1032' text="1 to 2 inches of snow expected."></record>
+<record key='A1041' text="Snow accumulating 1 to 3 inches."></record>
+<record key='A1042' text="1 to 3 inches of snow expected."></record>
+<record key='A1051' text="Snow accumulating 2 to 4 inches."></record>
+<record key='A1052' text="2 to 4 inches of snow expected."></record>
+<record key='A1061' text="Snow accumulating 3 to 5 inches."></record>
+<record key='A1062' text="3 to 5 inches of snow expected."></record>
+<record key='A1071' text="Snow accumulating 4 to 6 inches."></record>
+<record key='A1072' text="4 to 6 inches of snow expected."></record>
+<record key='A1081' text="Snow accumulating 5 to 8 inches."></record>
+<record key='A1082' text="5 to 8 inches of snow expected."></record>
+<record key='A1091' text="Snow accumulating 6 to 10 inches."></record>
+<record key='A1092' text="6 to 10 inches of snow expected."></record>
+<record key='A1101' text="Snow accumulating 8 to 12 inches."></record>
+<record key='A1102' text="8 to 12 inches of snow expected."></record>
+<record key='A1111' text="Snow accumulating 10 to 15 inches."></record>
+<record key='A1112' text="10 to 15 inches of snow expected."></record>
+<record key='A1121' text="Snow accumulation of a foot or more."></record>
+<record key='A1122' text="A foot or more of snow expected."></record>
+<record key='A2001' text="No significant snow or ice accumulations."></record>
+<record key='A2011' text="Snow and ice accumulations less than one inch."></record>
+<record key='A2021' text="Snow and ice accumulating around one inch."></record>
+<record key='A2022' text="About one inch of snow and ice expected."></record>
+<record key='A2031' text="Snow and ice accumulation of 1 to 3 inches."></record>
+<record key='A2032' text="1 to 3 inches of snow and ice expected."></record>
+<record key='A2041' text="Snow and ice accumulation of 2 to 4 inches."></record>
+<record key='A2042' text="2 to 4 inches of snow and ice expected."></record>
+<record key='A2051' text="Snow and ice accumulation of 3 to 6 inches."></record>
+<record key='A2052' text="3 to 6 inches of snow and ice expected."></record>
+<record key='A2061' text="Snow and ice accumulation of 4 to 8 inches."></record>
+<record key='A2062' text="4 to 8 inches of snow and ice expected."></record>
+<record key='A2071' text="Snow and ice accumulation of 8 to 12 inches."></record>
+<record key='A2072' text="8 to 12 inches of snow and ice expected."></record>
+<record key='A3001' text="No significant snow accumulation."></record>
+<record key='A3011' text="A slushy accumulation less than one inch."></record>
+<record key='A3021' text="Wet snow accumulating up to one inch."></record>
+<record key='A3022' text="A slushy accumulation around an inch expected."></record>
+<record key='A3031' text="Wet snow accumulating up to two inches."></record>
+<record key='A3032' text="A slushy accumulation of an inch or two expected."></record>
+<record key='A3041' text="Wet snow accumulation of 1 to 3 inches."></record>
+<record key='A3042' text="1 to 3 inches of wet snow expected."></record>
+<record key='A3051' text="Wet snow accumulation of 2 to 4 inches."></record>
+<record key='A3052' text="2 to 4 inches of wet snow expected."></record>
+<record key='A3061' text="Wet snow accumulation of 3 to 6 inches."></record>
+<record key='A3062' text="3 to 6 inches of wet snow expected."></record>
+<record key='A3071' text="Wet snow accumulation of 4 to 8 inches."></record>
+<record key='A3072' text="4 to 8 inches of wet snow expected."></record>
+<record key='A3081' text="Wet snow accumulation of 8 to 12 inches."></record>
+<record key='A3082' text="8 to 12 inches of wet snow expected."></record>
+<record key='A4011' text="Some ice accumulation possible."></record>
+<record key='A4021' text="Significant ice accumulation possible."></record>
+<record key='A5001' text="No significant icing expected."></record>
+<record key='A5011' text="Some icing possible."></record>
+<record key='A5021' text="Significant icing possible."></record>
+<record key='A6041' text="Rainfall may reach one inch."></record>
+<record key='A6042' text="Rainfall possibly over one inch."></record>
+<record key='A6051' text="1 to 2 inches of rain expected."></record>
+<record key='A6052' text="Rainfall possibly over two inches."></record>
+<record key='P9011' text="Chance of rain 10%."></record>
+<record key='P9021' text="Chance of rain 20%."></record>
+<record key='P9031' text="Chance of rain 30%."></record>
+<record key='P9041' text="Chance of rain 40%."></record>
+<record key='P9051' text="Chance of rain 50%."></record>
+<record key='P9061' text="Chance of rain 60%."></record>
+<record key='P9071' text="Chance of rain 70%."></record>
+<record key='P9081' text="Chance of rain 80%."></record>
+<record key='P9091' text="Chance of rain 90%."></record>
+<record key='P9101' text="Chance of rain 100%."></record>
+<record key='P9111' text="Chance of snow 10%."></record>
+<record key='P9121' text="Chance of snow 20%."></record>
+<record key='P9131' text="Chance of snow 30%."></record>
+<record key='P9141' text="Chance of snow 40%."></record>
+<record key='P9151' text="Chance of snow 50%."></record>
+<record key='P9161' text="Chance of snow 60%."></record>
+<record key='P9171' text="Chance of snow 70%."></record>
+<record key='P9181' text="Chance of snow 80%."></record>
+<record key='P9191' text="Chance of snow 90%."></record>
+<record key='P9201' text="Chance of snow 100%."></record>
+<record key='P9211' text="Chance of precipitation 10%."></record>
+<record key='P9211a' text="Chance of precip 10%."></record>
+<record key='P9221' text="Chance of precipitation 20%."></record>
+<record key='P9221a' text="Chance of precip 20%."></record>
+<record key='P9231' text="Chance of precipitation 30%."></record>
+<record key='P9231a' text="Chance of precip 30%."></record>
+<record key='P9241' text="Chance of precipitation 40%."></record>
+<record key='P9241a' text="Chance of precip 40%."></record>
+<record key='P9251' text="Chance of precipitation 50%."></record>
+<record key='P9251a' text="Chance of precip 50%."></record>
+<record key='P9261' text="Chance of precipitation 60%."></record>
+<record key='P9261a' text="Chance of precip 60%."></record>
+<record key='P9271' text="Chance of precipitation 70%."></record>
+<record key='P9271a' text="Chance of precip 70%."></record>
+<record key='P9281' text="Chance of precipitation 80%."></record>
+<record key='P9281a' text="Chance of precip 80%."></record>
+<record key='P9291' text="Chance of precipitation 90%."></record>
+<record key='P9291a' text="Chance of precip 90%."></record>
+<record key='P9301' text="Chance of precipitation 100%."></record>
+<record key='P9301a' text="Chance of precip 100%."></record>
+<record key='S0300' text="Strong thunderstorms."></record>
+<record key='S0310' text="Strong thunderstorms, windy."></record>
+<record key='S0400' text="Thunderstorms."></record>
+<record key='S0402' text="Heavy thunderstorms."></record>
+<record key='S0410' text="Windy with thunderstorms."></record>
+<record key='S0412' text="Heavy thunderstorms and wind."></record>
+<record key='S0500' text="Mix of rain and snow."></record>
+<record key='S0510' text="A mix of rain and snow, windy."></record>
+<record key='S0600' text="Mix of rain and sleet."></record>
+<record key='S0601' text="Mix of light rain and sleet."></record>
+<record key='S0610' text="Windy with rain and sleet."></record>
+<record key='S0611' text="Light rain and sleet, windy."></record>
+<record key='S0700' text="Wintry mix of precipitation."></record>
+<record key='S0701' text="Light wintry mix."></record>
+<record key='S0710' text="A wintry mix with wind."></record>
+<record key='S0711' text="Wind with a light wintry mix."></record>
+<record key='S0800' text="Periods of freezing drizzle."></record>
+<record key='S0810' text="Windy, freezing drizzle"></record>
+<record key='S0850' text="Freezing drizzle with fog."></record>
+<record key='S0900' text="Occasional drizzle."></record>
+<record key='S0910' text="Occasional drizzle, windy."></record>
+<record key='S0950' text="Drizzle and fog."></record>
+<record key='S1000' text="Freezing rain."></record>
+<record key='S1001' text="Light freezing rain."></record>
+<record key='S1002' text="Heavy freezing rain."></record>
+<record key='S1010' text="Freezing rain, windy"></record>
+<record key='S1011' text="Light freezing rain, windy."></record>
+<record key='S1012' text="Heavy freezing rain, windy."></record>
+<record key='S1051' text="Light freezing rain with fog."></record>
+<record key='S1100' text="Showers."></record>
+<record key='S1110' text="Windy with showers."></record>
+<record key='S1140' text="Showers and thunderstorms."></record>
+<record key='S1170' text="Thundershowers, windy."></record>
+<record key='S1200' text="Rain."></record>
+<record key='S1201' text="Light rain."></record>
+<record key='S1210' text="Windy with periods of rain."></record>
+<record key='S1211' text="Light rain and windy."></record>
+<record key='S1240' text="Rain with thunder."></record>
+<record key='S1251' text="Light rain and fog."></record>
+<record key='S1270' text="Rain and wind with thunder."></record>
+<record key='S1300' text="Cloudy with flurries."></record>
+<record key='S1310' text="Flurries and windy."></record>
+<record key='S1400' text="Snow showers."></record>
+<record key='S1410' text="Windy with snow showers."></record>
+<record key='S1600' text="Snow."></record>
+<record key='S1601' text="Light snow."></record>
+<record key='S1610' text="Snow and windy."></record>
+<record key='S1611' text="Light snow and windy."></record>
+<record key='S1651' text="Light snow and fog."></record>
+<record key='S1800' text="Sleet."></record>
+<record key='S1801' text="Light sleet."></record>
+<record key='S1810' text="Windy with sleet."></record>
+<record key='S1811' text="Windy with light sleet."></record>
+<record key='S2000' text="Areas of fog."></record>
+<record key='S2010' text="Windy with areas of fog."></record>
+<record key='S2100' text="Hazy."></record>
+<record key='S2110' text="Windy and hazy."></record>
+<record key='S2600' text="Cloudy."></record>
+<record key='S2610' text="Cloudy and windy."></record>
+<record key='S2800' text="Mostly cloudy."></record>
+<record key='S2810' text="Mostly cloudy and windy."></record>
+<record key='S3000' text="Partly cloudy."></record>
+<record key='S3010' text="Partly cloudy and windy."></record>
+<record key='S3200' text="Fair."></record>
+<record key='S3210' text="Fair and windy."></record>
+<record key='S3400' text="A few clouds."></record>
+<record key='S3410' text="Windy with a few clouds."></record>
+<record key='S3700' text="Isolated thunderstorms."></record>
+<record key='S3710' text="Isolated thunderstorms, wind."></record>
+<record key='S3800' text="Scattered thunderstorms."></record>
+<record key='S3810' text="Scattered thunderstorms."></record>
+<record key='S3900' text="Scattered showers."></record>
+<record key='S3910' text="Scattered showers, windy."></record>
+<record key='S4000' text="Rain, heavy at times."></record>
+<record key='S4010' text="Wind and heavy rain."></record>
+<record key='S4100' text="Snow showers at times."></record>
+<record key='S4110' text="Scattered snow showers."></record>
+<record key='S4200' text="Snow, heavy at times."></record>
+<record key='S4210' text="Windy with heavy snow."></record>
+<record key='S4300' text="Blizzard conditions."></record>
+<record key='S4500' text="A few sprinkles."></record>
+<record key='S4510' text="Windy with a few sprinkles."></record>
+<record key='S4600' text="Few showers."></record>
+<record key='S4610' text="Windy with a few showers."></record>
+<record key='S4700' text="A few snow showers."></record>
+<record key='S4710' text="A few snow showers, windy."></record>
+<record key='S4800' text="Scattered flurries."></record>
+<record key='S4810' text="Windy with flurries at times."></record>
+<record key='S4900' text="Rain and snow showers."></record>
+<record key='S4910' text="Rain and snow showers, windy."></record>
+<record key='S5000' text="Snow and blowing snow."></record>
+<record key='S5100' text="Sleet and freezing rain."></record>
+<record key='S5101' text="Freezing rain and sleet."></record>
+<record key='S5110' text="Freezing rain, sleet and windy."></record>
+<record key='S5111' text="Light freezing rain, sleet, windy."></record>
+<record key='S5200' text="Snow and sleet."></record>
+<record key='S5210' text="Windy with snow and sleet."></record>
+<record key='S5300' text="Rain and freezing rain."></record>
+<record key='S5301' text="Light rain and freezing rain."></record>
+<record key='S5302' text="Heavy rain and freezing rain"></record>
+<record key='S5310' text="Rain and freezing rain, windy."></record>
+<record key='S5311' text="Light rain and freezing rain."></record>
+<record key='S5312' text="Heavy rain and freezing rain."></record>
+<record key='S5351' text="Light rain and freezing rain."></record>
+<record key='S5400' text="Windy, occasional snow squalls."></record>
+<record key='S5500' text="Windy with showers at times."></record>
+<record key='S5600' text="Snow, thunder possible."></record>
+<record key='S5610' text="Snow and wind, thunder possible."></record>
+<record key='S5700' text="Scattered strong thunderstorms."></record>
+<record key='S5710' text="Scattered strong thunderstorms."></record>
+<record key='S6000' text="Drizzle ending early."></record>
+<record key='S6003' text="Morning drizzle."></record>
+<record key='S6010' text="Windy with drizzle early."></record>
+<record key='S6013' text="Drizzle in the morning, windy."></record>
+<record key='S6100' text="Showers ending early."></record>
+<record key='S6103' text="Morning showers."></record>
+<record key='S6110' text="Windy, showers early."></record>
+<record key='S6113' text="Morning showers with wind."></record>
+<record key='S6140' text="Thundershowers early."></record>
+<record key='S6143' text="Morning thundershowers"></record>
+<record key='S6170' text="Thundershowers early, windy."></record>
+<record key='S6173' text="Windy, morning thundershowers."></record>
+<record key='S6200' text="Thunderstorms early."></record>
+<record key='S6203' text="Morning thunderstorms."></record>
+<record key='S6210' text="Thunderstorms ending early."></record>
+<record key='S6213' text="Early thunderstorms and wind."></record>
+<record key='S6300' text="Periods of rain early."></record>
+<record key='S6303' text="Cloudy with morning rain."></record>
+<record key='S6301' text="Periods of light rain early."></record>
+<record key='S6304' text="Light rain in the morning."></record>
+<record key='S6310' text="Windy, periods of rain early."></record>
+<record key='S6313' text="Windy with morning rain."></record>
+<record key='S6311' text="Light rain early, windy."></record>
+<record key='S6314' text="Windy with morning rain."></record>
+<record key='S6400' text="A mix of rain and snow early."></record>
+<record key='S6403' text="Morning rain/snow."></record>
+<record key='S6401' text="Rain and snow early."></record>
+<record key='S6404' text="Morning rain and snow."></record>
+<record key='S6410' text="Rain and snow early, windy."></record>
+<record key='S6413' text="Windy, morning rain and snow."></record>
+<record key='S6411' text="Windy, rain and snow early."></record>
+<record key='S6414' text="Windy, morning rain and snow."></record>
+<record key='S6500' text="A mix of rain and ice early."></record>
+<record key='S6503' text="Morning rain and ice."></record>
+<record key='S6501' text="Light rain and ice early."></record>
+<record key='S6504' text="Morning light rain and ice."></record>
+<record key='S6510' text="Periods of rain and ice early."></record>
+<record key='S6513' text="Windy, rain and ice early."></record>
+<record key='S6511' text="A mix of light rain and ice early."></record>
+<record key='S6514' text="Morning light rain and ice."></record>
+<record key='S6600' text="An icy mix early."></record>
+<record key='S6603' text="AM freezing rain and sleet."></record>
+<record key='S6610' text="Freezing rain and sleet early."></record>
+<record key='S6613' text="AM freezing rain and sleet."></record>
+<record key='S6700' text="A wintry mix early."></record>
+<record key='S6703' text="Wintry precipitation early."></record>
+<record key='S6701' text="A light wintry mix early."></record>
+<record key='S6704' text="A wintry mix in the morning."></record>
+<record key='S6710' text="A wintry mix early, windy."></record>
+<record key='S6713' text="A wintry mix in the morning."></record>
+<record key='S6711' text="A wintry mix early, windy."></record>
+<record key='S6714' text="A wintry mix in the morning."></record>
+<record key='S6800' text="Snow showers early."></record>
+<record key='S6803' text="Morning snow showers."></record>
+<record key='S6810' text="Snow showers ending early."></record>
+<record key='S6813' text="Morning snow showers, windy."></record>
+<record key='S6900' text="Snow early."></record>
+<record key='S6903' text="Morning snow."></record>
+<record key='S6901' text="Periods of light snow early."></record>
+<record key='S6904' text="Light snow in the morning."></record>
+<record key='S6910' text="Snow early, windy at times."></record>
+<record key='S6913' text="Windy with morning snow."></record>
+<record key='S6911' text="Windy with light snow early."></record>
+<record key='S6914' text="Light snow in the morning."></record>
+<record key='S7000' text="Occasional late night drizzle."></record>
+<record key='S7003' text="Drizzle during the afternoon."></record>
+<record key='S7010' text="Windy with drizzle late."></record>
+<record key='S7013' text="Afternoon drizzle, windy."></record>
+<record key='S7100' text="Showers late."></record>
+<record key='S7103' text="Afternoon showers."></record>
+<record key='S7110' text="Windy with showers late."></record>
+<record key='S7113' text="Chance of late day showers."></record>
+<record key='S7140' text="Thundershowers late."></record>
+<record key='S7143' text="Afternoon thundershowers."></record>
+<record key='S7170' text="Late night thundershowers."></record>
+<record key='S7173' text="Afternoon thundershowers."></record>
+<record key='S7200' text="Late night thunderstorms."></record>
+<record key='S7203' text="Afternoon thunderstorms."></record>
+<record key='S7210' text="Windy, thunderstorms late."></record>
+<record key='S7213' text="Late day thunderstorms, wind."></record>
+<record key='S7300' text="Rain developing late."></record>
+<record key='S7303' text="Late afternoon rain likely."></record>
+<record key='S7301' text="Light rain developing late."></record>
+<record key='S7304' text="Late day light rain."></record>
+<record key='S7310' text="Windy with late night rain."></record>
+<record key='S7313' text="Afternoon rain and wind."></record>
+<record key='S7311' text="Windy, light rain late."></record>
+<record key='S7314' text="Afternoon rain and wind."></record>
+<record key='S7400' text="Rain and snow overnight."></record>
+<record key='S7403' text="Late day rain and snow."></record>
+<record key='S7401' text="Rain and snow showers late."></record>
+<record key='S7404' text="Late day rain and snow."></record>
+<record key='S7410' text="Wind with rain and snow late."></record>
+<record key='S7413' text="Late day rain and snow."></record>
+<record key='S7411' text="Rain and snow showers late."></record>
+<record key='S7414' text="Afternoon rain and snow."></record>
+<record key='S7500' text="A mix of rain and ice late."></record>
+<record key='S7503' text="Late day mix of ice and rain."></record>
+<record key='S7501' text="Light rain and ice late."></record>
+<record key='S7504' text="Afternoon light rain and ice."></record>
+<record key='S7510' text="Rain mixed with ice late."></record>
+<record key='S7513' text="Rain mixed with ice late."></record>
+<record key='S7511' text="Light rain and ice overnight."></record>
+<record key='S7514' text="Late day mix of rain and ice."></record>
+<record key='S7600' text="An icy mix overnight."></record>
+<record key='S7603' text="A late day icy mix."></record>
+<record key='S7610' text="An icy mix overnight, windy."></record>
+<record key='S7613' text="A late day icy mix, windy."></record>
+<record key='S7700' text="Late night wintry mix."></record>
+<record key='S7703' text="Afternoon wintry mix."></record>
+<record key='S7701' text="Light wintry mix late."></record>
+<record key='S7704' text="Afternoon light wintry mix."></record>
+<record key='S7710' text="Late night wintry mix, windy."></record>
+<record key='S7713' text="Windy, late day wintry mix."></record>
+<record key='S7711' text="Windy, light wintry mix late."></record>
+<record key='S7714' text="Afternoon light wintry mix."></record>
+<record key='S7800' text="Snow showers overnight."></record>
+<record key='S7803' text="Afternoon snow showers."></record>
+<record key='S7810' text="Late night snow showers."></record>
+<record key='S7813' text="Afternoon snow showers."></record>
+<record key='S7900' text="Snow developing overnight."></record>
+<record key='S7903' text="Afternoon snow likely."></record>
+<record key='S7901' text="Light snow overnight."></record>
+<record key='S7904' text="Late day light snow."></record>
+<record key='S7910' text="Snow developing overnight."></record>
+<record key='S7913' text="Afternoon snow and wind."></record>
+<record key='S7911' text="Windy, light snow overnight."></record>
+<record key='S7914' text="Late day light snow, windy."></record>
+<record key='S8000' text="Rain changing to snow."></record>
+<record key='S8010' text="Rain changing to snow."></record>
+<record key='S8100' text="Rain changing to ice."></record>
+<record key='S8110' text="Rain changing to ice, windy."></record>
+<record key='S8200' text="Snow changing to rain."></record>
+<record key='S8210' text="Snow changing to rain."></record>
+<record key='S8300' text="Snow and ice changing to rain."></record>
+<record key='S8310' text="Snow and ice changing to rain."></record>
+<record key='S8400' text="Snow changing to ice."></record>
+<record key='S8410' text="Snow changing to ice, windy."></record>
+<record key='S8500' text="Ice changing to rain."></record>
+<record key='S8510' text="Ice changing to rain, windy."></record>
+<record key='S8600' text="Ice changing to snow."></record>
+<record key='S8610' text="Ice changing to snow, windy."></record>
+<record key='S8700' text="Wintry mix changing to snow."></record>
+<record key='S8710' text="Wintry mix changing to snow."></record>
+<record key='S8800' text="Snow changing to a wintry mix."></record>
+<record key='S8810' text="Snow changing to a wintry mix."></record>
+<record key='S8900' text="A wintry mix changing to rain."></record>
+<record key='S8910' text="A wintry mix changing to rain."></record>
+<record key='S9000' text="Skies clearing overnight."></record>
+<record key='S9003' text="Morning clouds, afternoon sun."></record>
+<record key='S9010' text="Clearing skies late, windy."></record>
+<record key='S9013' text="Morning clouds, afternoon sun."></record>
+<record key='S9100' text="Areas of fog early."></record>
+<record key='S9103' text="Morning fog, afternoon sun."></record>
+<record key='S9110' text="Windy with areas of fog early."></record>
+<record key='S9113' text="Morning fog, afternoon sun."></record>
+<record key='S9200' text="Fog early, then cloudy."></record>
+<record key='S9203' text="Morning fog, then cloudy."></record>
+<record key='S9210' text="Fog early, then cloudy."></record>
+<record key='S9213' text="Morning fog, then cloudy."></record>
+<record key='S9300' text="Fog developing overnight."></record>
+<record key='S9303' text="Late day fog developing."></record>
+<record key='S9310' text="Fog developing late, windy."></record>
+<record key='S9313' text="Areas of fog late in the day."></record>
+<record key='S9500' text="Rain changing to a wintry mix."></record>
+<record key='S9510' text="Rain changing to a wintry mix."></record>
+<record key='R01' text="at less than 5 mph."></record>
+<record key='R02' text="at 5 to 10 mph."></record>
+<record key='R03' text="at 10 to 15 mph."></record>
+<record key='R04' text="at 10 to 20 mph."></record>
+<record key='R05' text="at 15 to 25 mph."></record>
+<record key='R06' text="at 20 to 30 mph."></record>
+<record key='R07' text="at 25 to 35 mph."></record>
+<record key='R08' text="at 25 to 40 mph."></record>
+<record key='R09' text="at 35 to 50 mph."></record>
+<record key='R10' text="at 40 to 60 mph."></record>
+<record key='R11' text="at 50 to 70 mph."></record>
+<record key='R12' text="at 60 to 80 mph."></record>
+<record key='R13' text="at 70 to 90 mph."></record>
+<record key='R14' text="at 80 to 100 mph."></record>
+<record key='R15' text="at over 100 mph."></record>
+<record key='W01' text="Winds NNE"></record>
+<record key='W02' text="Winds NE"></record>
+<record key='W03' text="Winds ENE"></record>
+<record key='W04' text="Winds East"></record>
+<record key='W05' text="Winds ESE"></record>
+<record key='W06' text="Winds SE"></record>
+<record key='W07' text="Winds SSE"></record>
+<record key='W08' text="Winds South"></record>
+<record key='W09' text="Winds SSW"></record>
+<record key='W10' text="Winds SW"></record>
+<record key='W11' text="Winds WSW"></record>
+<record key='W12' text="Winds West"></record>
+<record key='W13' text="Winds WNW"></record>
+<record key='W14' text="Winds NW"></record>
+<record key='W15' text="Winds NNW"></record>
+<record key='W16' text="Winds North"></record>
+<record key='W9900' text="Wind calm."></record>
+<record key='W9901' text="Wind near calm."></record>
+<record key='W9902' text="Winds light and variable."></record>
+</root>

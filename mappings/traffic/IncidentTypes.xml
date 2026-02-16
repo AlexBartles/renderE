@@ -1,0 +1,53 @@
+<root>
+<record key="ACC" group="Incident" description="Accident" />
+<record key="ACC>S" group="Incident" description="Accident on the side" />
+<record key="ACC?" group="Incident" description="Report of an accident" />
+<record key="ACCLR" group="Incident" description="Accident clear" />
+<record key="ACCS" group="Incident" description="Accidents" />
+<record key="BFIR" group="Incident" description="Bus fire" />
+<record key="BFIR?" group="Incident" description="Report of a bus fire" />
+<record key="CHEM" group="Unspecified" description="Chemical spill" />
+<record key="CONST" group="Construction" description="Construction" />
+<record key="CONST?" group="Construction" description="Report of construction" />
+<record key="CRFR" group="Incident" description="Car fire" />
+<record key="CRFR?" group="Incident" description="Report of a car fire" />
+<record key="DBUS" group="Incident" description="Disabled bus" />
+<record key="DBUS?" group="Incident" description="Report of a disabled bus" />
+<record key="DTRK" group="Incident" description="Disabled truck" />
+<record key="DTRK?" group="Incident" description="Report of a disabled truck" />
+<record key="DTT" group="Incident" description="Disabled tractor trailer" />
+<record key="DTT?" group="Incident" description="Report of a disabled tractor trailer" />
+<record key="DVEH" group="Incident" description="Disabled Vehicle" />
+<record key="DVEH?" group="Incident" description="Report of a disabled vehicle" />
+<record key="GMB" group="Unspecified" description="Gas main break" />
+<record key="ICY" group="Unspecified" description="Icy" />
+<record key="JTT" group="Incident" description="Jackknifed tractor trailer" />
+<record key="JTT?" group="Incident" description="Report of a jackknifed tractor" />
+<record key="MCACC" group="Incident" description="Motorcycle Accident" />
+<record key="MVACC" group="Incident" description="Multi-vehicle accident" />
+<record key="MVACC?" group="Incident" description="Report of a multi-vehicle accident" />
+<record key="OCAR" group="Incident" description="Overturned car" />
+<record key="OCAR?" group="Incident" description="Report of an overturned car" />
+<record key="OTRK" group="Incident" description="Overturned truck" />
+<record key="OTRK?" group="Incident" description="Report of an overturned truck" />
+<record key="OTT" group="Incident" description="Overturned tractor trailer" />
+<record key="OTT?" group="Incident" description="Report of an overturned tractor trailer" />
+<record key="OVEH" group="Incident" description="Overturned vehicle" />
+<record key="OVEH?" group="Incident" description="Report of an overturned vehicle" />
+<record key="POLE" group="Unspecified" description="Downed pole" />
+<record key="SPILL" group="Incident" description="Spill" />
+<record key="SPILL?" group="Incident" description="Report of a spill" />
+<record key="STT" group="Incident" description="Separated tractor trailer" />
+<record key="STT?" group="Incident" description="Report of a separated tractor trailer" />
+<record key="TREE" group="Unspecified" description="Downed tree" />
+<record key="TRKFR" group="Incident" description="Truck fire" />
+<record key="TRKFR?" group="Incident" description="Report of a truck fire" />
+<record key="TTACC" group="Incident" description="Tractor trailer accident" />
+<record key="TTFR" group="Incident" description="Tractor Trailer fire" />
+<record key="TTFR?" group="Incident" description="Report of a tractor trailer fire" />
+<record key="Unspecified" group="Unspecified" description="Unspecified" />
+<record key="VFR" group="Incident" description="Vehicle fire" />
+<record key="VFR?" group="Incident" description="Report of a vehicle fire" />
+<record key="WMB" group="Incident" description="Water main break" />
+<record key="WMB?" group="Unspecified" description="report of water main break" />
+</root>

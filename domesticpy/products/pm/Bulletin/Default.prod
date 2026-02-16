@@ -1,0 +1,283 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+import time
+import twccommon
+import domestic
+import twc.dsmarshal
+import twc.DataStoreInterface as ds
+dsm = twc.dsmarshal
+
+class Product(twc.products.Product):
+
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+
+        data = self.getData()
+        params = self.getParams()
+
+        if len(data.elements) == 0:
+            twccommon.Log.info("No active bulletins active for %s." % (params.product,))
+            return 0
+        else:
+            return maximum
+
+
+    def _loadData(self):
+
+        params = self.getParams()
+        data = self.getData()
+        data.ds = twccommon.Data()
+
+        # see if SCMT has turned off vocalization (defaults to ON)
+        # Config.0.Bulletin_Default : activeVocal = 1
+        data.activeVocal = getattr(params, 'activeVocal', 1)
+
+        elements = []
+        # create the bulletin crawl "elements" by concatenating 1-to-N bulletins
+        for e in params.bulletinCrawl:
+            elements.append((
+                e.headline.upper(), e.color, e.text.upper(), e.pil, e.pilExt, e.beeps))
+
+        data.elements = elements
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+import os
+
+<%@'_ProductHeader.rs'%>
+
+<%!
+params   = prod.getParams()
+data     = prod.getData()
+%>
+
+import os
+import string
+
+activeVocal = <%-data.activeVocal%>
+elements    = <%-data.elements%>
+
+CRAWL_RATE = 2.8
+MRQE_BBOX = (720, 36)
+
+
+f2 = TTFont("/rsrc/fonts/Interstate-Bold",  25, t=40)
+
+boxPos = 0
+def getBox(w, h, colors):
+    # Used to help build crazy glint line at top
+    global boxPos
+    poly = Polygon()
+    r,g,b,a = colors[0]
+    r,g,b,a = renderUtil.rgbaConvert(r,g,b,a)
+    poly.addVertex(0, 0, r,g,b,a)
+    r,g,b,a = colors[1]
+    r,g,b,a = renderUtil.rgbaConvert(r,g,b,a)
+    poly.addVertex(w, 0, r,g,b,a)
+    poly.addVertex(w, h, r,g,b,a)
+    r,g,b,a = colors[0]
+    r,g,b,a = renderUtil.rgbaConvert(r,g,b,a)
+    poly.addVertex(0, h, r,g,b,a)
+    poly.setPosition(boxPos, 0)
+    boxPos = boxPos + w
+    return poly
+
+
+_color = {
+    1 : ((158,128,33), (212,212,50), (20,20,20), ((76,78,38,255),
+                                                  (188,191,123,255),
+                                                  (86,88,43,255),
+                                                  (133,136,66,255),
+                                                  (221,223,188,255),
+                                                  (136,139,67,255),
+                                                  (193,196,133,255),
+                                                  (139,142,69,255))),
+    2 : ((174,84,0),   (234,140,18), (20,20,20), ((93,59,23,255),
+                                                  (217,160,98,255),
+                                                  (105,67,26,255),
+                                                  (163,104,40,255),
+                                                  (236,208,177,255),
+                                                  (166,106,41,255),
+                                                  (220,166,109,255),
+                                                  (169,107,41,255))),
+    3 : ((116,0,0),    (158,24,12), (212,212,212),((74,42,42,255),
+                                                   (184,130,130,255),
+                                                   (83,47,47,255),
+                                                   (129,73,73,255),
+                                                   (220,193,193,255),
+                                                   (132,75,75,255),
+                                                   (189,139,139,255),
+                                                   (134,76,76,255))),
+}
+def makeCrawlPage(headline, color, text, pil, pilExt, playAudio,beeps):
+
+    global boxPos
+
+    if color == 3:
+        f1 = TTFont("/rsrc/fonts/Interstate-Black", 16, sx=1, sy=1, t=100)
+    else:
+        f1 = TTFont("/rsrc/fonts/Interstate-Black", 16, shadow=0, t=100)
+
+    # marquee
+    mw, mh = MRQE_BBOX
+    c1, c2, c3, c4 = _color[color]
+
+    # The crawl, we'll place it on the page last so its on top
+    #crawl = Marquee(font=f2, str=text, step=CRAWL_RATE, repeat=0)
+    crawl = ScrollingCompositeRenderable(step = CRAWL_RATE, spacing = 1, repeat = 0)
+
+    #w, h = crawl.size()
+    #w = f2.stringWidth(text)
+    r,g,b,a = renderUtil.rgbaConvert(212,212,212)
+    crawl.setColor(r,g,b,a)
+    crawl.setPosition(0, mh)
+    crawl.setBoundingBoxSize(mw, mh)
+
+    w = 0
+    while len(text) > 0:
+        chunksize = 50
+        chunk = text[0:chunksize]
+        text = text[chunksize:]
+        if chunk[-1] in string.whitespace:
+            pos = 0
+            maxlen = len(text)
+            while (pos < maxlen) and text[pos] in string.whitespace:
+                pos += 1
+
+            pos += 1
+            chunk += text[0:pos]
+            text = text[pos:]
+
+        t = Text(f2, chunk)
+        t.setColor(r,g,b,a)
+        w += t.size()[0] + 1
+        crawl.addItem(t)
+
+    # create the page; it lasts as long as 
+    #it takes the bulletin to crawl
+    duration = (w + mw)/CRAWL_RATE
+    p = Page(duration)
+    # Crazy glint line at top of LDL
+    boxPos = 0
+    cr = CompositeRenderable()
+    cr.addItem(getBox(65,2, [c4[0], c4[1]]))
+    cr.addItem(getBox(43,2, [c4[1], c4[2]]))
+    cr.addItem(getBox(43,2, [c4[2], c4[3]]))
+    cr.addItem(getBox(187,2,[c4[3], c4[4]]))
+    cr.addItem(getBox(137,2,[c4[4], c4[5]]))
+    cr.addItem(getBox(39,2, [c4[5], c4[6]]))
+    cr.addItem(getBox(34,2, [c4[6], c4[7]]))
+    cr.addItem(getBox(172,2,[c4[7], c4[7]]))
+    cr.setPosition(0, 74)
+    p.addItem(cr)
+
+    box = Box()
+    box.setSize(720,74)
+    box.setPosition(0,0)
+    r,g,b = c1
+    r,g,b,a = renderUtil.rgbaConvert(r,g,b)
+    box.setColor(r,g,b,a)
+    p.addItem(box)
+
+    r,g,b = c2
+    boxPos = 0
+    box = getBox(100,15, [[r,g,b,0], [r,g,b,255]])
+    box.setPosition(0,59)
+    p.addItem(box)
+
+    box = Box()
+    r,g,b,a = renderUtil.rgbaConvert(r,g,b)
+    box.setSize(620, 15)
+    box.setPosition(100,59)
+    box.setColor(r,g,b,255)
+    p.addItem(box)
+
+    r,g,b,a = renderUtil.rgbaConvert(16,16,16)
+    m = TIFF_Image('/rsrc/images/clockTab')
+    m.setPosition(483,57)
+    # BLACK clockTab for bulletins!
+    r,g,b,a = renderUtil.rgbaConvert(20,20,20)
+    m.setColor(r,g,b,a)
+    p.addItem(m)
+ 
+    gr = Text(f1, headline)
+    gr.setPosition(62, 61)
+    r,g,b = c3
+    r,g,b,a = renderUtil.rgbaConvert(r,g,b)
+    gr.setColor(r,g,b,a)
+    p.addItem(gr)
+ 
+    # This is the Marquee crawl.. place it last so it on top
+    p.addItem(crawl)
+
+    as = AudioSequencer()
+
+    beepNum = beeps
+    if playAudio:
+        aFile = '%s%s' % (pil, pilExt)
+        intro = '/rsrc/audio/vocalLocal/Default_Phrases_Severe/%s.wav' % (aFile)
+        if(os.access(intro, os.R_OK) and activeVocal):
+            beepNum = 3
+            for i in range(beepNum):
+                beep = AudioClip('/rsrc/audio/misc/beep.wav')
+                beep.setBlendType(AudioRenderable.BLEND_MIX)
+                beep.setVolLevel(1.0)
+                as.addItem(beep)
+            ac = AudioClip(intro)
+            ac.setBlendType(AudioRenderable.BLEND_MIX)
+            ac.setVolLevel(1.0)
+
+            as.addItem(NullAudioClip(8))
+            as.addItem(ac)
+            as.addItem(NullAudioClip(15))
+
+    for i in range(beepNum):
+        beep = AudioClip('/rsrc/audio/misc/beep.wav')
+        beep.setBlendType(AudioRenderable.BLEND_MIX)
+        beep.setVolLevel(1.0)
+        as.addItem(beep)
+
+    p.addItem(as)
+    aes = AudioEffectSequencer(as, repeat=1)
+    aes.addEffect(AudioFader(None, 0.0, 0.8, 8), 8)
+    aes.addEffect(AudioNullEffect(None), as.duration() - 8)
+    aes.addEffect(AudioFader(None, 0.8, 0.0, 15), 15)
+    p.addItem(aes)
+
+    return p
+
+    
+l = Layer()
+
+playAudio = 1
+for i in range(5):
+    for headline, color, text, pil, pilExt, beeps in elements:
+        p = makeCrawlPage(
+            headline, color, text, pil, pilExt, playAudio, beeps)
+        l.addPage(p)
+    playAudio = 0
+
+# handle layer setup
+immediateReplacement  = <%-params.immediateReplacement%>
+lname                 = <%-params.layerProps.name%>
+
+if immediateReplacement:
+    RenderControl.setLayer(lname, l)
+else:
+    RenderControl.replaceLayer(lname, l)
+
+
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

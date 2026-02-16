@@ -1,0 +1,242 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+import Common
+import domestic.SunRiseSet
+import domestic.MoonPhase
+import string
+import time
+import twccommon
+import twc.dsmarshal
+dsm = twc.dsmarshal
+
+class Product(twc.products.Product):
+
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        if self._hasData:
+            return optimal
+        else:
+            return 0
+
+    def formatTime(self, t):
+        try:
+            timeStrTup = ()
+            hour = t[3]
+            if hour > 12:
+                hour = hour - 12
+            if hour == 0:
+                hour = 12
+            timeStr = '%d:%s' % (hour, string.lower(time.strftime('%M', t)))
+            am_pmStr = string.lower(time.strftime(' %p', t))
+            timeStrTup = (timeStr, am_pmStr)
+
+        except:
+            timeStr = ('', '')
+        return timeStrTup
+
+    def _loadData(self):
+        params = self.getParams()
+        data = self.getData()
+        try:
+            lon = params.longitude
+            lat = params.latitude
+
+            curTime = time.localtime(time.time())
+            y, m, d, H, M, S, dow, doy, dst = curTime
+            # Use 3 am so that there are no problems with DST
+            today    = (y, m, d, 3, 0, 0, dow, doy, -1)
+            tomorrow = time.mktime((y, m, d+1, 3, 0, 0, 0, 0, -1))
+            tomorrow = time.localtime(tomorrow)
+            timeTup  = (today, tomorrow)
+            riseSetList = []
+            # Need to figure out sunrise and moon phases, based on lat/lon
+            phaseTimes = domestic.MoonPhase.calcPhases(today)
+
+            # get today's and tomorrow's sunrise/sunset times
+            for theTime in timeTup:
+                sunRST = domestic.SunRiseSet.calcSunRiseSet(lon, lat, theTime)
+                sunrise = self.formatTime(sunRST[0])
+                sunset = self.formatTime(sunRST[1])
+                dow = string.upper(Common._dayname[theTime[6]])
+                sd = (dow, sunrise, sunset)
+                riseSetList.append(sd)
+
+            # text display order: either   = LAST,      NEW,     FIRST,     FULL
+            # file display order: northern = lastMoon,  newMoon, firstMoon, fullMoon
+            #                     southern = firstMoon, newMoon, lastMoon,  fullMoon
+            moonPhases = []
+            for phase in phaseTimes:
+                if phase[0] == 0:
+                    moonPhases.append(('NEW', '/rsrc/images/newMoon', phase[1]))
+                if phase[0] == 1:
+                    if lat > 0:
+                        moonPhases.append(('FIRST', '/rsrc/images/firstMoon',
+                                           phase[1]))
+                    else:
+                        moonPhases.append(('FIRST', '/rsrc/images/lastMoon',
+                                           phase[1]))
+                if phase[0] == 2:
+                    moonPhases.append(('FULL', '/rsrc/images/fullMoon', phase[1]))
+                if phase[0] == 3:
+                    if lat > 0:
+                        moonPhases.append(('LAST', '/rsrc/images/lastMoon',
+                                           phase[1]))
+                    else:
+                        moonPhases.append(('LAST', '/rsrc/images/firstMoon',
+                                           phase[1]))
+
+            if len(riseSetList) == 0 and len(moonPhases) == 0:
+                self._valid = 0
+            else:
+                self._valid = 1
+
+            data.riseSetList = riseSetList
+            data.moonPhases = moonPhases
+            self._hasData = data.valid = self._valid
+        except:
+            twccommon.Log.logCurrentException("Almanac error:")
+            data.riseSetList = []
+            data.moonPhases = []
+            self._hasData = data.valid = self._valid = 0
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+
+import time
+
+<%@'_Background.rs'%>
+<%@'_Title.rs'%>
+
+# create the two comp renderables necessary for trasnitions
+topCR    = CompositeRenderable()
+bottomCR = CompositeRenderable()
+
+r,g,b,a     = renderUtil.rgbaConvert(235,235,235,255) # white
+r1,g1,b1,a1 = renderUtil.rgbaConvert(212,212,50,255)  # yellow
+
+# top bevel box
+gr = renderUtil.getBevelBox(616, 118)
+gr.setPosition(52, 282)
+topCR.addItem(gr)
+
+# bottom bevel box
+gr = renderUtil.getBevelBox(616, 194)
+gr.setPosition(52, 88)
+bottomCR.addItem(gr)
+
+# Sunrise/set time
+f1 = TTFont('/rsrc/fonts/Interstate-Bold', 22, t=30)
+f2 = TTFont('/rsrc/fonts/Interstate-Bold', 20, t=50)
+f3 = TTFont('/rsrc/fonts/Interstate-Black', 25, t=30)
+timeXPos       = 303
+timeYPos       = 378
+timeXPosOffset = 67
+
+# place sunrise label
+str = 'SUNRISE'
+gr = Text(f1, str)
+gr.setPosition(149, 344)
+gr.setColor(r, g, b, a)
+topCR.addItem(gr)
+# place sunset label
+str = 'SUNSET'
+gr = Text(f1, str)
+gr.setPosition(149, 303)
+gr.setColor(r, g, b, a)
+topCR.addItem(gr)
+
+
+# place dat and time of sunrise/sunset
+for data in <%-prod.getData().riseSetList%>:
+    y = timeYPos
+    # place day name
+    day = Text(f2, data[0])
+    day.setColor(r1,g1,b1,a1)
+    day.setPosition(timeXPos, y)
+    topCR.addItem(day)
+
+    y -= 33
+    # place suynErise time
+    # the time and am/pm is in a different font
+    riseTextItemList = [
+                        (data[1][0], f3, (r,g,b,a)),
+                        (data[1][1], f1, (r,g,b,a)),
+                       ]
+    sunrise = RichText(riseTextItemList)
+    sunrise.setColor(r,g,b,a)
+    sunrise.setPosition(timeXPos, y)
+    topCR.addItem(sunrise)
+
+    y -= 42
+    # place sunset time
+    # the time and am/pm is in a different font
+    setTextItemList = [
+                       (data[2][0], f3, (r,g,b,a)),
+                       (data[2][1], f1, (r,g,b,a)),
+                      ]
+    sunset  = RichText(setTextItemList)
+    sunset.setColor(r,g,b,a)
+    sunset.setPosition(timeXPos, y)
+    topCR.addItem(sunset)
+
+    timeXPos += 167
+
+f = TTFont('/rsrc/fonts/Interstate-Bold', 24, t=20)
+count = 0
+for phase, icon, date in <%-prod.getData().moonPhases%>:
+    margWidth = 152
+    leftMarg = (count * margWidth) + 57
+    gr = Text(f2,phase)
+    xpos = renderUtil.justifyGR(gr.size()[0], margWidth, renderUtil.CENTER)
+    gr.setPosition(leftMarg+xpos, 175)
+    gr.setColor(r,g,b,a)
+    bottomCR.addItem(gr)
+
+    gr = TIFF_Image(icon)
+    gr.setPosition(leftMarg + 30, 191)
+    count = count + 1
+    bottomCR.addItem(gr)
+
+    month = time.strftime('%b',date)
+    day = date[2]
+    date = '%s %d' % (month, day)
+    gr = Text(f, date)
+    xpos = renderUtil.justifyGR(f.stringWidth(date), margWidth,\
+                                renderUtil.CENTER)
+    gr.setPosition(leftMarg+xpos, 139)
+    gr.setColor(r,g,b,a)
+    bottomCR.addItem(gr)
+
+# transitions
+p.addItem(topCR)
+p.addItem(bottomCR)
+# begin top
+es = EffectSequencer(topCR)
+es.addEffect(Slider(None, -720, 0), 1)
+es.addEffect(Slider(None, 72, 0), 10)
+es.addEffect(NullEffect(None), <%-params.duration%> - 21)
+es.addEffect(Slider(None, -72, 0), 10)
+p.addItem(es)
+# begin bottom
+es = EffectSequencer(bottomCR)
+es.addEffect(Slider(None, 720, 0), 1)
+es.addEffect(Slider(None, -72, 0), 10)
+es.addEffect(NullEffect(None), <%-params.duration%> - 21)
+es.addEffect(Slider(None, -72, 0), 10)
+p.addItem(es)
+
+
+<%@'_ProductFooter.rs'%>
+]]>
+</rs>
+
+</prod>

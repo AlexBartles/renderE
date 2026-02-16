@@ -1,0 +1,24 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+
+class Product(twc.products.Product):
+    pass
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

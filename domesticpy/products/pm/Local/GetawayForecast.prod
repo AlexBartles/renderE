@@ -1,0 +1,336 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+import time
+import twccommon
+import twc.dsmarshal
+dsm = twc.dsmarshal
+import twcWx
+import twcWx.dataUtil as wxDataUtil
+import twc
+
+class Product(twc.products.DeactivateableProduct):
+
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        if self._hasData:
+            return optimal
+        else:
+            return 0
+
+    def _loadData(self):
+        params = twccommon.DefaultedData(self.getParams())
+        data = self.getData()
+        self._hasData = 0
+        elems = []
+        valid = 0
+        
+        # Determine the start day of the forecast:
+        # --------------------------------------------------------------------
+        # We can simply add day offsets to the day(d), and the python 
+        # time.localtime() method will automatically handle edge cases and 
+        # change month and day to the appropriate values.
+        # (e.g. 
+        #       y, m, d, H, M, S, wd, day, dst = time.localtime(time.time())
+        #       returns the current date.
+        #   
+        #       If the current date were Sat May 31 2003, then d = 31,  
+        #       Adding one day... d = d + 1, would put d = 32. 
+        #       The time.localtime() method properly translates this 
+        #       into Sun, June 1st. )
+        # --------------------------------------------------------------------
+        y, m, d, H, M, S, wd, day, dst = time.localtime(time.time())
+
+        # Allday Mon -> 4pm Fri, show next weekends forecast (Fri, Sat, Sun)
+        if (0 <= wd <= 4):
+
+            # After 4pm on Friday, set start fcst day to following Saturday
+            # to show next three days fcst (Sat, Sun, Mon)
+            if ((wd == 4) and (H >= 16)):
+                d = d + 1
+
+            # Otherwise, set start fcst day to upcoming Friday
+            # to show next three days fcst (Fri, Sat, Sun)
+            else:
+                # Figure out how many days away from Friday we are...
+                numDays = 4 - wd
+                # and add it to the current day
+                d = d + numDays
+
+        # After 4pm Saturday, show forecast for next three days (Sun, Mon, Tue)
+        elif (wd == 5):
+            if (H >= 16):
+                d = d + 1  # Set day for Sunday
+
+        # After 4pm Sunday, show forecast for next weekend, starting with Friday
+        elif (wd == 6):
+            if (H >= 16):
+                d = d + 5   # Add 5 days to go to next Friday
+
+        start = time.mktime((y, m, d, 0, 0, 0, 0, 0, -1))
+
+        if params.locNameList is not None:
+            # Get three days worth of forecasts for each location:
+            # ----------------------------------------------------
+            for loc, id in \
+                map(lambda a, b: (a, b), params.locNameList, params.coopId):
+
+                tempData = []
+                for i in range(3):
+
+                    keyTime = time.mktime((y,m,d+i, 0, 0, 0, 0, 0, -1))
+                    day = time.strftime("%a", time.localtime(keyTime))
+                    day = day.upper()
+
+                    # Default
+                    res = (0, day, '', '', '', '')
+
+                    try:
+                        key = 'dailyFcst.%s.%d' % (id, keyTime)
+                        fcst = twc.DefaultedData(dsm.get(key))
+                        high = fcst.highTemp
+                        low  = fcst.lowTemp
+                        icon = fcst.daySkyCondition
+
+                        if high is None:
+                            high = ''
+                        else:
+                            high = '%s' % (high)
+
+                        if low is None:
+                            low = ''
+                        else:
+                            low = '%s' % (low)
+
+                        if icon is None:
+                            iconFile = ''
+                            text = ''
+                        else:
+                            sci = wxDataUtil.formatSkyCondition(icon, 'Forecast')
+                            iconFile = sci.iconFile
+                            text     = sci.textModifier
+
+                        # if any data missing for this entry then don't display it
+                        temp = (iconFile, text, high, low)
+                        valid = reduce(lambda a, b: a and b != None, temp)
+                        res = (valid, day) + temp
+                        if valid:
+                            self._hasData += 1
+
+                    except:
+                        pass
+
+                    tempData.append(res)
+
+                # Append ((loc) + (data1, data2, data3)) to make
+                # things easier down below:
+                elems.append( ((loc,), ) + (tuple(tempData),) )
+        else:
+            valid = 0
+
+        data.elems = elems
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+<%@'_Background.rs'%>
+<%@'_Title.rs'%>
+
+import time
+
+# Create fonts needed by various elements:
+# ----------------------------------------
+f1 = TTFont("/rsrc/fonts/Interstate-Bold", 20)
+f2 = TTFont("/rsrc/fonts/Interstate-Bold", 25)
+f3 = TTFont("/rsrc/fonts/Interstate-Bold", 36)
+f4 = TTFont("/rsrc/fonts/Interstate-Bold", 30)
+
+f5 = TTFont("/rsrc/fonts/Interstate-BlackCondensed", 30)
+f6 = TTFont("/rsrc/fonts/Interstate-Regular", 30)
+
+# The maximum width of the location text
+# if the width of the bevel box - (2 x the bevel widths)
+locTextWidth = 205 - (2 * 3)
+
+bevelOffsets= (
+    (205, ),
+    (205, ),
+    (205, ),
+)
+
+elementOffsets = (
+   # IconYPos, dayYPos, tempYPos
+    (252,      304,     276),  # Period 1 
+    (182,      234,     206),  # Period 2
+    (112,      164,     136),  # Period 3
+)      
+
+transitionPos= (
+   # TransIn,      Trans Out 
+   #    x     y      x   y 
+    ((-260,    0), (-720, 0)),
+    ((   0, -400), (-720, 0)),
+    (( 260,    0), (-720, 0))
+) 
+
+xPos = 52
+yPos = 88
+
+elems = <%-prod.getData().elems%>
+
+# Bevel box sizes are slightly different:
+elems = map(lambda a, b: (a+b), bevelOffsets, elems)
+
+jj = 0
+for elem in elems:
+
+    invalidFcstSet = 0 
+    
+    bevOffset, loc, fcst = elem
+
+    cr = CompositeRenderable()
+    
+    # Bevel Box:
+    # ----------
+    bBox = renderUtil.getBevelBox(205, 312)
+    bBox.setPosition(xPos, yPos)
+    cr.addItem(bBox)
+
+    # Location Name:
+    # --------------
+    locText = renderUtil.paginateText(f2, loc[0], locTextWidth, 25)
+
+    yStrOffset = 284 
+
+    idx = 0
+    locPosOffset = [5,3,3]
+    for loc in locText[:2]:
+        gr = Text(f2, loc)
+        grOff = renderUtil.justifyGR(gr.size()[0], 
+                                     locTextWidth, 
+                                     renderUtil.CENTER)
+        # Hack: center location names using TWC Creative defined
+        # offsets. 3 locations are standard for now, but if more
+        # are added make sure an offset is provided. SCR 989.
+        try:
+            locPos = xPos + locPosOffset[idx]
+        except: # IndexError
+            locPos = xPos + 3   
+        r, g, b, a = renderUtil.rgbaConvert(212, 212, 50)
+        gr.setPosition(locPos + grOff, yPos + yStrOffset)
+        gr.setColor(r, g, b)
+        cr.addItem(gr)
+        yStrOffset -= 28 
+        idx += 1
+
+    # If all three forecasts for a location are missing:
+    # --------------------------------------------------
+    if not((fcst[0][0]) and (fcst[1][0]) and (fcst[2][0])):
+        invalidFcstSet = 1 
+           
+    # For each forecast for this location (3 days worth):
+    # --------------------------------------------------- 
+    for i in range(3):
+
+        valid, day, iconFile, text, high, low = fcst[i]
+        iconYPos, dayYPos, tempYPos = elementOffsets[i]
+
+        dnaYPos = 236
+        if invalidFcstSet:
+            text = ['Temporarily', 'Unavailable']
+            dnaText = renderUtil.paginateText(f4, text[0], locTextWidth, 30)
+            for word in text:
+                gr = Text(f4, word)
+                grOff= renderUtil.justifyGR(gr.size()[0],
+                                            locTextWidth,
+                                            renderUtil.CENTER) 
+                r, g, b, a = renderUtil.rgbaConvert(212, 212, 50)
+                gr.setPosition(xPos + grOff, dnaYPos)
+                gr.setColor(r, g, b)
+                cr.addItem(gr)
+                dnaYPos -= 30
+                
+            # We're done here, go to next location:
+            break 
+
+        # Day Name:
+        # ---------
+        r, g, b, a = renderUtil.rgbaConvert(212, 212, 50)
+        gr = Text(f1, day)
+        gr.setPosition(xPos + 85, dayYPos)
+        gr.setColor(r, g, b)
+        cr.addItem(gr) 
+
+        # Icon:
+        # -----
+        if iconFile != None:
+            gr = Icon(twc.findRsrc('/icons/small/%s' % iconFile, "mv"))
+            gr.setPosition(xPos + 4, iconYPos)
+            cr.addItem(gr)
+
+        # Temp:
+        # -----
+        r, g, b, a = renderUtil.rgbaConvert(212, 212, 212)
+        tList = []
+
+        y, m, d, H, M, S, wd, doy, dst = time.localtime(time.time())
+
+        # don't show the low temp between 4am today (when today's low expires)
+        # and 3:59pm today (when we start showing tomorrow's low temp)
+        if (i == 0) and (H >= 4) and (H < 16) and wd in [4,5,6,]:
+            low = ''
+
+        # Show low temp if available
+        if low != '':
+            tList.append([low,  f5, (r,g,b,a)])
+            tList.append(["/",  f6, (r,g,b,a)])
+
+        # There will always be a high temp:
+        tList.append([high, f5, (r,g,b,a)])
+
+        # We're using RichText because of differing fonts:
+        rt = RichText(tList)
+        rt.setPosition(xPos + 85, tempYPos)
+        rt.setColor(r, g, b)
+        cr.addItem(rt)
+
+    # Setup Transistions:
+    # -------------------
+    p.addItem(cr)
+
+    transBeg, transEnd = transitionPos[jj]
+
+    xSpd = -(transBeg[0] / 10)
+    ySpd = -(transBeg[1] / 10)
+
+    ef = EffectSequencer(cr)
+    ef.addEffect(SetPosition(None, transBeg[0], transBeg[1]), 1)
+
+    # Slide renderables on the screen...
+    ef.addEffect(Slider(None, xSpd, ySpd), 10)
+
+    # Wait a while...
+    ef.addEffect(NullEffect(None), <%-params.duration%>-20)
+
+    xSpd = transEnd[0] / 10
+    ySpd = transEnd[1] / 10
+
+    # Lastly, slide renderables off the screen...
+    ef.addEffect(Slider(None, xSpd, ySpd), 10)
+    p.addItem(ef)
+
+    xPos += bevOffset 
+    jj+=1
+
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

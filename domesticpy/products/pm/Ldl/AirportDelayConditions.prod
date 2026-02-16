@@ -1,0 +1,206 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+import time
+import twccommon
+import twc.dsmarshal
+dsm = twc.dsmarshal
+import twcWx
+import twcWx.dataUtil as wxDataUtil
+import twc
+
+class Product(twc.products.Product):
+
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        if self._hasData:
+            data = self.getData()
+            return optimal*data.validPages
+        else:
+            return 0
+
+    def _getDefaultedObs(self,loc):
+        obs = dsm.defaultedGet("obs.%s" % loc)
+        if obs == None:
+            return None
+
+        obx = twccommon.DefaultedData(obs)
+
+        return obx
+
+    def _loadData(self):
+
+        params = twccommon.DefaultedData(self.getParams())
+        data = self.getData()
+        self._hasData = 0
+        obsList = []
+        validPages = 0
+        i = 0
+
+        for stn in params.airportId:
+            locName = params.locName[i]
+            obsStn = params.obsStation[i]
+            obs = self._getDefaultedObs(obsStn)
+
+            delayKey = "airportDelay.%s" % (stn)
+            delay = dsm.defaultedGet(delayKey)
+
+            if delay is None:
+                i = i + 1
+                continue
+
+            delay = twccommon.DefaultedData(delay)
+            generalDelay = delay.generalDelay
+
+            if generalDelay == 0 or generalDelay == None:
+                if params.displayFlag[i] == 0:
+                    i = i + 1
+                    continue
+
+            obsData = []
+            if obs != None:
+                obsData = [locName, obs.skyCondition, obs.temp, int(generalDelay)]
+            else:
+                obsData = [locName, None, None, int(generalDelay)]
+
+            obsList.append(obsData)
+            self._hasData = 1
+            validPages = validPages + 1
+            i = i + 1
+
+        data.validPages = validPages
+        data.obs = obsList
+        data.bulletins = []
+]]>
+</impl>
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+<%@'_Background.rs'%>
+
+data = <%-prod.getData()%>
+numPages = data.validPages * 2
+
+# luke added
+params = <%-prod.getParams()%>
+if params.ldlWarningMode:
+    titleColor = (239,192,49,255)
+else:
+    titleColor = (121,186,242,255)
+
+def locationHeader(title, location):
+
+    cr = CompositeRenderable()
+
+    # Title
+    f = TTFont('/rsrc/fonts/Interstate-Bold', 16, shadow=0, t=60)
+    t = Text(f, title)
+    t.setPosition(55, 60)
+    r,g,b,a = titleColor
+    r,g,b,a = renderUtil.rgbaConvert(r,g,b,a)
+    t.setColor(r,g,b,a)
+    cr.addItem(t)
+
+    # Location
+    f = TTFont('/rsrc/fonts/Interstate-Bold', 25, shadow=0, t=80)
+    t = Text(f, location)
+    t.setPosition(55, 37)
+    r,g,b,a = renderUtil.rgbaConvert(212,212,212,255)
+    t.setColor(r,g,b,a)
+    cr.addItem(t)
+
+    return cr
+
+def getAirportDelayGR(delay):
+
+    tf = TTFont('/rsrc/fonts/Interstate-Bold', 16, shadow=0, t=50)
+    nf = TTFont('/rsrc/fonts/Interstate-Black', 25, shadow=0, t=20)
+    r,g,b,a = renderUtil.rgbaConvert(212,212,212,255)
+    if delay == 999:
+        gr = Text(nf, 'Closed')
+        gr.setColor(r,g,b,a)
+        return gr
+
+    if delay == 0:
+        gr = Text(nf, 'No Delay')
+        gr.setColor(r,g,b,a)
+        return gr
+
+    hr = delay / 60
+    min = delay % 60
+    textList = []
+    if hr > 0:
+        textList.append(("%d" % (hr), nf, (r,g,b,a)))
+        textList.append((" HR  ", tf, (r,g,b,a)))
+    if min > 0:
+        textList.append(("%d" % (min), nf, (r,g,b,a)))
+        textList.append((" MIN", tf, (r,g,b,a)))
+    rt = RichText(textList)
+    return rt
+
+
+grSet = []
+for locName, skyCond, temp, delay in data.obs:
+
+    cr = CompositeRenderable()
+
+    # Header
+    hdr = locationHeader("CURRENTLY", locName)
+    cr.addItem(hdr)
+
+    r,g,b,a = renderUtil.rgbaConvert(212,212,212,255)
+    f = TTFont('/rsrc/fonts/Interstate-BlackCondensed', 25, shadow=0, t=20)
+    nrf = TTFont('/rsrc/fonts/Interstate-Black', 25, shadow=0, t=20)
+    if skyCond != None and temp != None:
+        # Sky condition
+        sc = wxDataUtil.formatSkyCondition(skyCond, "Forecast")
+        gr = Icon(twc.findRsrc('/icons/tiny/%s' % sc.iconFile, "mv"))
+        gr.setPosition(320, 29)
+        w,h = gr.size()
+        gr.setSize(w*0.8, h*0.8)
+        cr.addItem(gr)
+
+        # Temp
+        t = Text(f, "%d\260" % (temp))
+        t.setPosition(379,37)
+        t.setColor(r,g,b,a)
+        cr.addItem(t)
+    else:
+        t = Text(nrf, "No Report")
+        t.setPosition(320,37)
+        t.setColor(r,g,b,a)
+        cr.addItem(t)
+
+    grSet.append([cr])
+
+    cr = CompositeRenderable()
+
+    # Header
+    cr.addItem(locationHeader("CURRENTLY", locName))
+
+    f = TTFont('/rsrc/fonts/Interstate-Bold', 16, shadow=0, t=50)
+    t = Text(f, "DELAYS:")
+    t.setColor(r,g,b,a)
+    t.setPosition(323, 37)
+    cr.addItem(t)
+
+    f2 = TTFont('/rsrc/fonts/Interstate-Black', 20, shadow=0,t=20)
+    gr = getAirportDelayGR(delay)
+    gr.setPosition(402,37)
+    cr.addItem(gr)
+
+    grSet.append([cr])
+
+renderUtil.sequenceOnPage(p, grSet[:numPages],
+                          <%-prod.getDuration()%>/numPages, repeat=1)
+
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

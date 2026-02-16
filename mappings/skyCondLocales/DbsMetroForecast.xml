@@ -1,0 +1,299 @@
+<root>
+<record key='2800' iconFile="" textModifier="mostly cloudy"></record>
+<record key='2810' iconFile="" textModifier="m cloudy/wind"></record>
+<record key='3000' iconFile="" textModifier="partly cloudy"></record>
+<record key='3010' iconFile="" textModifier="p cloudy/wind"></record>
+<record key='3200' iconFile="" textModifier="sunny"></record>
+<record key='3210' iconFile="" textModifier="sunny/wind"></record>
+<record key='3400' iconFile="" textModifier="mostly sunny"></record>
+<record key='3410' iconFile="" textModifier="m sun/wind"></record>
+<record key='3700' iconFile="" textModifier="iso t-storms"></record>
+<record key='3710' iconFile="" textModifier="iso t-storms"></record>
+<record key='3800' iconFile="" textModifier="sct t-storms"></record>
+<record key='3810' iconFile="" textModifier="sct t-storms"></record>
+<record key='3900' iconFile="" textModifier="sct showers"></record>
+<record key='3910' iconFile="" textModifier="showers/wind"></record>
+<record key='4100' iconFile="" textModifier="snow showers"></record>
+<record key='4110' iconFile="" textModifier="snow showers"></record>
+<record key='4800' iconFile="" textModifier="sct flurries"></record>
+<record key='4810' iconFile="" textModifier="flurries/wind"></record>
+<record key='5400' iconFile="" textModifier="snow squalls"></record>
+<record key='5500' iconFile="" textModifier="squalls"></record>
+<record key='5700' iconFile="" textModifier="strong storms"></record>
+<record key='5710' iconFile="" textModifier="strong storms"></record>
+<record key='6003' iconFile="" textModifier="am drizzle"></record>
+<record key='6013' iconFile="" textModifier="am drizzle"></record>
+<record key='6103' iconFile="" textModifier="am showers"></record>
+<record key='6113' iconFile="" textModifier="am showers"></record>
+<record key='6143' iconFile="" textModifier="am t-showers"></record>
+<record key='6173' iconFile="" textModifier="am t-showers"></record>
+<record key='6203' iconFile="" textModifier="am t-storms"></record>
+<record key='6213' iconFile="" textModifier="am t-storms"></record>
+<record key='6303' iconFile="" textModifier="am rain"></record>
+<record key='6304' iconFile="" textModifier="am light rain"></record>
+<record key='6313' iconFile="" textModifier="am rain/wind"></record>
+<record key='6314' iconFile="" textModifier="am rain/wind"></record>
+<record key='6403' iconFile="" textModifier="am rain/snow"></record>
+<record key='6404' iconFile="" textModifier="am rain/snow"></record>
+<record key='6413' iconFile="" textModifier="am rain/snow"></record>
+<record key='6414' iconFile="" textModifier="am rain/snow"></record>
+<record key='6503' iconFile="" textModifier="am rain/ice"></record>
+<record key='6504' iconFile="" textModifier="am rain/ice"></record>
+<record key='6513' iconFile="" textModifier="am rain/ice"></record>
+<record key='6514' iconFile="" textModifier="am rain/ice"></record>
+<record key='6603' iconFile="" textModifier="am ice"></record>
+<record key='6613' iconFile="" textModifier="am ice/wind"></record>
+<record key='6703' iconFile="" textModifier="am mix"></record>
+<record key='6704' iconFile="" textModifier="am mix"></record>
+<record key='6713' iconFile="" textModifier="am mix/wind"></record>
+<record key='6714' iconFile="" textModifier="am mix/wind"></record>
+<record key='6803' iconFile="" textModifier="snow showers"></record>
+<record key='6813' iconFile="" textModifier="snow showers"></record>
+<record key='6903' iconFile="" textModifier="am snow"></record>
+<record key='6904' iconFile="" textModifier="am light snow"></record>
+<record key='6913' iconFile="" textModifier="am snow/wind"></record>
+<record key='6914' iconFile="" textModifier="am light snow"></record>
+<record key='7003' iconFile="" textModifier="pm drizzle"></record>
+<record key='7013' iconFile="" textModifier="pm drizzle"></record>
+<record key='7103' iconFile="" textModifier="pm showers"></record>
+<record key='7113' iconFile="" textModifier="pm showers"></record>
+<record key='7143' iconFile="" textModifier="pm t-showers"></record>
+<record key='7173' iconFile="" textModifier="pm t-showers"></record>
+<record key='7203' iconFile="" textModifier="pm t-storms"></record>
+<record key='7213' iconFile="" textModifier="pm t-storms"></record>
+<record key='7303' iconFile="" textModifier="pm rain"></record>
+<record key='7304' iconFile="" textModifier="pm light rain"></record>
+<record key='7313' iconFile="" textModifier="pm rain/wind"></record>
+<record key='7314' iconFile="" textModifier="pm rain/wind"></record>
+<record key='7403' iconFile="" textModifier="pm rain/snow"></record>
+<record key='7404' iconFile="" textModifier="pm rain/snow"></record>
+<record key='7413' iconFile="" textModifier="pm rain/snow"></record>
+<record key='7414' iconFile="" textModifier="pm rain/snow"></record>
+<record key='7503' iconFile="" textModifier="pm rain/ice"></record>
+<record key='7504' iconFile="" textModifier="pm rain/ice"></record>
+<record key='7513' iconFile="" textModifier="pm rain/ice"></record>
+<record key='7514' iconFile="" textModifier="pm rain/ice"></record>
+<record key='7603' iconFile="" textModifier="pm ice"></record>
+<record key='7613' iconFile="" textModifier="pm ice/wind"></record>
+<record key='7703' iconFile="" textModifier="pm mix"></record>
+<record key='7704' iconFile="" textModifier="pm mix"></record>
+<record key='7713' iconFile="" textModifier="pm mix/wind"></record>
+<record key='7714' iconFile="" textModifier="pm mix/wind"></record>
+<record key='7803' iconFile="" textModifier="snow showers"></record>
+<record key='7813' iconFile="" textModifier="snow showers"></record>
+<record key='7903' iconFile="" textModifier="pm snow"></record>
+<record key='7904' iconFile="" textModifier="pm light snow"></record>
+<record key='7913' iconFile="" textModifier="pm snow/wind"></record>
+<record key='7914' iconFile="" textModifier="pm light snow"></record>
+<record key='9003' iconFile="" textModifier="am clouds"></record>
+<record key='9013' iconFile="" textModifier="p cloudy/wind"></record>
+<record key='9103' iconFile="" textModifier="am fog"></record>
+<record key='9113' iconFile="" textModifier="am fog/wind"></record>
+<record key='9203' iconFile="" textModifier="am fog"></record>
+<record key='9213' iconFile="" textModifier="am fog/wind"></record>
+<record key='9303' iconFile="" textModifier="pm fog"></record>
+<record key='9313' iconFile="" textModifier="pm fog/wind"></record>
+<record key='300' iconFile="" textModifier="strong storms"></record>
+<record key='310' iconFile="" textModifier="strong storms"></record>
+<record key='400' iconFile="" textModifier="t-storms"></record>
+<record key='402' iconFile="" textModifier="heavy storms"></record>
+<record key='410' iconFile="" textModifier="t-storms/wind"></record>
+<record key='412' iconFile="" textModifier="heavy storms"></record>
+<record key='500' iconFile="" textModifier="rain/snow"></record>
+<record key='510' iconFile="" textModifier="rain/snow"></record>
+<record key='600' iconFile="" textModifier="rain/sleet"></record>
+<record key='601' iconFile="" textModifier="lgt rain/sleet"></record>
+<record key='610' iconFile="" textModifier="rain/sleet"></record>
+<record key='611' iconFile="" textModifier="lgt rain/sleet"></record>
+<record key='700' iconFile="" textModifier="wintry mix"></record>
+<record key='701' iconFile="" textModifier="light mix"></record>
+<record key='710' iconFile="" textModifier="mix/wind"></record>
+<record key='711' iconFile="" textModifier="lgt mix/wind"></record>
+<record key='800' iconFile="" textModifier="frz drizzle"></record>
+<record key='810' iconFile="" textModifier="frz drizzle"></record>
+<record key='850' iconFile="" textModifier="frz drizzle/fog"></record>
+<record key='900' iconFile="" textModifier="drizzle"></record>
+<record key='910' iconFile="" textModifier="drizzle/wind"></record>
+<record key='950' iconFile="" textModifier="drizzle/fog"></record>
+<record key='1000' iconFile="" textModifier="freezing rain"></record>
+<record key='1001' iconFile="" textModifier="light frz rain"></record>
+<record key='1002' iconFile="" textModifier="heavy frz rain"></record>
+<record key='1010' iconFile="" textModifier="freezing rain"></record>
+<record key='1011' iconFile="" textModifier="light frz rain"></record>
+<record key='1012' iconFile="" textModifier="heavy frz rain"></record>
+<record key='1051' iconFile="" textModifier="light frz rain"></record>
+<record key='1100' iconFile="" textModifier="showers"></record>
+<record key='1110' iconFile="" textModifier="showers/wind"></record>
+<record key='1140' iconFile="" textModifier="t-showers"></record>
+<record key='1170' iconFile="" textModifier="t-showers"></record>
+<record key='1200' iconFile="" textModifier="rain"></record>
+<record key='1201' iconFile="" textModifier="light rain"></record>
+<record key='1210' iconFile="" textModifier="rain/wind"></record>
+<record key='1211' iconFile="" textModifier="light rain"></record>
+<record key='1240' iconFile="" textModifier="rain/thunder"></record>
+<record key='1251' iconFile="" textModifier="light rain/fog"></record>
+<record key='1270' iconFile="" textModifier="rain/wind"></record>
+<record key='1300' iconFile="" textModifier="flurries"></record>
+<record key='1310' iconFile="" textModifier="flurries/wind"></record>
+<record key='1400' iconFile="" textModifier="snow showers"></record>
+<record key='1410' iconFile="" textModifier="snow showers"></record>
+<record key='1600' iconFile="" textModifier="snow"></record>
+<record key='1601' iconFile="" textModifier="light snow"></record>
+<record key='1610' iconFile="" textModifier="snow/wind"></record>
+<record key='1611' iconFile="" textModifier="light snow"></record>
+<record key='1651' iconFile="" textModifier="light snow/fog"></record>
+<record key='1800' iconFile="" textModifier="sleet"></record>
+<record key='1801' iconFile="" textModifier="light sleet"></record>
+<record key='1810' iconFile="" textModifier="sleet/wind"></record>
+<record key='1811' iconFile="" textModifier="light sleet"></record>
+<record key='2000' iconFile="" textModifier="foggy"></record>
+<record key='2010' iconFile="" textModifier="foggy/wind"></record>
+<record key='2600' iconFile="" textModifier="cloudy"></record>
+<record key='2610' iconFile="" textModifier="cloudy/wind"></record>
+<record key='4000' iconFile="" textModifier="heavy rain"></record>
+<record key='4010' iconFile="" textModifier="heavy rain"></record>
+<record key='4200' iconFile="" textModifier="heavy snow"></record>
+<record key='4210' iconFile="" textModifier="hvy snow/wind"></record>
+<record key='4300' iconFile="" textModifier="blizzard"></record>
+<record key='4400' iconFile="" textModifier=""></record>
+<record key='4500' iconFile="" textModifier="sprinkles"></record>
+<record key='4510' iconFile="" textModifier="sprinkles/wind"></record>
+<record key='4600' iconFile="" textModifier="few showers"></record>
+<record key='4610' iconFile="" textModifier="showers/wind"></record>
+<record key='4700' iconFile="" textModifier="snow showers"></record>
+<record key='4710' iconFile="" textModifier="snow showers"></record>
+<record key='4900' iconFile="" textModifier="rain/snow"></record>
+<record key='4910' iconFile="" textModifier="rain/snow"></record>
+<record key='5000' iconFile="" textModifier="snow/wind"></record>
+<record key='5100' iconFile="" textModifier="frz rain/sleet"></record>
+<record key='5101' iconFile="" textModifier="frz rain/sleet"></record>
+<record key='5110' iconFile="" textModifier="frz rain/sleet"></record>
+<record key='5111' iconFile="" textModifier="light frz rain"></record>
+<record key='5200' iconFile="" textModifier="snow/sleet"></record>
+<record key='5210' iconFile="" textModifier="snow/sleet"></record>
+<record key='5300' iconFile="" textModifier="rain/ice"></record>
+<record key='5301' iconFile="" textModifier="light rain/ice"></record>
+<record key='5302' iconFile="" textModifier="heavy rain/ice"></record>
+<record key='5310' iconFile="" textModifier="rain/ice"></record>
+<record key='5311' iconFile="" textModifier="light rain/ice"></record>
+<record key='5312' iconFile="" textModifier="heavy rain/ice"></record>
+<record key='5351' iconFile="" textModifier="rain/ice/fog"></record>
+<record key='5600' iconFile="" textModifier="thunder snow"></record>
+<record key='5610' iconFile="" textModifier="thunder snow"></record>
+<record key='8000' iconFile="" textModifier="rain to snow"></record>
+<record key='8010' iconFile="" textModifier="rain to snow"></record>
+<record key='8100' iconFile="" textModifier="rain to ice"></record>
+<record key='8110' iconFile="" textModifier="rain to ice"></record>
+<record key='8200' iconFile="" textModifier="snow to rain"></record>
+<record key='8210' iconFile="" textModifier="snow to rain"></record>
+<record key='8300' iconFile="" textModifier="mix to rain"></record>
+<record key='8310' iconFile="" textModifier="mix to rain"></record>
+<record key='8400' iconFile="" textModifier="snow to ice"></record>
+<record key='8410' iconFile="" textModifier="snow to ice"></record>
+<record key='8500' iconFile="" textModifier="ice to rain"></record>
+<record key='8510' iconFile="" textModifier="ice to rain"></record>
+<record key='8600' iconFile="" textModifier="ice to snow"></record>
+<record key='8610' iconFile="" textModifier="ice to snow"></record>
+<record key='8700' iconFile="" textModifier="mix to snow"></record>
+<record key='8710' iconFile="" textModifier="mix to snow"></record>
+<record key='8800' iconFile="" textModifier="snow to mix"></record>
+<record key='8810' iconFile="" textModifier="snow to mix"></record>
+<record key='8900' iconFile="" textModifier="mix to rain"></record>
+<record key='8910' iconFile="" textModifier="mix to rain"></record>
+<record key='9500' iconFile="" textModifier="rain to mix"></record>
+<record key='9510' iconFile="" textModifier="rain to mix"></record>
+<record key='2700' iconFile="" textModifier="mostly cloudy"></record>
+<record key='2710' iconFile="" textModifier="m cloudy/wind"></record>
+<record key='2900' iconFile="" textModifier="partly cloudy"></record>
+<record key='2910' iconFile="" textModifier="p cloudy/wind"></record>
+<record key='3100' iconFile="" textModifier="clear"></record>
+<record key='3110' iconFile="" textModifier="clear/wind"></record>
+<record key='3300' iconFile="" textModifier="mostly clear"></record>
+<record key='3310' iconFile="" textModifier="m clear/wind"></record>
+<record key='3709' iconFile="" textModifier="iso t-storms"></record>
+<record key='3719' iconFile="" textModifier="iso t-storms"></record>
+<record key='3809' iconFile="" textModifier="sct t-storms"></record>
+<record key='3819' iconFile="" textModifier="sct t-storms"></record>
+<record key='3909' iconFile="" textModifier="sct showers"></record>
+<record key='3919' iconFile="" textModifier="showers/wind"></record>
+<record key='4109' iconFile="" textModifier="snow showers"></record>
+<record key='4119' iconFile="" textModifier="snow showers"></record>
+<record key='4809' iconFile="" textModifier="sct flurries"></record>
+<record key='4819' iconFile="" textModifier="flurries/wind"></record>
+<record key='5409' iconFile="" textModifier="snow squalls"></record>
+<record key='5509' iconFile="" textModifier="squalls"></record>
+<record key='5709' iconFile="" textModifier="strong storms"></record>
+<record key='5719' iconFile="" textModifier="strong storms"></record>
+<record key='6000' iconFile="" textModifier="drizzle early"></record>
+<record key='6010' iconFile="" textModifier="drizzle early"></record>
+<record key='6100' iconFile="" textModifier="showers early"></record>
+<record key='6110' iconFile="" textModifier="showers/wind"></record>
+<record key='6140' iconFile="" textModifier="t-showers"></record>
+<record key='6170' iconFile="" textModifier="t-shwrs/wind"></record>
+<record key='6200' iconFile="" textModifier="t-storms"></record>
+<record key='6210' iconFile="" textModifier="t-storms/wind"></record>
+<record key='6300' iconFile="" textModifier="rain early"></record>
+<record key='6301' iconFile="" textModifier="rain early"></record>
+<record key='6310' iconFile="" textModifier="rain/wind"></record>
+<record key='6311' iconFile="" textModifier="rain/wind"></record>
+<record key='6400' iconFile="" textModifier="rain/snow"></record>
+<record key='6401' iconFile="" textModifier="rain/snow"></record>
+<record key='6410' iconFile="" textModifier="rain/snow"></record>
+<record key='6411' iconFile="" textModifier="rain/snow"></record>
+<record key='6500' iconFile="" textModifier="rain/ice"></record>
+<record key='6501' iconFile="" textModifier="rain/ice"></record>
+<record key='6510' iconFile="" textModifier="rain/ice"></record>
+<record key='6511' iconFile="" textModifier="rain/ice"></record>
+<record key='6600' iconFile="" textModifier="ice early"></record>
+<record key='6610' iconFile="" textModifier="ice early"></record>
+<record key='6700' iconFile="" textModifier="mix early"></record>
+<record key='6701' iconFile="" textModifier="mix early"></record>
+<record key='6710' iconFile="" textModifier="mix early"></record>
+<record key='6711' iconFile="" textModifier="mix early"></record>
+<record key='6800' iconFile="" textModifier="snow showers"></record>
+<record key='6810' iconFile="" textModifier="snow showers"></record>
+<record key='6900' iconFile="" textModifier="snow early"></record>
+<record key='6901' iconFile="" textModifier="light snow"></record>
+<record key='6910' iconFile="" textModifier="snow/wind"></record>
+<record key='6911' iconFile="" textModifier="light snow"></record>
+<record key='7000' iconFile="" textModifier="drizzle late"></record>
+<record key='7010' iconFile="" textModifier="drizzle late"></record>
+<record key='7100' iconFile="" textModifier="showers late"></record>
+<record key='7110' iconFile="" textModifier="showers/wind"></record>
+<record key='7140' iconFile="" textModifier="t-showers"></record>
+<record key='7170' iconFile="" textModifier="t-showers"></record>
+<record key='7200' iconFile="" textModifier="t-storms"></record>
+<record key='7210' iconFile="" textModifier="t-storms"></record>
+<record key='7300' iconFile="" textModifier="rain late"></record>
+<record key='7301' iconFile="" textModifier="rain late"></record>
+<record key='7310' iconFile="" textModifier="rain/wind"></record>
+<record key='7311' iconFile="" textModifier="rain/wind"></record>
+<record key='7400' iconFile="" textModifier="rain/snow late"></record>
+<record key='7401' iconFile="" textModifier="rain/snow late"></record>
+<record key='7410' iconFile="" textModifier="rain/snow late"></record>
+<record key='7411' iconFile="" textModifier="rain/snow late"></record>
+<record key='7500' iconFile="" textModifier="rain/ice"></record>
+<record key='7501' iconFile="" textModifier="rain/ice"></record>
+<record key='7510' iconFile="" textModifier="rain/ice"></record>
+<record key='7511' iconFile="" textModifier="rain/ice"></record>
+<record key='7600' iconFile="" textModifier="ice late"></record>
+<record key='7610' iconFile="" textModifier="ice late"></record>
+<record key='7700' iconFile="" textModifier="mix late"></record>
+<record key='7701' iconFile="" textModifier="mix late"></record>
+<record key='7710' iconFile="" textModifier="mix late"></record>
+<record key='7711' iconFile="" textModifier="mix late"></record>
+<record key='7800' iconFile="" textModifier="snow showers"></record>
+<record key='7810' iconFile="" textModifier="snow showers"></record>
+<record key='7900' iconFile="" textModifier="snow late"></record>
+<record key='7901' iconFile="" textModifier="light snow"></record>
+<record key='7910' iconFile="" textModifier="snow/wind"></record>
+<record key='7911' iconFile="" textModifier="light snow"></record>
+<record key='9000' iconFile="" textModifier="clear late"></record>
+<record key='9010' iconFile="" textModifier="p cloudy/wind"></record>
+<record key='9100' iconFile="" textModifier="fog early"></record>
+<record key='9110' iconFile="" textModifier="fog early"></record>
+<record key='9200' iconFile="" textModifier="fog early"></record>
+<record key='9210' iconFile="" textModifier="fog early"></record>
+<record key='9300' iconFile="" textModifier="fog late"></record>
+<record key='9310' iconFile="" textModifier="fog late"></record>
+</root>

@@ -1,0 +1,137 @@
+
+<prod>
+
+<impl>
+
+<![CDATA[
+import prodLocal
+import os
+import twccommon
+import twc.products
+import twc.dsmarshal as dsm
+
+class Product(twc.products.DeactivateableProduct, prodLocal.AnimatedMap):
+
+    def __init__(self, params):
+        prodLocal.AnimatedMap.__init__(self, params)
+
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+
+        data        = self.getData()
+
+        # if there's no image data...
+        if data.noDataAvailable:
+            return 0
+        else:
+            return optimal
+
+
+    def _loadData(self):
+        params = self.getParams()
+        data   = self.getData()
+
+        # set the max number of images that can be missing before the
+        # animation loop is cancelled
+        self._maxAllowedImageGap = 3 # image file count
+
+        # get any additional info about the map cut (in case we need it)
+        mapDataString = data.productString + '.MapData'
+        mapCutData = dsm.defaultedGet(mapDataString)
+
+        dataCutType = mapCutData.datacutType
+        dataCutInfo = dataCutType.split('.')
+        self.updateData(
+            # figure out the data type so we know what directory to look in
+            imageDir = data.imageRoot + '/%s/%s.cuts/' % (dataCutInfo[0], dataCutInfo[1]),
+
+            # set the image data parameters
+            imageFrequency     = 1800, # seconds
+            maxImages          =  20,  # image file count
+            imageDuration      =   3,  # frame count
+            lastImageDuration  =  63)  # frame count
+
+        prodLocal.AnimatedMap._loadData(self)
+        # set the no data available text for this product
+        data.noDataAvailableText = "Temporarily Unavailable"
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+
+<%@'_ProductHeader.rs'%>
+
+
+import twccommon
+# get the map data
+mapData = <%-prod.getData()%>
+duration = <%-prod.getDuration()%>
+productString = mapData.productString 
+
+# only display the valid time if we have a full count of images!
+# DEFINE the map data parameters:
+imageFrequency         = mapData.imageFrequency    # in seconds
+maxImages              = mapData.maxImages         # image file count
+lastImageDuration      = mapData.lastImageDuration # frame count
+imageDuration          = mapData.imageDuration     # frame count
+imageList              = mapData.imageList
+imageCount = len(imageList)
+
+# Add the terrain image (If the map is available)
+# Outputs - Creates mapAvailable
+<%@'_MapHandler.rs'%>
+
+# New way to handle map data
+# Inputs - imageCount, mapAvailable, availableData
+# Outputs - imageFile, issueTime (if there is only one image)
+availableData = imageList
+<%@'_MapImageHandler.rs'%>
+
+#Map Overlay
+baseObj = None
+drawMask = 2
+<%@'_MapOverlay.rs'%>
+
+<%@'_Title.rs'%>
+
+# MAP LEGEND:
+
+# draw legend banner
+renderTools.drawMapBanner(p)
+
+if ((mapAvailable) and (imageCount >= maxImages)):
+
+    # Find out how many complete loops we have time for.
+    loopLimit = int(duration / (lastImageDuration + ((maxImages - 1)*imageDuration)))
+
+    # if there is a full count of images, draw the time bar slider
+    timeScale   = [ '-10', '-8', '-6', '-4', '-2', '0', ]
+    scaleOffset = [     0,   42,   33,   33,   34,  32, ]
+
+    slider = renderTools.drawValidTimeSlider(p, lastImageDuration,
+        imageDuration, imageCount, timeScale, scaleOffset, loopLimit)
+
+    # Valid Time
+    f = TTFont('/rsrc/fonts/Interstate-BlackItalic', 20, t=20, shadow=1)
+    txt = 'Past %d Hours' % ((maxImages * imageFrequency)/3600)
+    t = Text(f, txt)
+    r,g,b,a = renderUtil.rgbaConvert(212,212,212,255) # white
+    t.setColor(r,g,b,a)
+    t.setPosition(340, 415)
+    p.addItem(t)
+
+# finally, draw the No Data text on the top of everything (if needed)
+if ((not mapAvailable) or (imageCount == 0)):
+    renderTools.dataNotAvailable(page=p,
+                                 text=mapData.noDataAvailableText,
+                                 noDataBar=1,
+                                 displayDuration=duration)
+
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

@@ -1,0 +1,614 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import math
+import twccommon
+import twc.products 
+import twc.DataStoreInterface as ds
+import twc.dsmarshal as dsm
+import domestic.dataUtil as dataUtil
+import twcWx.dataUtil as wxDataUtil
+import time
+from twc import rsutil
+
+class Product(twc.products.DeactivateableProduct):
+
+    def _getDesiredDuration(self, min, max, opt):
+        if self._hasData:
+            return opt
+        else:
+            return 0
+
+ 
+    def _getDesiredPageDurations(self, pageParams):
+        durationList = []
+        # increment thru the number of pages requested by playman
+        for i in range(len(pageParams)):
+            page, min, max, opt = pageParams[i]
+            # if there are more pages being requested than there is data for,
+            # append 0's
+            if i < self.numPages():
+                durationList.append(opt)
+            else:
+                durationList.append(0)
+        
+        return durationList
+
+        
+    def _loadData(self):
+        # load any data necessary; this method not invoked if not _active()
+        params = self.getParams()
+        data = self.getData()
+    
+        # get the 1st key to get the incident data - right now only 1 metroId, hence indexing
+        # 1st element
+        trafficData = self._getTrafficData()
+
+        # get the incident specific data
+        incidentData = []
+        if trafficData is not None:
+            for incident in trafficData:
+                if incident is not None:
+                    incident = twccommon.DefaultedData(incident)
+                    incidentData.append(incident)
+
+        # determine how many pages to display (data driven - at most 2 incidents per page)
+        dataPages = math.ceil(float(len(incidentData))/2)
+        if dataPages <= params.maxPages:
+            self._numPages = int(dataPages)
+        else:
+            self._numPages = params.maxPages
+
+        self._hasData = len(incidentData) > 0
+        
+        self.updateData(trafficReports = incidentData)
+
+        vocalLocalSchedule = dsm.defaultedConfigGet("VocalLocalSchedule",
+            twccommon.Data(OffTimes=((19, 3), )))
+        data.playVocal =  rsutil.playVocal(time.time(), 
+            vocalLocalSchedule.OffTimes)
+
+    def _trafficReportOrder(self, lst1, lst2):
+        for pos in [0,1,2]:
+            result = twccommon.compare(lst1[pos],lst2[pos])
+            if result:
+                return result
+        return twccommon.compare(lst2[3],lst1[3])
+   
+    
+    def numPages(self):
+        return self._numPages
+
+            
+    def _getTrafficData(self):
+        params = self.getParams()
+        data = self.getData()
+        tdata = self.getTestData()
+
+        processedData = twccommon.Data()
+        rs = twccommon.Data()
+
+        # initialize test data vars
+        outsideBox = [] 
+        incorrectType = []
+        lowSeverity = []
+
+        all = []
+        for metroId in params.metroId:
+            mstr = dsm.defaultedGet("incidents.%s" % metroId)
+            if mstr == None:
+                continue
+            count = mstr.count
+            rev = mstr.rev
+            if count == None or rev == None:
+                continue
+            for i in range(1,count + 1):
+                data = dsm.defaultedGet("incident." + metroId + "." + str(rev) + "." + str(i))
+                if data != None:
+                    all.append((metroId, rev, i, data))
+
+        desiredRecords = params.maxPages * 2
+        rlist = []
+        for metroId,rev,count,data in all:
+            # determine area priority for sort
+            areaPri = None
+            pri = 0
+            for box in params.latLongBoxes:
+                pri += 1
+                if dataUtil.isPointInsideBox((data.long, data.lat), box[0], box[1]) == 1:
+                    areaPri = pri
+                    break
+            if areaPri == None:
+                d = twccommon.Data()
+                d.metroId = metroId
+                d.rev = rev
+                d.count = count
+                d.data = data
+                outsideBox.append(d)
+                continue
+
+            # determine location (and verify severity) for sort
+            iType = wxDataUtil.getIncidentType(data.iType, 'IncidentTypes', 0)
+            i = 1
+            iPri = 0
+            typeHit = 0
+            if iType != 0:
+                for severityItem in params.severityList:
+                    type, severity = severityItem
+                    if iType.group == type:
+                        typeHit = 1
+                        if data.crit <= severity:
+                            iPri = i
+                        break
+                    else:
+                        i += 1
+            # Either the iType is None, the iType doesn't match the type in the config, or
+            # the crit value is more than the configured severity level (the incident isn't 
+            # significant enough to be displayed), so go to the next record 
+            if iPri == 0:
+                d = twccommon.Data()
+                d.metroId = metroId
+                d.rev = rev
+                d.count = count
+                d.data = data
+
+                # There was not a type match 
+                if not typeHit:
+                    incorrectType.append(d)
+                # There was a type match, but the severity was too low
+                else:
+                    lowSeverity.append(d)
+                continue
+
+            # determine start for sort
+            start = getattr(data, "start", None)
+            if start == None:
+                if data.issueTime == None:
+                    start = 0
+                else:
+                    start = data.issueTime
+
+            rlist.append((areaPri, iPri, data.crit, start, data))
+        rlist.sort(self._trafficReportOrder)
+    
+        recs = []
+        incIds = []
+        for w,x,y,z,data in rlist:
+            if data.incId not in incIds:
+                incIds.append(data.incId)
+                recs.append(data)
+                if len(recs) >= desiredRecords:
+                    break
+
+        # set test data
+        processedData.outsideBoxes = outsideBox
+        processedData.incorrectType = incorrectType
+        processedData.lowSeverity = lowSeverity
+        processedData.sortedIncidents = rlist
+        processedData.finalIncidents = recs
+
+        self.updateTestData(processedData = processedData)
+        self.updateData(ds = all) 
+                    
+        return recs
+                                                
+    
+]]>
+</impl>
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+
+<%!
+#import math
+import string
+import twccommon
+import domestic.dataUtil as dataUtil
+import twcWx.dataUtil as wxDataUtil
+
+params = prod.getParams()
+data   = prod.getData()
+tdata  = prod.getTestData()   
+
+# find out if this is the last product in the playlist
+# NOTE: prodSchedule is a list of (prodname, duration)
+if prod.getName() == params.prodSchedule[-1][0]:
+    lastProduct = 1
+else:
+    lastProduct = 0
+
+if data.trafficReports is None:
+    trafficReports = []
+else:
+    trafficReports = data.trafficReports
+
+durations = []
+duration = prod.getDuration()
+# Either use the list of page durations if provided or figure it out
+if len(prod.getPageDurations()):
+    durations = prod.getPageDurations()
+else:
+    numPages = prod.numPages()
+    if (numPages):  #this will avoid divide by zero
+        pageDur = duration / numPages
+        remainingSecs = duration % numPages
+        # Figure out whether enough time was provided to display all the pages with data
+        if pageDur < params.minPageDuration:
+            # since there isn't enough time to display all the pages with data, return
+            # the best times for each page for which there is time to display 
+            t = prod.getDuration()
+            pageDur = params.minPageDuration
+            # append the minimum page duration
+            while t >= pageDur:
+                durations.append(pageDur)
+                t -= pageDur
+            # need to tack these on later
+            remainingSecs = t
+        else:
+            for i in range(numPages):
+                durations.append(pageDur)
+
+        # tack on remaining seconds
+        if remainingSecs:
+            for i in range(remainingSecs):
+                durations[i%len(durations)] += 1
+    
+
+lastPage = len(durations)-1
+oneOnPage = len(data.trafficReports) % 2
+
+outputList = []
+for incident in trafficReports:
+    incData = twccommon.Data()
+    dataTagList = []
+    # These are the tags we need to assemble the data
+    interestedTagList = ['- ' + incident.descLocation,  # required field
+                         incident.descDetails,          # required field
+                         incident.descComments,         # optional - if it fits
+                         incident.descEstDuration,      # optional - if it fits
+                         incident.descDetour,           # optional - if it fits
+                         incident.descAltRoute          # optional - if it fits
+                        ]
+    # Now create the list of tags to sort through 
+    for tag in interestedTagList:
+        # Check to see if the tag exists
+        if tag is not None:
+            # Check to see if the tag has data 
+            if len(tag) > 0:
+                dataTagList.append(tag)
+
+    iType = wxDataUtil.getIncidentType(incident.iType, 'IncidentTypes', 0)
+    if iType != 0:
+        typeAndRoute = '%s, %s %s' % (iType.group, incident.loc, incident.dir)
+    else:
+        typeAndRoute = ''
+
+    # display the impact box and text 
+    if incident.crit < 2:                 # High - red
+        impactBoxColor = (191,32,38,255)
+    elif incident.crit == 2:              # Medium - yellow
+        impactBoxColor = (212,212,50,255)
+    else:                                 # Good - green
+        impactBoxColor = (71,179,67,255)
+
+    impact, impactBox = dataUtil.formatTrafficImpact(incident.crit)
+
+    incData.interestedTagList = interestedTagList
+    incData.dataTagList = dataTagList
+    incData.typeAndRoute = typeAndRoute
+    incData.impactBoxColor = impactBoxColor
+    incData.impact = impact
+    incData.impactBox = impactBox
+
+    outputList.append(incData)
+
+prod.updateTestData(durationList = durations)
+prod.updateTestData(oneIncidentOnLastPage = oneOnPage)
+prod.updateTestData(numPages = prod.numPages())
+prod.updateData(output = outputList)
+    
+
+%>
+
+<%@'_Background.rs'%>
+<%@'_Title.rs'%>
+
+import string
+
+global TOP 
+global BOTTOM
+
+TOP = 0
+BOTTOM = 1
+
+def serializeIncidentData(strList):
+    # This function takes a list of strings and returns a string by concatenating each 
+    # string in the list with the next string in the list.
+    str = ''
+    
+    if len(strList):
+        str = reduce(lambda x,y: x+' '+y, strList)
+        
+    return str
+
+def assembleData(tagList, dataHeight, indentList):
+    # This function takes the 6 tags that make up the incident report data and figures out 
+    # how much data to show on the page.  The tags are added to the tagList in order of 
+    # priority (least significant is last).  If the serialized data is too long, the last
+    # string is removed from the list and is reprocessed until the right amount of data is
+    # found to fit on the page.  If all the strings are removed from the list (except for 
+    # first 2 as they are required), Use the first 2 strings in the list up to the last 
+    # whole word on the first page.
+
+    f = TTFont("/rsrc/fonts/Interstate-Bold", 20, l=26)
+    r,g,b,a = renderUtil.rgbaConvert(212,212,212,255)  # white
+    tooLong = 0
+    
+    # Convert the list of data tags into a string for paginating
+    str = serializeIncidentData(tagList)
+    pageList = renderUtil.paginateIndentedText(f, (r,g,b,a), str, 560, dataHeight, indentList)
+
+    # Check to see if the data fits on one page
+    # While we are only going to use 1 page, we dont want the first half of some
+    # string to appear at the end of page 1, so start removing whole strings from tagList
+
+    # If there is more than 1 page.
+    if (len(pageList) > 1):
+        # There is too much text, so start popping whole strings from the tagList
+        # until we get to the 2 required items.
+        while len(tagList) > 2:
+            junk = tagList.pop() #remove the least important string
+
+            # generate the page based on what is left in tagList
+            str = serializeIncidentData(tagList)
+            pageList = renderUtil.paginateIndentedText(f, (r,g,b,a), str, 560, dataHeight, indentList)
+
+            # Eureka! The data now fits on one page, use it!
+            if len(pageList) == 1:
+                break
+
+        # If pageList is still too long, then the 2 required taglist items must be too long to fit
+        # on one page, so return what we have by falling through to the return.
+        # NOTE: Only the first page will be used so the truncated version of the 2 required tags
+        #       (up to the last whole word on the first page) will be used.
+
+    # Return the list of composite renderables (1 per page)
+    return pageList
+
+                                                    
+# This method adds the bevel boxes behind the data
+def addDataBox(bevelX, bevelY, gradX, gradY, bevelHeight):
+    lr,lg,lb,la = (0, 38, 95,255)  # blue w/ X-parency
+    rr,rg,rb,ra = (0, 38, 95,  0)  # blue w/ X-parency
+    gradientColors = [(lr,lg,lb,la),(rr,rg,rb,ra)]
+    dataBox = CompositeRenderable()
+    
+    # add the bevel box
+    gr = renderUtil.getBevelBox(616, bevelHeight)
+    gr.setPosition(bevelX, bevelY)
+    dataBox.addItem(gr)
+    
+    # add the gradient area under the route name and direction
+    cr = renderUtil.gradientBox(657, 45, gradientColors)
+    cr.setPosition(gradX, gradY)
+    dataBox.addItem(cr)
+
+    return dataBox
+
+# This method adds the data to the page
+def addData(data, dataHeight, dataOffset, bottom):
+    # fonts
+    f1 = TTFont("/rsrc/fonts/Interstate-Bold", 24, t=30)
+    f2 = TTFont("/rsrc/fonts/Interstate-Bold", 20, l=24, t=0)
+    f3 = TTFont("/rsrc/fonts/Interstate-Bold", 20, shadow=0)
+    # colors
+    r,g,b,a     = renderUtil.rgbaConvert(212,212,212,255)  # white
+    r1,g1,b1,a1 = renderUtil.rgbaConvert( 20, 20, 20,255)  # black
+    # other vars
+    cr = CompositeRenderable()
+    crSet = []
+    
+    if bottom:
+        offset = 141
+    else:
+        offset = 0
+    
+    # display the type of delay, route and direction
+    gr = Text(f1, data.typeAndRoute)
+    gr.setBoundingBoxSize(600, 45)
+    gr.setPosition(10, 250-offset)
+    gr.setColor(r,g,b,a)
+    cr.addItem(gr)
+
+    # create a composite renderable containing both the embossed impact box and the phrase    
+    impactButton = CompositeRenderable()
+    # create box
+    box = TIFF_Image(data.impactBox)
+    tr,tg,tb,ta = data.impactBoxColor
+    br,bg,bb,ba = renderUtil.rgbaConvert(tr,tg,tb,ta)
+    box.setColor(br,bg,bb,ba)
+    box.setPosition(0, 0)
+    impactButton.addItem(box)
+    # add text phrase
+    gr = Text(f3, data.impact)
+    gr.setColor(r1,g1,b1,a1)
+    gr.setPosition(3, 5)
+    impactButton.addItem(gr)
+
+    impactButton.setPosition(5, 207-offset)
+    cr.addItem(impactButton)
+
+    # now display the description
+    indentW = box.size()[0] + 4
+    pageList = assembleData(data.dataTagList, dataHeight, [(indentW, renderUtil.LEFT),])
+
+    # pageList should always contain at least 1 CompositeRenderable, but validate it anyway.
+    if (pageList and len(pageList)):
+        page = pageList[0] # Only use the first page, regardless of how many were generated
+        page.setPosition(7, (141-dataOffset)-offset)
+        cr.addItem(page)
+
+    return cr
+
+def sequenceOnPage(page, grSet, delayList, lastProduct, repeat=0):
+    pageCount = len(grSet)
+    count = 0
+    delay = 0
+    totFrames = reduce(lambda a, b: a+b, delayList)
+    for loc, data in grSet:
+        # the playas
+        locES  = EffectSequencer(loc, repeat=repeat)
+        dataES = EffectSequencer(data, repeat=repeat)
+        # slide in from the left
+        if delay > 0:
+            locES.addEffect(NullEffect(None), delay)
+            dataES.addEffect(NullEffect(None), delay)
+
+        locES.addEffect(Slider(None, 72, 0), 10)
+        # slide in from the right
+        dataES.addEffect(Slider(None, -72, 0), 10)
+        # Last page may need to fade out
+        if count == pageCount-1 and lastProduct:
+            # fade the product out
+            box = Box()
+            box.setSize(720,480)
+            r,g,b,a = renderUtil.rgbaConvert(30,30,30,255)
+            box.setColor(r,g,b,a)
+            box.setVisibility(0)
+            boxES = EffectSequencer(box)
+            boxES.addEffect(NullEffect(None), delay + delayList[count]-7)
+            boxES.addEffect(Fader(None, 1, 0, 1), 1)
+            boxES.addEffect(SetVisibility(None, 1), 1)
+            boxES.addEffect(Fader(None, 0, 1, 5), 5)
+        # pages need to slide out
+        else:
+            # slide out to the left
+            locES.addEffect(NullEffect(None), delayList[count]-20)
+            locES.addEffect(Slider(None, -72, 0), 10)
+            # slide out to the right
+            dataES.addEffect(NullEffect(None), delayList[count]-20)
+            dataES.addEffect(Slider(None, 72, 0), 10)
+        # let's do this thang - note the loc cr was added previously.  Only need to add it 
+        # once or things get all screwy
+        page.addItem(data)
+        page.addItem(locES)
+        page.addItem(dataES)
+        # must add this last for the effect to work properly!
+        if count == pageCount-1 and lastProduct:
+            page.addItem(box)
+            page.addItem(boxES)
+        
+        delay = delayList[count] + delay
+        count = count + 1
+
+
+params = <%-params%>
+durations = <%-durations%>
+duration = <%-duration%>
+outputList = <%-outputList%>
+lastPage  = <%-lastPage%>
+oneOnPage = <%-oneOnPage%>
+crSet = []
+i = 0
+page = 0
+
+# needed colors
+r,g,b,a     = renderUtil.rgbaConvert(212,212,212,255)  # white
+r1,g1,b1,a1 = renderUtil.rgbaConvert(212,212, 50,255)  # yellow
+
+#
+# location area
+#
+locBanner = CompositeRenderable()
+gr = renderUtil.getBevelBox(616, 30)
+gr.setPosition(0, 282)
+locBanner.addItem(gr)
+# location name
+f = TTFont("/rsrc/fonts/Interstate-Bold", 24, t=50)
+gr = Text(f, <%-params.locName%>)
+gr.setBoundingBoxSize(460, 30)
+gr.setPosition(11, 289)
+gr.setColor(r1,g1,b1,a1)
+locBanner.addItem(gr)
+# source label
+f = TTFont("/rsrc/fonts/Interstate-BoldCompressed", 19, t=20)
+gr = Text(f, "Traffic from: Traffic Pulse")
+gr.setPosition(465, 291)
+gr.setColor(r,g,b,a)
+locBanner.addItem(gr)
+locBanner.setPosition(51-720, 89)
+p.addItem(locBanner)
+
+#
+# data area
+#
+
+for dur in durations:
+    data = CompositeRenderable()
+    incident = outputList[i]
+    if page == lastPage and oneOnPage:
+        dataHeight = 235
+        # add bevel box and the gradient area under the route name and direction
+        cr = addDataBox(0, 0, 3, 233, 282)
+        data.addItem(cr)
+        # add the data
+        cr = addData(incident, dataHeight, 141, TOP)
+        data.addItem(cr)
+    else:
+        dataHeight = 94
+        # add the top bevel box and the gradient area under the route name and direction
+        cr = addDataBox(0, 141, 3, 233, 141)
+        data.addItem(cr)
+        # add the data
+        cr = addData(incident, dataHeight, 0, TOP)
+        data.addItem(cr)
+
+        i += 1
+        incident = outputList[i]
+        
+        # add the bottom bevel box and the gradient area under the route name and direction
+        cr = addDataBox(0, 0, 3, 92, 141)
+        data.addItem(cr)
+        # add the data
+        cr = addData(incident, dataHeight, 0, BOTTOM)
+        data.addItem(cr)
+
+    data.setPosition(51+720, 89) 
+    crSet.append([locBanner, data])
+    i += 1
+    page += 1
+
+sequenceOnPage(p, crSet, durations, <%-lastProduct%>)
+
+if <%-data.playVocal%> and params.activeVocalCue:
+    aFile = 'TRREP_DEFAULT1'
+    intro = '/rsrc/audio/vocalLocal/Default_Phrases_Traffic_Report/%s.wav' % (aFile)
+    ac = AudioClip(intro)
+    ac.setBlendType(AudioRenderable.BLEND_MIX)
+    ac.setVolLevel(1.0)
+
+    as = AudioSequencer()
+    as.addItem(NullAudioClip(8))
+    as.addItem(ac)
+    as.addItem(NullAudioClip(15))
+    p.addItem(as)
+
+    aes = AudioEffectSequencer(as)
+    aes.addEffect(AudioFader(None, 0.0, 0.8, 8), 8)
+    aes.addEffect(AudioNullEffect(None), as.duration() - 23)
+    aes.addEffect(AudioFader(None, 0.8, 0.0, 15), 15)
+    p.addItem(aes)
+
+    twccommon.Log.info('|TR|%d|FadeIn:%s:FadeOut:%d|1|' % (duration, aFile, as.duration()))
+        
+
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

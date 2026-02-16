@@ -1,0 +1,130 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+import time
+import twccommon
+import twc.dsmarshal
+import domestic
+import domestic.SunRiseSet
+dsm = twc.dsmarshal
+
+class Product(twc.products.Product):
+
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        if self._hasData:
+            return optimal
+        else:
+            return 0
+
+    def _loadData(self):
+
+        params = twccommon.DefaultedData(self.getParams())
+        data = self.getData()
+        self._hasData = 0
+        try:
+            lat = params.latitude
+            lon = params.longitude
+        except:
+            # Not configured
+            return
+
+        curTime = time.localtime(time.time())
+        y,m,d,H,M,S,dow,doy,dst = curTime
+        # Need to get today and tomorrow sunrise/set times, incase
+        # one or both of today's has passed. Use 3am to avoid problems with
+        # dst.
+        today = (y,m,d,3,0,0,dow,doy,-1)
+        tomorrow = time.mktime((y,m,d+1,3,0,0,0,0,-1))
+        tomorrow = time.localtime(tomorrow)
+
+        timeList = []
+        sunRST = domestic.SunRiseSet.calcSunRiseSet(lon, lat, today)
+        timeList.append((twccommon.Data(header='SUNRISE',time=sunRST[0])))
+        timeList.append((twccommon.Data(header='SUNSET',time=sunRST[1])))
+        sunRST = domestic.SunRiseSet.calcSunRiseSet(lon, lat, tomorrow)
+        timeList.append((twccommon.Data(header='SUNRISE',time=sunRST[0])))
+        timeList.append((twccommon.Data(header='SUNSET',time=sunRST[1])))
+
+        srstData = []
+        # Find the times that havent yet happened
+        for t in timeList:
+            if time.mktime(t.time) > time.mktime(curTime):
+                srstData.append(t)
+
+        self._hasData = 1
+        # We're only interested in the first two
+        data.srstData = srstData[:2]
+        data.bulletins = []
+]]>
+</impl>
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+<%@'_Background.rs'%>
+
+import time
+import string
+
+data = <%-prod.getData()%>
+params = <%-prod.getParams()%>
+if params.ldlWarningMode:
+    titleColor = (239,192,49,255)
+else:
+    titleColor = (121,186,242,255)
+
+def formatTime(t):
+    try:
+        timeStrTup = ()
+        hour = t[3]
+        if hour > 12:
+            hour = hour - 12
+        if hour == 0:
+            hour = 12
+        timeStr = '%d:%s' % (hour, string.lower(time.strftime('%M', t)))
+        dayStr = string.upper(time.strftime(' %p %a', t))
+        timeStrTup = (timeStr, dayStr)
+    except:
+        timeStrTup = ('', '')
+    return timeStrTup
+
+
+fHeader = TTFont('/rsrc/fonts/Interstate-Bold', 16, shadow=0, t=60)
+fTime   = TTFont('/rsrc/fonts/Interstate-BlackCondensed', 25, shadow=0, t=20)
+fDay    = TTFont('/rsrc/fonts/Interstate-Bold', 16, shadow=0, t=20)
+
+offset = 0
+cr     = CompositeRenderable()
+
+for d in data.srstData:
+    t = Text(fHeader, d.header)
+    t.setPosition(56+offset, 60)
+    r,g,b,a = titleColor
+    r,g,b,a = renderUtil.rgbaConvert(r,g,b,a)
+    t.setColor(r,g,b,a)
+    cr.addItem(t)
+
+    timeStr = formatTime(d.time)
+    r,g,b,a = renderUtil.rgbaConvert(212,212,212,255)
+    timeTextList = [(timeStr[0], fTime, (r,g,b,a)),
+                    (timeStr[1], fDay, (r,g,b,a)),
+                   ]
+    t = RichText(timeTextList)
+    t.setPosition(56+offset, 37)
+    t.setColor(r,g,b,a)
+    cr.addItem(t)
+
+    offset += 200
+
+p.addItem(cr)
+
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

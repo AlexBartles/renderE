@@ -1,0 +1,246 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+import time
+import twccommon
+import twc.dsmarshal
+dsm = twc.dsmarshal
+import twc
+
+class Product(twc.products.Product):
+
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        if self._hasData:
+            return optimal
+        else:
+            return 0
+
+    def _loadData(self):
+        params = self.getParams()
+        data = self.getData()
+        cnt = 0
+
+        try:
+            obsStations = params.obsStation
+            data.locName = params.locName
+
+            self._valid = 0
+
+            obsl = []
+            for stn in params.obsStation:
+                obs = dsm.defaultedGet("obs.%s" % stn)
+                if obs is not None:
+                    obs = twccommon.DefaultedData(obs)    
+                    # check each site for validity of data
+                    if obs.temp != None or obs.skyCondition != None:
+                        cnt += 1
+                obsl.append(obs)
+        
+            data.obs = obsl
+            self._hasData = cnt
+        except:
+            twccommon.Log.logCurrentException("LocalObservations error:")
+            data.locName = [""]
+            data.obs = [None]
+            self._hasData = 0
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+
+<%!
+data = prod.getData()
+values = []
+count = 0
+for obs in data.obs:
+    loc = params.locName[count]
+    if obs is not None:
+        values.append((loc, obs.skyCondition, obs.temp, 
+                       obs.windSpeed, obs.windDirection))
+    else:
+        values.append((loc, None, None, None, None))
+    count = count + 1
+%>
+
+<%@'_Background.rs'%>
+<%@'_Title.rs'%>
+
+def createPage(obsList):
+    # Create fonts needed by various elements:
+    # ----------------------------------------
+    f1 = TTFont("/rsrc/fonts/Interstate-Bold", 31, t=0)
+    f2 = TTFont("/rsrc/fonts/Interstate-BlackCondensed", 37, t=30)
+    f3 = TTFont("/rsrc/fonts/Interstate-BlackCondensed", 31, t=0)
+    yPos = 206
+
+    # For each location...
+    cr = CompositeRenderable()
+    for loc, skyCond, temp, windSpeed, windDir in obsList:
+
+        valid = 1
+        if temp == None and skyCond == None:
+            valid = 0
+
+        # City Name:
+        boundingBoxWidth = 357 - xPos
+        locText = renderUtil.paginateText(f1, loc, boundingBoxWidth, 
+                                          f1.pointSize())
+   
+        # Only print 2 lines of location name (on one line):
+        yStrOffset = 0 
+        if len(locText) >= 2:
+            yStrOffset = 10 
+
+        locLeading = 31
+        for txt in locText[:2]:
+            gr = Text(f1, txt)
+            gr.setPosition(0, yPos + yStrOffset)
+            gr.setBoundingBoxSize(boundingBoxWidth, f1.pointSize())
+            gr.setColor(r,g,b,a)
+            cr.addItem(gr)
+            yStrOffset = yStrOffset - locLeading
+
+        # If Temp and Icon aren't valid:
+        if not valid:
+            gr = Text(f1, 'No Report')
+            gr.setPosition(270, yPos)
+            gr.setColor(r, g, b, a)
+            cr.addItem(gr)
+
+        else:# Temperature:
+            if temp is not None:
+                gr = Text(f2, "%d" % temp)
+                gr.setPosition(270, yPos)
+                gr.setColor(r, g, b, a)
+                cr.addItem(gr)
+ 
+            # Icon:
+            if skyCond is not None:
+                pass
+                skyCond = wxDataUtil.formatSkyCondition(skyCond, "Observation")
+                gr = Icon(twc.findRsrc('/icons/small/%s' % skyCond.iconFile, "mv"))
+                gr.setPosition(399 - gr.size()[0]/2, yPos-28)
+                cr.addItem(gr)
+
+            if windDir is not None and windSpeed is not None:
+                wTextList = []
+                wt = dataUtil.formatWindText(windSpeed, windDir)
+                wt = wt.split()
+                ws = wt[0] + ' '
+                wTextList.append([ws, f1, (r,g,b,a)])
+                if len(wt) > 1:
+                    wTextList.append([" " + wt[1], f3, (r,g,b,a)])
+
+                rt = RichText(wTextList)
+                rt.setPosition(481, yPos)
+                cr.addItem(rt)
+
+        yPos -= bBoxOffset
+
+    cr.setPosition(782,124)
+    # Set up sequences:
+    ef = EffectSequencer(cr)
+    ef.addEffect(SetPosition(None, 720, 0), 1)
+    ef.addEffect(Slider(None, -72, 0), 10)
+    ef.addEffect(NullEffect(None), <%-params.duration%>-20)
+    ef.addEffect(Slider(None, -72, 0), 10)
+    p.addItem(ef)
+
+    return cr
+
+elems = <%-values%>
+
+xPos          = 52
+yPos          = 370 
+bBoxOffset    = 70
+r, g, b, a    = renderUtil.rgbaConvert(212, 212, 212)
+
+# Bevel Box 1 (small, topmost box):
+label = CompositeRenderable()
+dur = <%-params.duration%> - 20
+bBox = renderUtil.getBevelBox(616, 30)
+label.addItem(bBox)
+
+# Temp Label:
+f = TTFont("/rsrc/fonts/Interstate-Bold", 16, t=50)
+gr = Text(f, "TEMP")
+gr.setColor(r, g, b, a)
+gr.setPosition(280,12)
+label.addItem(gr)
+
+# Wind Label:
+gr = Text(f, "WIND (mph)")
+gr.setPosition(490,12)
+gr.setColor(r, g, b, a)
+label.addItem(gr)
+
+label.setPosition(-668, 369)
+p.addItem(label)
+
+es = EffectSequencer(label)
+es.addEffect(Slider(None, 72, 0), 10) # 72 pixels per frame * 10 frames = 720
+es.addEffect(NullEffect(None), dur)
+es.addEffect(Slider(None, -72, 0), 10)
+p.addItem(es)
+
+cr = CompositeRenderable()
+yPos = 0
+for i in range(4):
+    # Obs Bevel Box:
+    bBox = renderUtil.getBevelBox(616, 70)
+    bBox.setPosition(0, yPos)
+    cr.addItem(bBox)
+    yPos += bBoxOffset
+cr.setPosition(772, 89)
+p.addItem(cr)
+
+# they won't fade out half way thru like the data does:
+ef = EffectSequencer(cr)
+ef.addEffect(Slider(None, -72, 0), 10)
+ef.addEffect(NullEffect(None), dur)
+ef.addEffect(Slider(None, -72, 0), 10)
+p.addItem(ef)
+
+# Composite Renderable Sets:
+crSet = []
+
+# Render Data: 
+# ------------
+yPos = 299
+
+crSet.append([createPage(elems[:4])])
+if len(elems) > 1:
+    crSet.append([createPage(elems[4:])])
+
+
+# Split the forecast renderables out into two pages:
+#grSet = [crSet[0], crSet[1]]
+
+# Base number of cities on number of elements in pageDurations list.
+# We're assuming that one page will have 4 stations on it.
+
+pDurs = []
+dur = <%-prod.getDuration()%>/len(crSet)
+remainder = dur%30
+if remainder:
+    dur += 30 - remainder
+pDurs.append(dur)
+if len(elems) > 1:
+    pDurs.append(<%-params.duration%> - pDurs[0])
+
+renderTools.sequenceOnPage(p, crSet, pDurs)
+
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

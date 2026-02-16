@@ -1,0 +1,68 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+import time
+import twccommon
+import twc.dsmarshal
+dsm = twc.dsmarshal
+
+class Product(twc.products.Product):
+
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        params = self.getParams()
+        if params.ldlWarningMode:
+            return 0
+
+        # do a 'getattr' in case the config entry is missing
+        # (assume this id is OFF)
+        displayMessage = getattr(params, 'displayMessage', 0)
+        if displayMessage == 0:
+            twccommon.Log.info("%s configured OFF. Don't display" % (self.getName()))
+            return 0
+
+        data = self.getData()
+        if data.message != None:
+            return optimal
+        else:
+            return 0
+
+    def _loadData(self):
+        data = self.getData()
+        data.bulletins = []
+
+        key = "ldlStarIDMessage"
+        msg = dsm.defaultedConfigGet(key)
+
+        # If there isn't a default message use this canned one
+        if msg is None:
+            hid = dsm.defaultedGet("headendId")
+            if hid is not None:
+                hid = int(hid)
+                msg = "Local weather ID: %d" % (hid)
+            else:
+                msg = None
+                self._validData = 0
+
+        data.message = msg
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+<%@'_Background.rs'%>
+
+<%@'_StarIDMessage.rs'%>
+
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

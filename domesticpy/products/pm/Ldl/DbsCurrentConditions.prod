@@ -1,0 +1,192 @@
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+import prodLdl
+import time
+import math
+import twccommon
+import twc.dsmarshal
+dsm = twc.dsmarshal
+import twc
+
+class Product(prodLdl.Observation):
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        params = twccommon.DefaultedData(self.getParams())
+        data = self.getData()
+
+        duration = int( math.ceil( params.displayDuration * len(data.obs) ) )
+
+        return min([duration, maximum])
+
+
+    def _getDefaultedObs(self,loc):
+        obs = dsm.defaultedGet("obs.%s" % loc)
+
+        if obs == None:
+            return None
+
+        obx = twccommon.DefaultedData(obs)
+
+        return obx
+
+    def _loadData(self):
+        params = twccommon.DefaultedData(self.getParams())
+        data = self.getData()
+
+        obsData = []
+
+        i = 0
+        for loc in params.obsStation:
+            # get obs data for this location
+            obs = self._getDefaultedObs(loc)
+            obsData.append(obs)
+            i = i + 1
+
+        data.obs = obsData
+
+        # get start/stop points
+        data.startLocation = 0
+        data.endLocation   = len(params.obsStation) - 1
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+<%@'_init.rs'%>
+<%!
+data = prod.getData()
+
+values = []
+
+i = 0
+for obs in data.obs:
+
+    locName = params.locName[i]
+    i = i + 1
+
+    if obs != None:
+        skyCondition = obs.skyCondition
+        temp = obs.temp
+        obsData = [ locName, skyCondition, temp ]
+    else:
+        obsData = [ locName, None, None ]
+
+    values.append(obsData)
+
+numPages = len(values)
+framesPerPage = int(params.displayDuration * 30)
+duration = numPages * framesPerPage
+%>
+
+#
+# Stuff from _ProductHeader.rs
+# we are changing the page duration.
+#
+__skipPage = 0
+p = Page(<%-duration%>)
+#
+# end of Stuff from _ProductHeader.rs
+#
+
+<%@'_Background.rs'%>
+
+grSet   = []
+locPos  = 55
+xPos    = locPos
+spacing = 20
+
+def locationHeader(title):
+
+    global locPos
+
+    # Title
+    f = TTFont('/rsrc/fonts/Interstate-Bold', 16, shadow=0, t=60)
+    hdr = Text(f, title)
+    hdr.setPosition(locPos, 60)
+    r,g,b,a = renderUtil.rgbaConvert(121,186,242,255)
+    hdr.setColor(r,g,b,a)
+
+    return hdr
+
+for locName, skyCond, temp in <%-values%>:
+
+    cr = CompositeRenderable()
+    r,g,b,a = renderUtil.rgbaConvert(212,212,212,255)
+
+    # init the xPos
+    xPos = locPos
+
+    # Location
+    f = TTFont('/rsrc/fonts/Interstate-Bold', 25, shadow=0, t=20)
+    t = Text(f, locName)
+    t.setPosition(xPos, 37)
+    t.setColor(r,g,b,a)
+    locWidth = f.stringWidth(locName)
+    cr.addItem(t)
+
+    # Update xPos to display the next element
+    xPos = xPos + locWidth + spacing
+
+    if skyCond != None:
+        # Sky condition
+        sc = wxDataUtil.formatSkyCondition(skyCond, "Observation")
+        gr = Icon(twc.findRsrc('/icons/tiny/%s' % sc.iconFile, "mv"))
+        # per requirements, space right after location name or position 175
+        # whichever is greater
+        xPos = max([xPos, 175])
+        gr.setPosition(xPos, 29)
+        w,h = gr.size()
+        gr.setSize(w*0.8, h*0.8)
+        iconWidth,h = gr.size()
+        cr.addItem(gr)
+    else:
+        iconWidth = 0
+
+    # Update xPos to display the next element
+    # Note: Yes, if the icon isn't there, add a second space (spacing)!
+    xPos = xPos + iconWidth + spacing
+
+    if temp != None:
+        # Temp
+        f = TTFont('/rsrc/fonts/Interstate-BlackCondensed', 25, shadow=0, t=20)
+        t = Text(f, "%d\260" % (temp))
+        t.setPosition(xPos, 37)
+        t.setColor(r,g,b,a)
+        cr.addItem(t)
+
+    if skyCond is None and temp is None:
+        # No Report for Temperature and Sky Condition
+        f = TTFont('/rsrc/fonts/Interstate-Bold', 25, shadow=0, t=20)
+        t = Text(f, 'No Report')
+        t.setPosition(xPos, 37)
+        t.setColor(r,g,b,a)
+        cr.addItem(t)
+
+    cr.setPosition(0,0)
+
+    grSet.append([cr,])
+
+numPages = <%-numPages%>
+
+hdr = locationHeader("CURRENTLY")
+p.addItem(hdr)
+
+if numPages > 1:
+    # Delay List
+    renderTools.sequenceOnPage(p, grSet[:numPages],
+                          [<%-framesPerPage%>,]*numPages, repeat=0)
+else:
+    p.addItem(grSet[0][0])
+
+
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

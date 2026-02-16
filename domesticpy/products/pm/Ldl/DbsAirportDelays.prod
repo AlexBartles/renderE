@@ -1,0 +1,397 @@
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+import time
+import twccommon
+import twc.dsmarshal
+dsm = twc.dsmarshal
+import twcWx
+import twc
+
+class Product(twc.products.Product):
+
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        params = twccommon.DefaultedData(self.getParams())
+        data = self.getData()
+
+        # count how many pages we need to display
+        pageCount = len(data.airportData) + data.noReportedDelays + data.showSponsorText
+
+        duration = params.displayDuration * pageCount
+
+        if duration == 0:
+            # we'll show temp unavail
+            duration = params.displayDuration
+
+        return min([duration, maximum])
+
+    def _getDefaultedObs(self,loc):
+        obs = dsm.defaultedGet("obs.%s" % loc)
+        if obs == None:
+            return None
+
+        obx = twccommon.DefaultedData(obs)
+        return obx
+
+    def _applyDisplayRules(self, airportDataArg):
+
+        params = twccommon.DefaultedData(self.getParams())
+        data = self.getData()
+
+        data.noReportedDelays = 0
+        data.showSponsorText  = 0
+
+        # what time is it locally? (we really just use this to figure out the date)
+        now = time.time()
+
+        # now is the date right now between the first Sunday in April and the last
+        # Sunday in October of this year? (if so, this is when Atlanta observes DST).
+        AtlantaDST  = twc.rsutil.isDST(now)
+
+        # now what time is that in GMT?
+        y, m, d, H, M, S, dow, doy, dst = time.gmtime(now)
+
+        # now do the calculation from GMT to Atlanta Time (minutes stay the same)
+        if AtlantaDST == 1:
+            H = (H - 4) % 24
+        else:
+            H = (H - 5) % 24
+
+        # get the time we need to start looking at the airport display flag
+        startHour = params.displayFlagStartTime[0]
+        startMin = params.displayFlagStartTime[1]
+
+        # get the time we need to stop looking at the airport display flag
+        stopHour = params.displayFlagStopTime[0]
+        stopMin = params.displayFlagStopTime[1]
+
+        # figure out if the display flag is active
+        # (the display flag forces an airport to display regardless if it has
+        # a delay or not)
+        displayFlagActive = 0
+
+        if (H > startHour and H < stopHour) or \
+           (H == startHour and M >= startMin) or \
+           (H == stopHour and M < stopMin):
+            displayFlagActive = 1
+
+        airportData = []
+        totalDelay  = 0
+        noData      = 1 # assume there's no data until we see some
+        i = 0
+        for item in airportDataArg:
+
+            name  = item[0]
+            delay = item[1]
+            obs   = item[2]
+
+            # if we don't have any data for this location, skip it
+            if delay == None:
+                i = i + 1
+                continue
+
+            delay = twccommon.DefaultedData(delay)
+            # If we don't have the specific piece of data we need
+            if delay.generalDelay == None:
+                i = i + 1
+                continue
+
+            noData = 0 # we have data for at least one site if we make it this far
+
+            # if we do have data, then decide if we still need to skip this airport
+            if displayFlagActive:
+
+                # if the delay is zero (and this airport is NOT
+                # configured to ALWAYS display), then skip this airport
+                if delay.generalDelay == 0 and params.displayFlag[i] == 0:
+                    i = i + 1
+                    continue
+
+            else:
+                # always skip an airport with a delay of zero
+                if delay.generalDelay == 0:
+                    i = i + 1
+                    continue
+
+            # track the total delay for later (if no airports have a delay
+            # report that fact rather than showing all the airports with
+            # 'No Delay' text).
+            totalDelay = totalDelay + delay.generalDelay
+
+            # if we made it to here, then at least one of our sites has a delay
+            # or is an airport that is ALWAYS displayed
+            # now that we've filtered out all the sites we don't need
+            airportData.append([name, delay, obs])
+            i = i + 1
+
+        if noData:
+            totalDelay = -1
+
+        # if the total delay of all airports is 0, then there
+        # are no reported delays so set this flag so the product can distinguish
+        # between No Data and No Delays.
+        # Only do this when the displayFlag is not active!
+        if displayFlagActive == 0 and totalDelay == 0:
+            airportData = [] # clear the data we have, there are no delays
+            data.noReportedDelays = 1
+
+        # Decide whether we need to show the "Data Provided by FAA" sponsor text
+        #if displayFlagActive == 1 and noData == 0:
+        if totalDelay >= 0:
+            data.showSponsorText = 1
+
+        return airportData
+
+
+    def _loadData(self):
+        params = twccommon.DefaultedData(self.getParams())
+        data = self.getData()
+
+        # collect obs and delay data for each airport
+        airportData = []
+
+        i = 0
+        for stn in params.airportId:
+            # get obs data for this airport
+            obsStn  = params.obsStation[i]
+
+            obsData = self._getDefaultedObs(obsStn)
+
+            # get delay data for this airport
+            key = "airportDelay.%s" % (stn)
+            delayData = dsm.defaultedGet(key)
+
+            # get airport name
+            locName = params.locName[i]
+
+            # build data list
+            airportData.append([locName, delayData, obsData])
+            i = i + 1
+
+        data.airportData = self._applyDisplayRules(airportData)
+]]>
+</impl>
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+<%@'_Background.rs'%>
+
+import string
+import time
+
+<%!
+import twccommon
+import twcWx.dataUtil as wxDataUtil
+
+params = twccommon.DefaultedData(prod.getParams())
+data = prod.getData()
+
+d = twccommon.Data()
+d.displayFlagStartTime = (7,0)  # (H,M) 7am  Eastern Time by default
+d.displayFlagStopTime  = (11,0) # (H,M) 11am Eastern Time by default
+
+noDelaysFlag    = data.noReportedDelays
+sponsorTextFlag = data.showSponsorText
+
+values = []
+for locName, delayData, obsData in data.airportData:
+    if delayData != None:
+        # Note: generalDelay is defined as the greater of
+        # arrivalDelay and departureDelay
+        delay = delayData.generalDelay
+    else:
+        delay = None
+
+    if obsData != None:
+        skyCondition = obsData.skyCondition
+    else:
+        skyCondition = None
+
+    airportData = [ locName, delay, skyCondition ]
+
+    values.append(airportData)
+
+
+# we have to show each page for a min. num of seconds
+# figure out how many pages we have time to show
+duration = prod.getDuration()
+
+pagesTimeFor = int(duration / (params.displayDuration * 30))
+
+# if we only have time to show one screen temp unavail
+if pagesTimeFor == 1:
+    values = []
+    sponsorTextFlag = 0
+# if we show at least one airport then show the sponsor
+elif len(values) > 0:
+    sponsorTextFlag = 1
+
+%>
+
+delayValues      = <%-values%>
+noReportedDelays = <%-noDelaysFlag%>
+showSponsorText  = <%-sponsorTextFlag%>
+pagesTimeFor     = <%-pagesTimeFor%>
+locPos = 55
+xPos   = locPos
+spacing = 20
+grSet   = []
+
+def locationHeader(title):
+
+    global locPos
+
+    # Title
+    f = TTFont('/rsrc/fonts/Interstate-Bold', 16, shadow=0, t=60)
+    hdr = Text(f, title)
+    hdr.setPosition(locPos, 60)
+    r,g,b,a = renderUtil.rgbaConvert(121,186,242,255)
+    hdr.setColor(r,g,b,a)
+
+    return hdr
+
+
+def getAirportDelayGR(delay):
+
+    textFont    = TTFont('/rsrc/fonts/Interstate-Bold', 25, shadow=0, t=20)
+    numbersFont = TTFont('/rsrc/fonts/Interstate-BlackCondensed', 25, shadow=0, t=20)
+    labelFont   = TTFont('/rsrc/fonts/Interstate-Bold', 16, shadow=0, t=20)
+
+    r,g,b,a = renderUtil.rgbaConvert(212,212,212,255)
+
+    if delay == 999:
+        gr = Text(textFont, 'Closed')
+        gr.setColor(r,g,b,a)
+        return gr
+
+    if delay == 0:
+        gr = Text(textFont, 'No Delay')
+        gr.setColor(r,g,b,a)
+        return gr
+
+    hr = delay / 60
+    min = delay % 60
+    textList = []
+    if hr > 0:
+        textList.append(("%d" % (hr), numbersFont, (r,g,b,a)))
+        textList.append((" HR    ", labelFont, (r,g,b,a)))
+    if min > 0:
+        textList.append(("%d" % (min), numbersFont, (r,g,b,a)))
+        textList.append((" MIN", labelFont, (r,g,b,a)))
+    rt = RichText(textList)
+    return rt
+
+# determine if we have data
+if len(delayValues) == 0:
+
+    cr = CompositeRenderable()
+    r,g,b,a = renderUtil.rgbaConvert(212,212,212,255)
+
+    if noReportedDelays:
+
+        # No Delays Message
+        f = TTFont('/rsrc/fonts/Interstate-Bold', 25, shadow=0, t=20)
+        t = Text(f, 'No Reported Delays')
+        t.setPosition(locPos, 37)
+        t.setColor(r,g,b,a)
+        cr.addItem(t)
+
+    else:
+
+        # No Data Message
+        f = TTFont('/rsrc/fonts/Interstate-Bold', 25, shadow=0, t=20)
+        t = Text(f, 'Temporarily Unavailable')
+        t.setPosition(locPos, 37)
+        t.setColor(r,g,b,a)
+        cr.addItem(t)
+
+    grSet.append([cr])
+
+else:
+
+    # otherwise, show the actual data
+    for locName, delay, skyCond in <%-values%>:
+
+        cr = CompositeRenderable()
+        r,g,b,a = renderUtil.rgbaConvert(212,212,212,255)
+
+        # init the xPos
+        xPos = locPos
+
+        # Location
+        f = TTFont('/rsrc/fonts/Interstate-Bold', 25, shadow=0, t=80)
+        t = Text(f, locName)
+        t.setPosition(xPos, 37)
+        t.setColor(r,g,b,a)
+        locWidth = f.stringWidth(locName)
+        cr.addItem(t)
+
+        f   = TTFont('/rsrc/fonts/Interstate-BlackCondensed', 25, shadow=0, t=20)
+        nrf = TTFont('/rsrc/fonts/Interstate-Black', 25, shadow=0, t=20)
+
+        # Update xPos to display the next element
+        xPos = xPos + locWidth + spacing
+
+        if skyCond != None:
+            # Sky condition
+            sc = wxDataUtil.formatSkyCondition(skyCond, "Observation")
+            gr = Icon(twc.findRsrc('/icons/tiny/%s' % sc.iconFile, "mv"))
+            # per requirements, space right after location name or position 175
+            # whichever is greater
+            xPos = max([xPos, 220])
+            gr.setPosition(xPos, 29)
+            w,h = gr.size()
+            gr.setSize(w*0.8, h*0.8)
+            iconWidth,h = gr.size()
+            cr.addItem(gr)
+
+        else:
+            iconWidth = 0
+
+        # Update xPos to display the next element
+        # Note: Yes, if the icon isn't there, add a second space (spacing)!
+        xPos = xPos + iconWidth + spacing
+
+        f2 = TTFont('/rsrc/fonts/Interstate-Black', 20, shadow=0,t=20)
+        gr = getAirportDelayGR(delay)
+        gr.setPosition(xPos, 37)
+        cr.addItem(gr)
+
+        grSet.append([cr])
+
+
+# Sponsor Text
+if showSponsorText:
+    f = TTFont('/rsrc/fonts/Interstate-Bold', 25, shadow=0, t=80)
+    t = Text(f, 'Data provided by FAA')
+    t.setPosition(locPos, 37)
+    r,g,b,a = renderUtil.rgbaConvert(212,212,212,255)
+    t.setColor(r,g,b,a)
+    if (len(grSet) < pagesTimeFor):
+        # if we have plenty of time then append the sponsor on the end
+        grSet.append([t])
+    else:
+        # if we have limited time put the sponsor in the last position
+        # we have time for
+        grSet[(pagesTimeFor - 1)] = [t]
+
+hdr = locationHeader('AIRPORT DELAYS')
+p.addItem(hdr)
+
+numPages = min([pagesTimeFor, len(grSet)])
+
+# split the time up among the data pages we have time to show
+framesPerPage =  <%-duration%> / numPages
+
+renderTools.sequenceOnPage(p, grSet[:numPages], [framesPerPage,]*numPages, repeat=1)
+
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

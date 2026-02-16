@@ -1,0 +1,40 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+import time
+import twccommon
+import twc.dsmarshal
+dsm = twc.dsmarshal
+
+class Product(twc.products.Product):
+    pass
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+
+squeezeBack = <%-getattr(params, "squeezeBack", 0)%>
+bulletinActive = <%-getattr(params, "bulletinActive", 0)%>
+
+if bulletinActive or squeezeBack:
+    # use the no shadow version because the shadow obscures the bulletin text
+    m = TIFF_Image('/rsrc/logos/twcDomesticLogoNoShadow')
+else:
+    m = TIFF_Image('/rsrc/logos/twcDomesticLogo')
+
+p.addItem(m)
+
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

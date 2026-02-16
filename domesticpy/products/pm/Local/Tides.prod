@@ -1,0 +1,248 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+import twccommon
+import twc.dsmarshal
+dsm = twc.dsmarshal
+
+class Product(twc.products.DeactivateableProduct):
+
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        if self._hasData:
+            return optimal
+        else:
+            return 0
+
+    def _loadData(self):
+        valid = 0
+        data = self.getData()
+        params = twccommon.DefaultedData(self.getParams())
+        stationData = []
+
+        if params.tideStation is not None:
+            for station in params.tideStation:
+                key = 'tide.%s' % station
+                tdata = dsm.defaultedGet(key)
+
+                tideData = []
+                if tdata is not None:
+                    for tide in tdata:
+                        if (tide.time > params.startTime):
+                            valid = 1
+                            tideData.append((tide.highFlag, tide.time))
+                stationData.append(tideData) # append data even if it's empty
+
+        data.tides = stationData
+        self._hasData = data.valid = valid
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+
+<%!
+data = prod.getData()
+
+# check to see if MarineForecast precedes or follows us
+i = 0
+myProdName = prod.getName()  # should be 'Local_Tides'
+for tmpname, unused in params.prodSchedule:  # prodSchedule is a list of (name, duration) tuples
+    if tmpname == myProdName:  # If we found ourselves in the schedule
+        if i-1 > 0:  # If we can index the product before us
+            if params.prodSchedule[i-1][0] == 'Local_MarineForecast':  # see if it's MarineForecast
+                data.bkgFade = (0, 5)  # don't fade in
+        if i+1 < len(params.prodSchedule):  # If there is a product after us
+            if params.prodSchedule[i+1][0] == 'Local_MarineForecast':  # see if it's MarineForecast
+                data.bkgFade = (5, 0)  # don't fade out
+        break  # don't need to look for more than one instance
+    i += 1  # Keep incrementing the index until we find ourselves
+%>
+
+#####
+#MAIN
+#####
+data = <%-prod.getData()%>
+params = <%-prod.getParams()%>
+duration = <%-prod.getDuration()%>
+
+import string
+import time
+import types
+import os
+
+<%@'_ProductHeader.rs'%>
+<%@'_Background.rs'%>
+<%@'_Title.rs'%>
+
+ru = renderUtil   # abbreviation
+defaultTZ = ":/etc/localtime"   # See man tzset(3) for details
+maxTZLen = len(defaultTZ)       # Use this len to avoid mem leak when setting TZ
+
+
+def set_tz(tzStr):
+    # If we keep the TZ value a constant length, we will not leak memory
+    # So use string.ljust() to pad value with spaces so that the length
+    # is the same as the default value.
+    # NOTE: The docs for the python os.tzset() caution against using whitespace
+    #       for the TZ variable, but it seems to work and may be the only way.
+    # TODO: Verify that whitespace in TZ does not cause other problems.
+
+    if( (tzStr is not None) and
+        (len(tzStr) > 0) and
+        (len(tzStr) <= maxTZLen) ):
+        tz = string.ljust(tzStr, maxTZLen)
+        os.putenv('TZ', tz)
+
+
+def reset_tz():
+    os.putenv('TZ', defaultTZ)
+
+
+def formatTime(time_t, tz=None):
+
+    tz_changed = 0
+
+    try:
+        if( (tz is not None) and (len(tz)) ):
+            tz_changed = 1
+            set_tz(tz)
+
+        t = time.localtime(time_t)
+
+        # Create the numeric part of the time string.
+        # This is separate because it uses a different font.
+        timeNum = time.strftime("%I:%M", t)
+	if(timeNum[0] == '0'):
+		timeNum = timeNum[1:]
+
+        # Create the suffix (am/pm and weekday abr.)
+        timeSfx = " %s %s" % (  string.lower(time.strftime("%p", t)),
+                                string.upper(time.strftime("%a", t))    )
+    except:
+        timeNum = ""
+        timeSfx = ""
+
+    if( tz_changed ):
+        reset_tz()
+
+    return timeNum, timeSfx
+
+# begin rendering product
+#ff           = TTFont('/rsrc/fonts/Interstate-Bold', 36, t= 80)
+locFont      = TTFont('/rsrc/fonts/Interstate-Bold', 20, l=26, t=30)
+labelFont    = TTFont('/rsrc/fonts/Interstate-Regular', 26, t=80)
+timeFont     = TTFont('/rsrc/fonts/Interstate-BlackCondensed', 26, t=80)
+dayFont      = TTFont('/rsrc/fonts/Interstate-Regular', 26, t=80)
+unavailFont  = TTFont('/rsrc/fonts/Interstate-Bold', 28, t=30)
+ry,gy,by,ay  = ru.rgbaConvert(212,212,50)   # yellow
+r,g,b,a      = ru.rgbaConvert(212,212,212)  # white
+leftCR       = CompositeRenderable()
+rightCR      = CompositeRenderable()
+crList       = [leftCR, rightCR]    
+
+locs         = params.locName
+tideData     = data.tides
+hiLoLabel    = ('LOW', 'HIGH')
+maxNumEvents = 4
+
+xpos         =  52
+ww           = 308            
+
+# Draw 2 sets of 2 stacked boxes.
+# The lefthand stack of 2 boxes is for one Loc, the right stack is another.
+for iLoc in range(2):
+    cr = crList[iLoc]
+    locBox = CompositeRenderable()
+    locBox.addItem(ru.getBevelBox(ww, 59))
+    txtList = ru.paginateText(locFont, locs[iLoc], ww-10, 50)
+    yOffset = 23 
+    for txt in txtList:
+        gr = Text(locFont, txt)
+        gr.setPosition(10, 59 - yOffset)
+        gr.setColor(ry,gy,by,ay)
+        locBox.addItem(gr)
+        yOffset += yOffset
+    locBox.setPosition(xpos, 341)
+    cr.addItem(locBox)
+
+    tideBox  = CompositeRenderable()
+    bb = ru.getBevelBox(ww,253)
+    bb.setPosition(xpos, 89)
+    tideBox.addItem(bb)
+    cr.addItem(tideBox)
+
+    ypos = 479 - 173
+
+    # Each Data box has 2 pairs of Hi/Lo tides, totaling 4 display lines
+    # If we have any times to display
+    if len(tideData[iLoc]) > 0:
+        tideSet = tideData[iLoc]
+
+        # Add all the times for this location to the page
+        # Max number of times to show is 4, actual may be less if data is old.
+        for eventNum in range(min(maxNumEvents, len(tideSet))):
+            hiFlag, time_t = tideSet[eventNum]
+            # Simple valid data check
+            if (hiFlag is not None) and (time_t is not None):
+
+                #create the time text from the UTC time
+                # TODO: This needs to be in the localtime of the tide location
+                timeStr, dayStr = formatTime(time_t)
+
+                # place HIGH or LOW label
+                txt = Text(labelFont, hiLoLabel[hiFlag])
+                txt.setColor(r,g,b,a)
+                txt.setPosition(xpos+10, ypos)
+                cr.addItem(txt)
+
+                textList = [    (timeStr, timeFont, (r,g,b,a)),
+                                (dayStr, dayFont, (r,g,b,a)),   ] 
+                rtxt = RichText(textList)
+                rtxt.setPosition(xpos+92, ypos)
+                cr.addItem(rtxt)
+
+                # Move to the next line down
+                ypos -= 57
+
+    else:
+        #TODO: Needs to be centered.
+        tt = Text(unavailFont, 'Temporarily\nUnavailable')
+        tt.setColor(ry,gy,by,ay)
+        tt.setPosition(xpos+70, ypos-65)
+        cr.addItem(tt)
+
+    # Move over the window width
+    xpos += ww
+
+# transitions
+p.addItem(leftCR)
+p.addItem(rightCR)
+# begin left 
+es = EffectSequencer(leftCR)
+es.addEffect(Slider(None, -360, 0), 1)
+es.addEffect(Slider(None, 36, 0), 10)
+es.addEffect(NullEffect(None), duration - 21)
+es.addEffect(Slider(None, -72, 0), 10)
+p.addItem(es)
+# begin right
+es = EffectSequencer(rightCR)
+es.addEffect(Slider(None, 360, 0), 1)
+es.addEffect(Slider(None, -36, 0), 10)
+es.addEffect(NullEffect(None), duration - 21)
+es.addEffect(Slider(None, -72, 0), 10)
+p.addItem(es)
+    
+    
+<%@'_ProductFooter.rs'%>
+]]>
+</rs>
+
+</prod>
+

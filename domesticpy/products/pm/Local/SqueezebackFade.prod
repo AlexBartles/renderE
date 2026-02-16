@@ -1,0 +1,64 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+
+class Product(twc.products.Product):
+    
+    def _loadData(self):
+        params     = self.getParams()
+        data       = self.getData()
+        data.ccfname = twc.findRsrc('/backgrounds/%s' % (params.ccBkgImage),'tif')
+        data.fcstfname = twc.findRsrc('/backgrounds/%s'% (params.fcstBkgImage),'tif')
+
+
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        data = self.getData()
+        if (data.ccfname is None)and (data.fcstfname is None):
+            return 0
+
+        return optimal
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+
+
+data = <%-prod.getData()%>
+
+cr = CompositeRenderable()
+ccBkg = None
+fcstBkg = None
+
+ccBkg = TIFF_Image(data.ccfname)
+fcstBkg = TIFF_Image(data.fcstfname)
+w,h = fcstBkg.size()
+    
+if ccBkg and fcstBkg:
+    ccBkg.setPosition(0, 0+h)
+    fcstBkg.setPosition(0,0)
+
+cr.addItem(fcstBkg)
+cr.addItem(ccBkg)
+p.addItem(cr)
+
+es = EffectSequencer(cr)
+es.addEffect(Fader(None, 1, 0, 10), 10)
+es.addEffect(NullEffect(None), <%-prod.getDuration()%>-15)
+es.addEffect(Fader(None, 0, 1, 5), 5)
+p.addItem(es)
+
+<%@'_WxDotComLogo.rs'%>
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

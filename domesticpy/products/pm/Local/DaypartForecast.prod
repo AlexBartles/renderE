@@ -1,0 +1,491 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc
+import twc.products
+import string
+import time
+import twccommon
+import Common
+import domestic.dataUtil as dataUtil
+import twc.dsmarshal
+dsm = twc.dsmarshal
+
+class Product(twc.products.Product):
+
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        if self._hasData:
+            return optimal
+        else:
+            return 0
+
+    def makeBarTimeT(self, offset, y, m, d):
+        # Figures out the time_t that we need.
+        # Arg is number of hours after midnight for the day given in curTime
+        dayOffset = offset / 100
+        hourOffset = offset % 100
+        return int(time.mktime((y,m,d+dayOffset,hourOffset,0,0,0,0,-1)))
+
+    def buildFcastList(self, forecast):
+
+        # If the data is valid
+        if forecast.skyCondition or forecast.temp != None:
+            # maintain some accelerators we will need later
+            self._validFlag = 1
+
+            # If we have a valid temp, update the MAX/MIN temps if needed.
+            if forecast.temp != None:
+                if (self.maxTemp is None) or (forecast.temp > self.maxTemp):
+                    self.maxTemp = forecast.temp
+                if (self.minTemp is None) or (forecast.temp < self.minTemp):
+                    self.minTemp = forecast.temp
+
+            # Create a wind speed and direction string or "Calm"
+            windText = dataUtil.formatWindText(forecast.windSpeed, 
+                                               forecast.windDir)
+
+            self.fcastCond.append((forecast.skyCondition, 
+                                   forecast.temp, 
+                                   windText))
+
+        else:
+            # Append an blank record
+            self.fcastCond.append((None, None, None))
+
+    def _loadData(self):
+        params = self.getParams()
+        data = self.getData()
+        data.locName = params.locName
+        self.fcastCond = []
+        self.fcastTimes = []
+        self.maxTemp = None
+        self.minTemp = None
+        self._validFlag = 0
+        fcastDayName = ""
+
+        try:
+            #Set curTime based on the time when the product will play
+            curTime = time.localtime(time.time())
+            y,m,d,H,M,S,wd,jd,dst = curTime
+            # Get the HHMM time the product will start in 24Hour format
+            milTime = (H * 100) + M
+
+            # ---------------------------------------------------------------------
+            # NOTE: For now, leave the day in mixed case so that it matches
+            #      the style of text returned by formatDayOfWeek().
+            #      Later we can do a string.upper()
+            #
+            # NOTE: In order to avoid problems with DST time changes, It is best to
+            #      not use 2AM (2) in the tables for the last 4 fields.
+            #
+            # Fields are  TimeslotEnd, DayTitleFormat, FcstOffset1, ... FcstOffset4
+            # TimeslotEnd format is HHMM for the current day
+            # FcstOffset* format is DDHH where FcstOffset == 100 means tomorrow at
+            #                                                midnight
+            # ---------------------------------------------------------------------
+
+            daypartTable = [
+                ( 300, '%s' % Common._dayname[(wd % 7)],        6,  12,  15,  17),
+                ( 900, '%s' % Common._dayname[(wd % 7)],       12,  15,  17,  20),
+                (1200, '%s' % Common._dayname[(wd % 7)],       15,  17,  20, 100),
+                (1400, '%s Night' % Common._dayname[(wd % 7)][:3], 17,  20, 100, 106),
+                (1700, '%s Night/%s' % (Common._dayname[(wd % 7)][:3], 
+                                        Common._dayname[((wd+1) % 7)][:3]),
+                                        20, 100, 106, 112),
+                (2100, '%s' % Common._dayname[((wd+1) % 7)],  100, 106, 112, 115),
+                (2400, '%s' % Common._dayname[((wd+1) % 7)],  106, 112, 115, 117)
+                ]   
+
+            # Find out which daypart times to display (and what day label to use)
+            # based on the current time.
+            for endTime, fcastDayName, t1, t2, t3, t4 in daypartTable[:] :
+                if (endTime >= milTime):
+                    break
+
+            #Generate the product day-label based on the format in the table.
+            fcastDayName=string.upper(fcastDayName)
+
+            # Build the list of time_t vals which corresponds the the forecast times
+            # from the daypartTable.
+            secTime = (self.makeBarTimeT(t1, y, m, d),
+                       self.makeBarTimeT(t2, y, m, d),
+                       self.makeBarTimeT(t3, y, m, d),
+                       self.makeBarTimeT(t4, y, m, d))
+
+            # Preserve the list of DDHH forecast times chosen
+            self.fcastTimes = (t1, t2, t3, t4)
+
+            # Get the forecast date for those forecast times.
+            for sec in secTime:
+                key = 'hourlyFcst.%s.%s' % (params.coopId[0], sec)
+            
+                # getDefaulted will ensure all the fields exist
+                # (so we don't have to worry about throwing an exception)
+                #forecast = dsm.getDefaulted(key)
+                try:
+                    forecast = twc.DefaultedData(dsm.get(key))
+                except:
+                    twccommon.Log.warning('got an exception trying to get %s' % key)
+                    forecast = twc.Data()
+                    forecast = twc.DefaultedData(forecast)
+
+                self.buildFcastList(forecast)
+
+            self._hasData = data.valid = self._validFlag
+        except:
+            twccommon.Log.logCurrentException("DaypartForecast error:")
+            data.locName = [""]
+            self._hasData = data.valid = 0
+
+        data.fcastCond    = self.fcastCond
+        data.fcastTimes   = self.fcastTimes
+        data.maxTemp      = self.maxTemp
+        data.minTemp      = self.minTemp
+        data.fcastDayName = fcastDayName
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+<%@'_Background.rs'%>
+<%@'_Title.rs'%>
+
+# Fonts
+prodDayFont = TTFont("/rsrc/fonts/Interstate-Bold", 16, shadow=0, t=50)
+locNameFont = TTFont("/rsrc/fonts/Interstate-Bold", 24, t=50)
+
+daypartTimeNumFont = TTFont("/rsrc/fonts/Interstate-Black", 27)
+
+daypartTimeTxtFont = TTFont("/rsrc/fonts/Interstate-Bold", 27)
+daypartTempFont = TTFont("/rsrc/fonts/Interstate-BlackCondensed", 40, shadow=0)
+daypartSkyFont = TTFont("/rsrc/fonts/Interstate-Bold", 20, t=0, l=18)
+daypartWindFont = TTFont("/rsrc/fonts/Interstate-Bold", 22, t=0)
+
+# Colors
+barColorRGBA = renderUtil.rgbaConvert(212, 212, 212, 204)
+whiteRGBA = renderUtil.rgbaConvert(212, 212, 212, 255)
+blackRGBA = renderUtil.rgbaConvert(20, 20, 20, 255)
+goldRGBA = renderUtil.rgbaConvert(212, 212, 50, 255)
+
+
+# Page Constants
+leftMargin = 52
+titleX = 52
+titleY = 479 - 74
+
+# Daypart tombstone coordinates
+dpTombY = (479 - 391)
+dpTombW = 154
+dpTombH = 282
+dpTombStartX = [-dpTombW,
+                leftMargin+dpTombW,
+                leftMargin+(dpTombW*2),
+                720]
+dpTombFinalX = [leftMargin,
+                leftMargin+dpTombW,
+                leftMargin+(dpTombW*2),
+                leftMargin+(dpTombW*3)]
+dpTombStartY = [ dpTombY,
+                -dpTombH,
+                -dpTombH,
+                dpTombY]
+dpTombFinalY = [ dpTombY,
+                dpTombY,
+                dpTombY,
+                dpTombY]
+
+# Temperature bar coordinates
+barW = 102
+barY = (479 - 337) - dpTombY
+
+# Daypart Time Label coordinates
+timeY = (479 - 135) - dpTombY
+
+# Icon coordinates
+iconY = (479 - 208) - dpTombY
+
+# Text Modifier coordinates
+textY = (479 - 220) - dpTombY
+
+# Windspeed and Direction coordinates
+windY = (479 - 355) - dpTombY
+
+# LocName tombstone coordinates
+locBevelY = (479 - 109)
+locBevelW = dpTombW * 4
+locBevelH = 30
+locBevelStartX = -locBevelW
+locBevelFinalX = leftMargin
+
+# Forecast day name title coordinates
+fcstDayNameX = 508
+fcstDayNameY = (479 - 63)
+
+#####
+# Animation effect timing
+
+flyInDuration = 10
+
+#Start the first bar growth after the flyin is complete
+tempBarDelay = flyInDuration
+tempBarDuration = 5
+
+#Start the temperature fad-in a little before the bar stops growing
+tempNumDelay = tempBarDelay + (tempBarDuration - 1)
+tempNumDuration = 5
+
+flyOutDuration = 10
+flyOutDeltaX = float(leftMargin + (dpTombW * 4)) / flyOutDuration
+
+
+
+data        = <%-prod.getData()%>
+fcastCond    = data.fcastCond
+fcastTimes   = data.fcastTimes
+fcastDayName = data.fcastDayName
+maxTemp      = data.maxTemp
+minTemp      = data.minTemp
+valid        = data.valid
+title        = <%-params.productTitle%>
+duration     = <%-prod.getDuration()%>
+
+import string
+#####
+# Add the forecast period to the title bar
+#
+# Create the text to identify which day(s) forecast is being displayed
+cr = CompositeRenderable()
+txt = Text(prodDayFont, fcastDayName)
+xpos = renderUtil.justifyGR(txt.size()[0], fcstDayNameX, renderUtil.RIGHT)
+
+#Create the drop shadow and add it first
+shd = Text(prodDayFont, fcastDayName)
+shd.setPosition(xpos, fcstDayNameY-1)
+apply(shd.setColor, whiteRGBA)
+cr.addItem(shd)
+
+#Now, add the text body
+txt.setPosition(xpos, fcstDayNameY)
+apply(txt.setColor, blackRGBA)
+cr.addItem(txt)
+
+#Place both shadow and text on the page
+p.addItem(cr)
+
+# Make sure they fade on at the same rate as the title bar
+renderUtil.fadeInOut(p, cr, duration,
+    <%-params.titleFadeInDuration%>, <%-params.titleFadeOutDuration%>)
+
+
+#####
+# Add the LocName bevel
+locName = string.upper(<%-params.locName[0]%>)
+crLocation = renderUtil.getBevelBox(locBevelW, locBevelH)
+gr = Text(locNameFont, locName)
+gr.setPosition(11, 8)
+apply(gr.setColor, goldRGBA)
+crLocation.addItem(gr)
+
+crLocation.setPosition(locBevelStartX, locBevelY)
+p.addItem(crLocation)
+
+# Setup the movement for the LocName bevel
+es = EffectSequencer(crLocation)
+es.addEffect(Slider(None,
+                    (float(locBevelFinalX - locBevelStartX) / flyInDuration),
+                    0),
+             flyInDuration)
+es.addEffect(NullEffect(None), duration - (flyInDuration + flyOutDuration))
+es.addEffect(Slider(None, -flyOutDeltaX, 0), flyOutDuration)
+p.addItem(es)
+
+
+#####
+# Add the Daypart Tombstones
+for num in range(0,4):
+    # This will hold all the elements on the tombstone
+    crDaypart = renderUtil.getBevelBox(dpTombW, dpTombH)
+
+    # Display the Daypart Forecast Time
+
+    fcastTime = fcastTimes[num] % 100   # Strip out the day
+
+    if (fcastTime == 0):
+        strList = [ ('Midnight', daypartTimeTxtFont, (whiteRGBA))   ]
+    elif( fcastTime < 12):
+        strList = [ ('%d' % fcastTime, daypartTimeNumFont, (whiteRGBA)),
+                    (' am', daypartTimeTxtFont, (whiteRGBA))        ]
+    elif( fcastTime == 12):
+        strList = [ ('Noon', daypartTimeTxtFont, (whiteRGBA))       ]
+    else:
+        strList = [ ('%d' % (fcastTime - 12), daypartTimeNumFont, (whiteRGBA)),
+                    (' pm', daypartTimeTxtFont, (whiteRGBA))        ]
+
+    gr = RichText(strList)
+    xpos = renderUtil.justifyGR(gr.size()[0], dpTombW, renderUtil.CENTER)
+    gr.setPosition(xpos, timeY)
+    crDaypart.addItem(gr)
+
+
+    # Add the data elements (if any data was valid)
+    if (valid):
+        skyCond, temperature, windText = fcastCond[num]
+
+        # Display the Icon and Text Modifier
+        if skyCond:
+            # Display the forecast icon
+            sky = wxDataUtil.formatSkyCondition(skyCond, 'DaypartForecast')
+            skyIcon = sky.iconFile
+            skyText = sky.textModifier
+            gr = Icon(twc.findRsrc('/icons/small/%s' % skyIcon, "mv"))
+            xpos = renderUtil.justifyGR(gr.size()[0], dpTombW,
+                                        renderUtil.CENTER)
+            gr.setPosition(xpos, iconY)
+            crDaypart.addItem(gr)
+
+            # Display the weather modifier text
+            # We HAVE to split each line in order to center the text properly.
+            #skyTextList = renderUtil.paginateText(daypartSkyFont, skyText,
+            #                                      dpTombW-20, 19)
+            skyTextList = skyText.split('*')                                   
+
+            y = textY
+            for skyText in skyTextList:
+                gr = Text(daypartSkyFont, skyText)
+                xpos = renderUtil.justifyGR(gr.size()[0], dpTombW,
+                                            renderUtil.CENTER)
+                gr.setPosition(xpos, y)
+                apply(gr.setColor, whiteRGBA)
+                crDaypart.addItem(gr)
+                y -= 19
+
+
+        # Display Windspeed and Direction
+        if windText:
+            # Display the wind speed and direction
+            gr = Text(daypartWindFont, windText)
+            len = daypartWindFont.stringWidth(windText)
+            xpos = renderUtil.justifyGR(len, dpTombW, renderUtil.CENTER)
+            gr.setPosition(xpos, windY)
+            apply(gr.setColor, whiteRGBA)
+            crDaypart.addItem(gr)
+
+
+        # Display the temperature bar
+        if (temperature != None):
+
+            # Temp Bar Location and Size constants
+            if ((maxTemp - minTemp) > 10):
+                # If the temp range is > 10 use the full range of heights.
+                minBarH = 34
+                maxBarH = 88
+            else:
+                # Otherwise, make the bars more similar in height.
+                minBarH = 44
+                maxBarH = 88
+
+            bar = Polygon()
+
+            if(temperature == maxTemp):
+                barH = maxBarH
+            elif(temperature == minTemp):
+                barH = minBarH
+            else:
+                barH = (minBarH + int((temperature - minTemp) *
+                                      (float(maxBarH - minBarH) /
+                                            (maxTemp - minTemp))))
+
+            # Start with a line and then make it grow with the Sizer effect
+            bar.addVertex(0, 0)
+            bar.addVertex(barW, 0)
+            bar.addVertex(barW, 1)
+            bar.addVertex(0, 1)
+            bar.setPosition(renderUtil.justifyGR(barW, dpTombW,
+                                                 renderUtil.CENTER), barY)
+            apply(bar.setColor, barColorRGBA)
+            bar.setVisibility(0)
+            crDaypart.addItem(bar)
+
+            es = EffectSequencer(bar)
+            es.addEffect(SetAnimationState(None, 0), tempBarDelay)
+            es.addEffect(SetVisibility(None, 1), 1)
+            es.addEffect(SetAnimationState(None, 1), 1)
+            es.addEffect(Sizer(None, 0, barH/float(tempBarDuration)),
+                         tempBarDuration)
+            p.addItem(es)
+
+
+            # Display the temperature value
+            tempString = "%d" % (temperature)
+            gr = Text(daypartTempFont, tempString)
+            len = daypartTempFont.stringWidth(tempString)
+            hgt = daypartTempFont.stringHeight(tempString)
+            xpos = renderUtil.justifyGR(len, dpTombW, renderUtil.CENTER)
+
+            # NOTE: The value subtracted (28) is the height of the actual
+            #       characters. The methods stringHeight() or font.size()
+            #       give 40 so we can't use these functions.
+            gr.setPosition(xpos, (barY+barH)-28)
+
+            apply(gr.setColor, blackRGBA)
+            crDaypart.addItem(gr)
+
+            # Fade in the temperature after the temperature bar has grown
+            fade = EffectSequencer(gr)
+            fade.addEffect(SetVisibility(None, 0), tempNumDelay)
+            fade.addEffect(Fader(None, 1, 0, 1), 1)
+            fade.addEffect(SetVisibility(None, 1), 1)
+            fade.addEffect(Fader(None, 0, 1, tempNumDuration), tempNumDuration)
+            p.addItem(fade)
+
+    # Set the starting position for each daypart forecast tombstone
+    crDaypart.setPosition(dpTombStartX[num], dpTombStartY[num])
+    p.addItem(crDaypart)
+
+    # Add the effect to slide each daypart forecast tombstone
+    es = EffectSequencer(crDaypart)
+    es.addEffect(Slider(None,
+                        float(dpTombFinalX[num] - dpTombStartX[num]) / flyInDuration,
+                        float(dpTombFinalY[num] - dpTombStartY[num]) / flyInDuration),
+                 flyInDuration)
+    es.addEffect(NullEffect(None),
+                 duration - (flyInDuration + flyOutDuration))
+    es.addEffect(Slider(None, -flyOutDeltaX, 0), flyOutDuration)
+    p.addItem(es)
+
+
+    #Start the next bar after the last has stopped animating
+    tempBarDelay = tempBarDelay + tempBarDuration
+
+    #Start the temperature fad-in a little before the bar stops growing
+    tempNumDelay = tempBarDelay + 4
+
+
+if (not valid):
+    # NOTE: dataNotAvailable() will create the text AND add it to the page.
+    gr = renderTools.dataNotAvailable(page=p, 
+                                      text='Temporarily Unavailable',
+                                      displayDuration=duration)
+
+    es = EffectSequencer(gr)
+    es.addEffect(SetVisibility(None, 0), flyInDuration)
+    es.addEffect(SetVisibility(None, 1),
+                 duration - (flyInDuration + flyOutDuration))
+    es.addEffect(SetVisibility(None, 0), flyOutDuration)
+    p.addItem(es)
+
+
+
+p1 = p
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

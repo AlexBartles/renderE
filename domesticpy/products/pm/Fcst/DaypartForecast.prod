@@ -1,0 +1,304 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+import time
+import twccommon
+import domestic.dataUtil as dataUtil
+import twcWx.dataUtil as wxDataUtil
+import twc.dsmarshal
+dsm = twc.dsmarshal
+import twc
+
+class Product(twc.products.Product):
+
+    def _genDayLabel(self, year, mon, day, abbrev=1):
+
+        fmt = time.mktime((year,mon,day,0,0,0,0,0,-1))
+        if (abbrev):
+            return time.strftime("%a", time.localtime(fmt))
+        else:
+            return time.strftime("%A", time.localtime(fmt))
+
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+
+        data = self.getData()
+
+        if (data.valid):
+            return optimal
+        else:
+            return 0
+
+    def _loadData(self):
+
+        params   = self.getParams()
+        params   = twccommon.DefaultedData(params)
+        dsRaw    = twccommon.Data()
+        testData = self.getTestData()
+        testData.output = twccommon.Data()
+        testData.output.daypartFcstList = []
+
+        Y,M,D,h,m,s,wd,jd,dst= time.localtime(time.time())
+
+        # Build up a list of data for the dayparts based on
+        # the current time.  The rules below are based on 
+        # the Weatherscan Redesign 05 req's. 
+        dayParts = []
+        dayLabel = ""
+
+        # Between 12:00am - 4:00am
+        if (0 <= h < 4):
+            dayLabel = "Today's\nForecast"
+            dayParts = [(D,7,"7 am"),(D,12,"noon"),(D,17,"5 pm")]
+
+        # Between 4:00am - 9:00am
+        elif (4 <= h < 9): 
+            dayLabel = "Today's\nForecast"
+            dayParts = [(D,12,"noon"),(D,15,"3 pm"),(D,17,"5 pm")]
+
+        # Between 9:00am - 12:00pm
+        elif (9 <= h < 12):
+            dayLabel = "Today's\nForecast"
+            dayParts = [(D,15,"3 pm"),(D,17,"5 pm"),(D,20,"8 pm")]
+
+        # Between 12:00pm - 2:00pm
+        elif (12 <= h < 14):
+            dayLabel = "Tonight's\nForecast"
+            dayParts = [(D,17,"5 pm"),(D,20,"8 pm"),(D+1,0,"midnight")]
+
+        # Between 2:00pm - 5:00pm
+        elif (14 <= h < 17):
+            dayLabel = "Tonight's\nForecast"
+            dayParts = [(D,20,"8 pm"),(D+1,0,"midnight"),(D+1,6,"6 am")]
+
+        # Between 5:00pm - 8:00pm
+        elif (17 <= h < 20):
+            dayLabel = self._genDayLabel(Y,M,D+1,0) + "\nForecast"
+            dayParts = [(D+1,0,"midnight"),(D+1,6,"6 am"),(D+1,12,"noon")]
+
+        # Between 8:00pm - 12:00pm
+        else:
+            dayLabel = self._genDayLabel(Y,M,D+1,0) + "\nForecast"
+            dayParts = [(D+1,7,"7 am"),(D+1,12,"noon"),(D+1,17,"5 pm")]
+
+        # Log the hour that we used to determine the dayparts:
+        testData.currHour = h
+        testData.output.dayLabel = dayLabel 
+            
+        data = []
+        tempList = []
+        validData = 0
+        dsRaw.daypartFcstList = []
+        for day, hour, dpLabel in dayParts:
+
+            # Get the data:
+            keyTime = time.mktime((Y,M,day,hour,0,0,0,0,-1))
+            key = "hourlyFcst.%s.%s" % (params.coopId, int(keyTime))
+            fcst = dsm.defaultedGet(key)
+
+            # Log the raw data we picked out of the datastore:
+            dsRaw.daypartFcstList.append(fcst)
+
+            temp    = None
+            sci     = None
+            windStr = None
+
+            if fcst is not None:
+
+                fcst = twc.DefaultedData(fcst)
+
+                # Even tho we got a fcst record...
+                # make sure the specific fields are available:
+                if (fcst.temp != None):
+                    temp = fcst.temp
+                    tempList.insert(0, int(temp))
+                    validData = 1
+
+                if (fcst.skyCondition != None):
+                    sci = wxDataUtil.formatSkyCondition(fcst.skyCondition, "DaypartForecast")
+                    validData = 1
+
+                if (fcst.windDir != None) and (fcst.windSpeed != None):
+                    if (fcst.windDir == 0) or (fcst.windSpeed == 0):
+                        windStr = 'Calm'
+                    else:
+                        windDir = dataUtil.formatWindDirection(fcst.windDir)
+                        if windDir == 'Var':
+                            windDir = 'Variable'
+                        windStr = "%s %d" % (windDir, fcst.windSpeed)
+
+                    validData = 1
+
+            forecast = (dpLabel, sci, temp, windStr)
+
+            # Log the data that we're using to render with:         
+            testData.output.daypartFcstList.append(forecast)
+            data.append(forecast)
+
+        if (len(tempList) == 0):
+            minTemp = 0
+            maxTemp = 0
+        elif (len(tempList) == 1):
+            minTemp = tempList[0]
+            maxTemp = minTemp
+        else:
+            tempList.sort()
+            minTemp = tempList[0]
+            maxTemp = tempList[len(tempList)-1]
+
+        testData.minTemp = minTemp
+        testData.maxTemp = maxTemp
+            
+        self.updateData(ds=dsRaw,
+                        valid=validData,
+                        dayLabel=dayLabel, 
+                        fcst=data, 
+                        minTemp=minTemp, 
+                        maxTemp=maxTemp)
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+<%@'_Background.rs'%>
+<%@'_ProductFooter.rs'%>
+
+<%!
+data     = prod.getData()
+minTemp  = data.minTemp
+maxTemp  = data.maxTemp
+dayLabel = data.dayLabel
+fcst     = data.fcst
+duration = prod.getDuration()
+%>
+
+# Fonts:
+tempFont     = TTFont("/rsrc/fonts/Interstate-Bold", 24, shadow=0)
+titleFont    = TTFont("/rsrc/fonts/Interstate-Bold", 20, shadow=0)
+daypartFont  = TTFont("/rsrc/fonts/Interstate-Bold", 14, shadow=0)
+windFont     = TTFont("/rsrc/fonts/Interstate-Bold", 18, shadow=0)
+
+xPos = 220
+tempBarDuration = 15 
+
+cr1 = CompositeRenderable()
+cr2 = CompositeRenderable()
+
+# title:
+gr = Text(titleFont, <%-dayLabel%>)
+r,g,b,a = renderUtil.rgbaConvert(229, 229, 229)
+gr.setColor(r,g,b) 
+gr.setPosition(74, 105)
+cr2.addItem(gr)
+
+# Iterate over panels:
+for daypart, skyCond, temp, windStr in <%-fcst%>:
+
+    # Daypart text:
+    dp = Text(daypartFont, daypart)
+    r,g,b,a = renderUtil.rgbaConvert(229, 229, 229)
+    dp.setColor(r,g,b)
+    dp.setPosition(xPos+5,128)
+    cr2.addItem(dp)
+
+    # Icon:
+    if (skyCond != None):
+        gr = Icon(twc.findRsrc('/icons/small/%s' % skyCond.iconFile, "mv"))
+        w,h = gr.size()
+        gr.setSize(w*.65, h*.65)
+        gr.setPosition(xPos, 80)
+        cr1.addItem(gr)
+
+    # Wind Dir & Speed:
+    if (windStr != None):
+        gr = Text(windFont, "%s" % (windStr))
+        r,g,b,a = renderUtil.rgbaConvert(229, 229, 229)
+        gr.setColor(r,g,b)
+        wOffset = renderUtil.justifyGR(gr.size()[0], 112, renderUtil.CENTER)
+        gr.setPosition(xPos+wOffset, 62)
+        cr1.addItem(gr)
+
+    # Temperature & Bar:
+    # Calculate min/max bar height:
+    # If the temp range is > 10, use full range of min to max heights.
+    if (temp != None):
+
+        if ((<%-maxTemp%> - <%-minTemp%>) > 10):
+            minBarHeight = 20  # 16pix + 5pix = 21pix starting point
+            maxBarHeight = 44
+        else:
+            # Otherwise, make the bars more similar in height:
+            minBarHeight = 24  # Picked out of air
+            maxBarHeight = 40
+
+        # Figure out the bar height based on temp:
+        if (temp == <%-maxTemp%>):
+            barHeight = maxBarHeight
+        elif (temp == <%-minTemp%>):
+            barHeight = minBarHeight
+        else:
+            barHeight = (minBarHeight + int((temp - <%-minTemp%>) * \
+                        (float(maxBarHeight - minBarHeight) / (<%-maxTemp%> - <%-minTemp%>))))
+
+        bar = Polygon()
+        r,g,b,a = renderUtil.rgbaConvert(173,224,238,255)
+        bar.addVertex(0,0,r,g,b,a)
+        bar.addVertex(0,1,r,g,b,a)
+        bar.addVertex(48,1,r,g,b,a)
+        bar.addVertex(48,0,r,g,b,a)
+        bar.setPosition(xPos+53, 80)
+        p.addItem(bar)
+
+        barEndHeight = barHeight/float(tempBarDuration)
+
+        # Sizer Effect Sequencer:
+        es = EffectSequencer(bar)
+        es.addEffect(SetVisibility(None, 0), 14)
+        es.addEffect(SetVisibility(None, 1), 1)
+        es.addEffect(Sizer(None, 0, barEndHeight), tempBarDuration)
+        es.addEffect(NullEffect(None), <%-duration%> - (tempBarDuration+30))
+        es.addEffect(Fader(None, 1, 0, 15), 15)
+        p.addItem(es)
+
+        # Temperature:
+        tgr = Text(tempFont, "%s" % (temp))
+        r,g,b,a = renderUtil.rgbaConvert(0, 132, 169)
+        tgr.setColor(r,g,b)
+        tOffset= renderUtil.justifyGR(tgr.size()[0], 48, renderUtil.CENTER)
+        tgr.setPosition(xPos+53+tOffset, 80+barHeight-17)
+        cr1.addItem(tgr)
+
+    xPos += 114   # Width of panel
+
+# Fade the title, & daypart periods:
+p.addItem(cr2)
+fade2 = EffectSequencer(cr2)
+fade2.addEffect(SetVisibility(None, 0), 13)
+fade2.addEffect(Fader(None, 1, 0, 1), 1)
+fade2.addEffect(SetVisibility(None, 1), 1)
+fade2.addEffect(Fader(None, 0, 1, 15), 15)
+fade2.addEffect(NullEffect(None), <%-duration%> - 45)
+fade2.addEffect(Fader(None, 1, 0, 15), 15)
+p.addItem(fade2)
+
+# Fade the temps, icons, & wind speed & dirs in:
+p.addItem(cr1)
+fade1 = EffectSequencer(cr1)
+fade1.addEffect(SetVisibility(None, 0), 28)
+fade1.addEffect(Fader(None, 1, 0, 1), 1)
+fade1.addEffect(SetVisibility(None, 1), 1)
+fade1.addEffect(Fader(None, 0, 1, 15), 15)
+fade1.addEffect(NullEffect(None), <%-duration%> - 60)
+fade1.addEffect(Fader(None, 1, 0, 15), 15)
+p.addItem(fade1)
+
+
+]]>
+</rs>
+
+</prod>

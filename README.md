@@ -1,0 +1,26 @@
+# renderE - The Open Source IntelliStar 1 Renderer
+
+RenderE is intended as a replacement for a VM emulating the IntelliStar 1, a system previously used by The Weather Channel to render Local on the 8s.
+
+## renderE is far from finished! Expect bugs, issues, and crashes!
+
+## Usage
+
+1. Clone repository
+2. Install Python dependencies
+3. Load your IntellliStar 1 configuration file (using loadSCMTconfig.py)
+4. Run main.py
+5. You'll have to figure out the rest because there is absolutely no way to properly use it yet.
+
+## Environment Variables
+
+RenderE uses the following environment variables for replacements to various paths used by the i1:
+
+- RENDEREROOT: The folder renderE is in. This will probably be removed in the future.
+- RENDERERSRC: The rsrc folder to be used. On the i1, this is located at /usr/local/twc/rsrc
+- RENDEREMEDIA: The media folder. this is located at /media
+- RENDEREDOMESTIC: The domestic data folder. On the i1, this is located at /usr/twc/domestic
+- TWCCLIDIR: Used by the the original i1, located at /usr/twc. There is no equivalent for renderE.
+- TWCPERSDIR: Used by the original i1. renderE's version is in the `domesticpy` folder.
+
+I suggest making a shell script to set your environment variables.

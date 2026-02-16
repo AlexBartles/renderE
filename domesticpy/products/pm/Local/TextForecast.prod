@@ -1,0 +1,1057 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import os
+import stat
+import string
+import time
+import twc
+import twc.DataStoreInterface as ds
+import twc.dsmarshal as dsm
+import twccommon
+import domestic
+import domestic.dataUtil as dataUtil
+from twc import rsutil
+
+class Product(twc.products.Product):
+    def _is_valid_clip(self, fn):
+        filename = '/rsrc/audio/vocalLocal/%s.wav' % (fn)
+        if (os.access(filename, os.R_OK)):
+            return 1
+        else:
+            return 0
+
+    def _getClipDuration(self, clip):
+        sz = os.stat('/rsrc/audio/vocalLocal/%s.wav' % clip)[stat.ST_SIZE]
+        # 48Khz * 2 bits per channel (1 channel, we're mono, baby!)
+        sec = (float(sz) / 96000)
+        # Round up to nearest frame
+        dur = round(sec * 30 + 0.4999)
+        return dur
+
+    def _createClip(self, pri, clip):
+        ac = None
+        dur = self._getClipDuration(clip)
+        ac = twccommon.Data(duration = dur,
+                            priority = pri,
+                            filename = '/rsrc/audio/vocalLocal/%s.wav' % clip)
+
+        return ac
+
+
+    def _parseAudioCodes(self, data):
+        params = self.getParams()
+        # vars for vocal local winds
+        windPriority = 5
+        spdDict = {'01' : 'Below_5',
+                   '02' : '5_10',
+                   '03' : '10_15',
+                   '04' : '10_20',
+                   '05' : '15_25',
+                   '06' : '20_30',
+                   '07' : '25_35',
+                   '08' : '25_40',
+                   '09' : '35_50',
+                   '10' : '40_60',
+                   '11' : '50_70',
+                   '12' : '60_80',
+                   '13' : '70_90',
+                   '14' : '80_100',
+                   '15' : 'Over_100'
+                  } 
+
+        dirDict = {'01' : 'NNE',
+                   '02' : 'NE',
+                   '03' : 'ENE',
+                   '04' : 'E', 
+                   '05' : 'ESE',
+                   '06' : 'SE',
+                   '07' : 'SSE',
+                   '08' : 'S',
+                   '09' : 'SSW',
+                   '10' : 'SW',
+                   '11' : 'WSW', 
+                   '12' : 'W', 
+                   '13' : 'WNW',
+                   '14' : 'NW',
+                   '15' : 'NNW',
+                   '16' : 'N' 
+                  } 
+
+    
+        ndx = 0
+        audioCodes = []
+        _tempFilter = string.letters + string.punctuation + string.whitespace
+        _tempFilter = dataUtil.removeChars(_tempFilter, '-')
+
+        # cover the no data case
+        if data == None:
+            return audioCodes
+
+        try:
+            minDur = params.minPageDuration*30
+        except:
+            minDur = 6*30
+
+        for currT, fcst in data:
+            # Start by creating an empty code list for this period
+            audioCodes.append(twccommon.Data(duration=0, audioList=[]))
+            wxPhraseFound=0
+            tempPhraseFound = 0
+            
+            if fcst is None:
+                audioCodes[ndx].duration = minDur
+                audioCode = None
+            else:
+                audioCode = fcst.audioCode
+
+
+
+            #####
+            # Now we need to process the audioCodes
+            #
+            validClip = 1
+            if(not audioCode) or (params.activeVocal == 0):
+                #twccommon.Log.warning("Null audio clip for page %d" % ndx+1)
+                validClip = 0
+            else:
+
+                try:
+                    # Strip the audioCode into seprate fields.
+                    codes = string.split(audioCode, ':')
+
+                    prevField = ''
+                    # turn the audio codes into filenames and validate
+                    for field in codes:
+                        if (len(field) == 0):
+                            continue
+                        ##### D - CODES
+                        if   (field[0] == 'D'):
+                            # save for later processing
+                            daypart = int(field[1])
+                            prevField = field[0]
+                            pass
+
+                        ##### X - CODES
+                        elif (field[0] == 'X'):
+                            if (wxPhraseFound == 1):
+                                continue        #already processed a weather phrase
+
+                            prevField = field[0]
+                            filename = '%s/%s' % ('Wx_Phrases_Longform', field[1:])
+
+                            # Add the file to the list if it is readable
+                            if(self._is_valid_clip(filename)):
+                                d = self._createClip(1, filename) 
+                                audioCodes[ndx].audioList.append(d)
+                                audioCodes[ndx].duration += d.duration
+                                wxPhraseFound = 1
+                                
+                        ##### S - CODES
+                        elif (field[0] == 'S'):
+                            if (wxPhraseFound == 1):
+                                continue        #already processed a weather phrase
+
+                            prevField = field[0]
+                            filename = '%s/%s' % ('Wx_Phrases_Shortcast', field[1:5])
+
+                            # Add the file to the list if it is readable
+                            if(self._is_valid_clip(filename)):
+                                d = self._createClip(1, filename) 
+                                audioCodes[ndx].audioList.append(d)
+                                audioCodes[ndx].duration += d.duration
+                                wxPhraseFound = 1
+                                
+                        ##### T - CODES
+                        elif (field[0] == 'T'):
+                            prevField = field[0]
+                            tempEnd = dataUtil.findfirst(field[2:], _tempFilter)
+                            if (tempEnd != -1):
+                                temperature = int(field[2:tempEnd + 2])
+                            else:
+                                temperature = int(field[2:])
+
+                            # Find out if it is a high or a low
+                            if (field[1] == 'L'):
+                                dir = 'Temps_Lows'
+
+                                # verify the temp is in range
+                                if (temperature < -80):
+                                    fn = 'LOW_BM80'
+                                elif (temperature > 105):
+                                    fn = 'LOW_A105'
+                                elif (temperature < 0):
+                                    fn = 'LOW_M%d' % (-temperature)
+                                else:
+                                    fn = 'LOW_%d' % (temperature)
+
+                            elif (field[1] == 'H'):
+                                dir = 'Temps_Highs'
+
+                                # verify the temp is in range
+                                if (temperature < -60):
+                                    fn = 'HIGH_BM60'
+                                elif (temperature > 130):
+                                    fn = 'HIGH_A130'
+                                elif (temperature < 0):
+                                    fn = 'HIGH_M%d' % (-temperature)
+                                else:
+                                    fn = 'HIGH_%d' % (temperature)
+                            else:
+                                # ERROR
+                                continue
+
+                            filename = '%s/%s' % (dir, fn)
+                                                          
+                            # Add the file to the list if it is readable
+                            if(self._is_valid_clip(filename)):
+                                tempPhraseFound = 1
+                                d = self._createClip(1, filename) 
+                                audioCodes[ndx].audioList.append(d)
+                                audioCodes[ndx].duration += d.duration
+
+                        ##### Q - CODES
+                        elif (field[0] == 'Q'):
+                            filename = '%s/%s' % ('Wx_Phrases_Qualifiers', field[1:])
+                                                          
+                            # Add the file to the list if it is readable
+                            if(self._is_valid_clip(filename)):
+                                if(prevField == 'A'):
+                                    # Give it the same pri as the QPF phrase
+                                    d = self._createClip(3, filename) 
+                                else:
+                                    d = self._createClip(2, filename)
+                                audioCodes[ndx].audioList.append(d)
+                                audioCodes[ndx].duration += d.duration
+                            prevField = field[0]
+
+                        ##### P - CODES
+                        elif (field[0] == 'P'):
+                            prevField = field[0]
+                            filename = '%s/%s' % ('Wx_Phrases_Precip', field[:])
+                                                          
+                            # Add the file to the list if it is readable
+                            if(self._is_valid_clip(filename)):
+                                d = self._createClip(4, filename) 
+                                audioCodes[ndx].audioList.append(d) 
+                                audioCodes[ndx].duration += d.duration
+
+                        ##### A - CODES
+                        elif (field[0] == 'A'):
+                            prevField = field[0]
+                            filename = '%s/%s' % ('Wx_Phrases_Precip', field[:])
+                                                          
+                            # Add the file to the list if it is readable
+                            if(self._is_valid_clip(filename)):
+                                d = self._createClip(3, filename) 
+                                audioCodes[ndx].audioList.append(d) 
+                                audioCodes[ndx].duration += d.duration
+
+                        ##### W - CODES
+                        elif (field[0] == 'W'):
+                            prevField = field[0]
+                            spdList = []
+                            dirList = []
+                            fnameList = []
+                            i = 0
+                            dir = ''
+                            fn = ''
+                            
+                            # parse wind code string
+                            while (i < len(field)):
+                                if (field[i] == 'W'):
+                                    if field[i:i+3] == 'W99':
+                                        break
+                                    else:
+                                        dirList.append(field[i:i+3])
+                                        i += 3
+                                elif (field[i] == 'S') or (field[i] == 'B'):
+                                    dirList.append(field[i:i+3])
+                                    i += 3
+                                elif (field[i] == 'R'):
+                                    spdList.append(field[i:i+3])
+                                    i += 3
+                                elif (field[i] == 'I') or (field[i] == 'D'):
+                                    spdList.append(field[i:i+4])
+                                    i += 4
+                                elif (field[i] == 'A'):
+                                    spdList.append(field[i:i+5])
+                                    i += 5
+                                else:
+                                    break
+
+                            # Basic non-calm wind codes
+                            if len(dirList) == 1 and len(spdList) == 1:
+                                # Process the direction first
+                                dir = 'Wind_Dir2'
+                                code = dirList[0]
+                                fn  = 'W_%s' % (dirDict[code[1:]])
+                                filename = '%s/%s' % (dir, fn)
+                                if(self._is_valid_clip(filename)):
+                                    fnameList.append(filename)
+                                # Process the speed
+                                dir = 'Wind_At_Speed' 
+                                code = spdList[0]
+                                fn = 'AT_%s' % (spdDict[code[1:]])
+                                filename = '%s/%s' % (dir, fn)
+                                if(self._is_valid_clip(filename)):
+                                    fnameList.append(filename)
+                                # Check to make sure there is a valid wind direction and speed
+                                # before appending the filenames to the audio code list
+                                if len(fnameList) == len(dirList) + len(spdList):
+                                    for fname in fnameList:
+                                        d = self._createClip(windPriority, fname) 
+                                        audioCodes[ndx].audioList.append(d)
+                                        audioCodes[ndx].duration += d.duration
+
+                            # Wind direction shift with constant speed
+                            elif len(dirList) == 2 and len(spdList) == 1:
+                                # Process the direction first 
+                                dir = 'Wind_Dir1' 
+                                code = dirList[0] 
+                                fn  = '%s_W' % (dirDict[code[1:]])
+                                filename = '%s/%s' % (dir, fn)
+                                if(self._is_valid_clip(filename)):
+                                    fnameList.append(filename)
+                                # Second direction
+                                code = dirList[1]
+                                if dirList[1][0] == 'S':
+                                    dir = 'Wind_Shifting'
+                                    fn = 'Shift_%s' % (dirDict[code[1:]])
+                                    filename = '%s/%s' % (dir, fn)
+                                    if(self._is_valid_clip(filename)):
+                                        fnameList.append(filename)
+                                elif dirList[1][0] == 'B':
+                                    dir = 'Wind_Becoming'
+                                    fn = 'Bec_%s' % (dirDict[code[1:]])
+                                    filename = '%s/%s' % (dir, fn)
+                                    if(self._is_valid_clip(filename)):
+                                        fnameList.append(filename)
+                                # Process the speed 
+                                dir = 'Wind_At_Speed'  
+                                code = spdList[0] 
+                                fn = 'AT_%s' % (spdDict[code[1:]])
+                                filename = '%s/%s' % (dir, fn)
+                                if(self._is_valid_clip(filename)):
+                                    fnameList.append(filename)
+                                # Check to make sure there is a valid wind direction and speed
+                                # before appending the filenames to the audio code list
+                                if len(fnameList) == len(dirList) + len(spdList):
+                                    for fname in fnameList:
+                                        d =  self._createClip(windPriority, fname)
+                                        audioCodes[ndx].audioList.append(d)
+                                        audioCodes[ndx].duration += d.duration
+        
+                            # Increasing or diminishing winds with constant direction
+                            elif len(dirList) == 1 and len(spdList) == 2:
+                                # Process the direction first 
+                                dir = 'Wind_Dir1'
+                                code = dirList[0]
+                                fn  = '%s_W' % (dirDict[code[1:]])
+                                filename = '%s/%s' % (dir, fn)
+                                if(self._is_valid_clip(filename)):
+                                    fnameList.append(filename)
+                                # Process the speed 
+                                dir = 'Wind_At_Speed'  
+                                code = spdList[0] 
+                                fn = 'AT_%s' % (spdDict[code[1:]])
+                                filename = '%s/%s' % (dir, fn)
+                                if(self._is_valid_clip(filename)):
+                                    fnameList.append(filename)
+                                # Second speed 
+                                code = spdList[1]
+                                if spdList[1][0:2] == 'IR':
+                                    dir = 'Wind_Increasing'
+                                    fn = 'Inc_%s' % (spdDict[code[2:]])
+                                    filename = '%s/%s' % (dir, fn)
+                                    if(self._is_valid_clip(filename)):
+                                        fnameList.append(filename)
+                                elif spdList[1][0:2] == 'DR': 
+                                    dir = 'Wind_Diminishing'
+                                    fn = 'Dim_%s' % (spdDict[code[2:]])
+                                    filename = '%s/%s' % (dir, fn)
+                                    if(self._is_valid_clip(filename)):
+                                        fnameList.append(filename)
+                                # Check to make sure there is a valid wind direction and speed
+                                # before appending the filenames to the audio code list
+                                if len(fnameList) == len(dirList) + len(spdList):
+                                    for fname in fnameList:
+                                        d =  self._createClip(windPriority, fname)
+                                        audioCodes[ndx].audioList.append(d)
+                                        audioCodes[ndx].duration += d.duration
+        
+                            # Winds shifting in direction and increasing or diminishing in speed
+                            elif len(dirList) == 2 and len(spdList) == 2:
+                                # Process the direction first 
+                                dir = 'Wind_Dir2'
+                                code = dirList[0]
+                                fn  = 'W_%s' % (dirDict[code[1:]])
+                                filename = '%s/%s' % (dir, fn)
+                                if(self._is_valid_clip(filename)):
+                                    fnameList.append(filename)
+                                # Process the speed 
+                                dir = 'Wind_At_Speed'
+                                code = spdList[0]
+                                fn = 'AT_%s' % (spdDict[code[1:]])
+                                filename = '%s/%s' % (dir, fn)
+                                if(self._is_valid_clip(filename)):
+                                    fnameList.append(filename)
+                                # Second direction
+                                code = dirList[1]
+                                if dirList[1][0] == 'S':
+                                    dir = 'Wind_Shifting'
+                                    fn = 'Shift_%s' % (dirDict[code[1:]])
+                                    filename = '%s/%s' % (dir, fn)
+                                    if(self._is_valid_clip(filename)):
+                                        fnameList.append(filename)
+                                elif dirList[1][0] == 'B':
+                                    dir = 'Wind_Becoming'
+                                    fn = 'Bec_%s' % (dirDict[code[1:]])
+                                    filename = '%s/%s' % (dir, fn)
+                                    if(self._is_valid_clip(filename)):
+                                        fnameList.append(filename)
+                                # Second speed 
+                                code = spdList[1]
+                                if spdList[1][0:3] == 'AIR':
+                                    dir = 'Wind_And_Increasing'
+                                    fn = 'And_Inc_%s' % (spdDict[code[3:]])
+                                    filename = '%s/%s' % (dir, fn)
+                                    if(self._is_valid_clip(filename)):
+                                        fnameList.append(filename)
+                                elif spdList[1][0:3] == 'ADR':
+                                    dir = 'Wind_And_Diminishing'
+                                    fn = 'And_Dim_%s' % (spdDict[code[3:]])
+                                    filename = '%s/%s' % (dir, fn)
+                                    if(self._is_valid_clip(filename)):
+                                        fnameList.append(filename)
+                                # Check to make sure there is a valid wind direction and speed
+                                # before appending the filenames to the audio code list
+                                if len(fnameList) == len(dirList) + len(spdList):
+                                    for fname in fnameList:
+                                        d =  self._createClip(windPriority, fname)
+                                        audioCodes[ndx].audioList.append(d)
+                                        audioCodes[ndx].duration += d.duration
+                            # Calm or light winds and other static codes
+                            elif len(dirList) == 0 and len(spdList) == 0 and len(field) != 0:
+                                dir = 'Winds_Misc'
+                                specCode = field[3:]
+                                # Calm
+                                if  specCode not in ('00', '01', '02'):
+                                    # Wind not encoded
+                                    fn = ''
+                                else:
+                                    fn = '%s' % field
+                                
+                                filename = '%s/%s' % (dir, fn)
+                                if(self._is_valid_clip(filename)):
+                                    fnameList.append(filename)
+                                for fname in fnameList:
+                                    d = self._createClip(windPriority, fname)
+                                    audioCodes[ndx].audioList.append(d)
+                                    audioCodes[ndx].duration += d.duration
+                    
+                        ##### R - CODES
+                        ##### M - CODES
+                        else:
+                            prevField = ''
+                            continue
+                       
+                    #end of# for field in codes
+
+                except:
+                    twccommon.Log.warning("Error parsing audioCode (%s). VL Clip for daypart %d may not be complete." % (audioCode,ndx+1,))
+                    audioCodes[ndx] = twc.Data(duration=minDur, audioList=[])
+                    validClip = 0
+        
+            #end of# if(audioCode)
+
+            if not audioCodes[ndx].audioList:
+                validClip = 0
+
+            if not (tempPhraseFound and wxPhraseFound):
+                twccommon.Log.warning("Error parsing audioCodes (%s). Could not find temperature and/or forecast phrase for daypart %d" % (audioCode, ndx+1))
+                audioCodes[ndx] = twc.Data(duration=minDur, audioList=[])
+                validClip = 0
+
+            if ndx == 0 and not validClip:
+                twccommon.Log.info("TextForecast - Default phrase for first index")
+                d = self._createClip(1, 'Default_Phrases_Daypart/DAYPART_DEFAULT1')
+                audioCodes[ndx].audioList.insert(0,d)
+                audioCodes[ndx].duration += d.duration
+            elif validClip:
+                twccommon.Log.info("TextForecast - Time to do some intros")
+                d = self._getIntro(ndx)
+                audioCodes[ndx].audioList.insert(0,d)
+                audioCodes[ndx].duration += d.duration
+                
+
+            #####
+            # advance to the next period
+            dur = audioCodes[ndx].duration
+            rem = dur % 30
+            if rem > 0:
+                dur = dur + (30 - rem)
+            audioCodes[ndx].duration = dur
+            ndx = ndx + 1
+        return audioCodes
+
+
+    def _getIntro(self, ndx):
+        # Find out what time it is in localtime
+        y, m, d, H, M, S, wd, day, dst = time.localtime(time.time())
+
+        #####
+        # Now we need to create the labels and intros
+        #
+
+        if   (ndx == 0):
+            if   (H < 4):           # Midnight - 4AM
+                fn = 'OVERNIGHT' # says "Overnight"
+            elif (H < 16):           # 4AM - 4PM
+                fn = 'TODAY1' # says "Today"
+            else:                   # 4PM - MIDNIGHT
+                fn = 'TONIGHT2' # says "For tonight"
+        elif (ndx == 1):
+            if   (H < 4):           # Midnight - 4AM
+                day = dataUtil.formatDayOfWeek(wd)
+                # Use "for ..." version
+                fn = '%s1' % (string.upper(day[:3]))
+            elif (H < 16):          # 4AM - 4PM
+                day = 'Tonight'
+                fn = 'TONIGHT2'     # For tonight
+            else:                   # 4PM - Midnight
+                day = dataUtil.formatDayOfWeek(wd+1)
+                # Use "and on ..." version
+                fn = '%s4' % (string.upper(day[:3]))
+        elif (ndx == 2):                       # period 3
+            if   (H < 4):           # Midnight - 4AM
+                day = dataUtil.formatDayOfWeek(wd)
+                # Use "and ... Night" version
+                fn = '%s5' % (string.upper(day[:3]))
+            elif (H < 16):          # 4AM - 4PM
+                day = dataUtil.formatDayOfWeek(wd+1)
+                # Use "on ..." version
+                fn = '%s2' % (string.upper(day[:3]))
+            else:                   # 4PM - Midnight
+                day = dataUtil.formatDayOfWeek(wd+1)
+                # Use "and ... Night" version
+                fn = '%s5' % (string.upper(day[:3]))
+        else:                                     # period 4
+            if   (H < 4):           # Midnight - 4AM
+                day = dataUtil.formatDayOfWeek(wd+1)
+                # Use "and on ..." version
+                fn = '%s4' % (string.upper(day[:3]))
+            elif (H < 16):          # 4AM - 4PM
+                day = dataUtil.formatDayOfWeek(wd+1)
+                # Use "and ... Night" version
+                fn = '%s5' % (string.upper(day[:3]))
+            else:                   # 4PM - Midnight
+                day = dataUtil.formatDayOfWeek(wd+2)
+                # Use "and on ..." version
+                fn = '%s4' % (string.upper(day[:3]))
+
+        return self._createClip(1, '%s/%s' % ('Periods2', fn))
+
+    def hasPrecipitation(self):
+        #TODO: We ain't got a clue what we're supposed to do
+        twccommon.Log.info("NO PRECIP FOR YOU! (TextForecast)")
+        return 0
+
+    def _createMaxPage(self, audioCodes, max):
+        #totDur = reduce(lambda a,b: a+b.duration, audioCodes, 0)
+        params = self.getParams()
+        try:
+            min = params.minPageDuration*30
+        except:
+            min = 6*30
+
+        totDur = audioCodes.duration
+        if totDur > max:
+            pri = 5
+            while pri > 1:
+                ac = filter(lambda a: a.priority < pri, audioCodes.audioList)
+                totDur = reduce(lambda a,b: a+b.duration, ac, 0)
+                rem = totDur % 30
+                if rem > 0:
+                    totDur = totDur + ( 30 - rem)
+                audioCodes.audioList = ac
+                audioCodes.duration = totDur
+                pri -= 1
+
+                if totDur <= max:
+                    break
+        if totDur < min:
+            audioCodes.duration = min
+
+        return audioCodes
+
+    def _createMaxPages(self, audioCodes):
+        params = self.getParams()
+        try:
+            max = params.maxPageDuration*30
+        except:
+            max = 14*30
+
+        currentAC = []
+        for page in audioCodes:
+            currentAC.append(self._createMaxPage(page, max))
+
+        return currentAC
+
+    def _createMaxDuration(self, audioCodes, max):
+        params = self.getParams()
+        try:
+            minPage = params.minPageDuration*30
+        except:
+            minPage = 6*30
+        totDur = 0
+        # Reverse index! 0-3
+        for ndx in range(len(audioCodes)-1, -1, -1):
+            pri = 5
+            # For the 4th daypart, we eliminate as much as possible,
+            # for all others, we stop at priority 1
+            if ndx == 3:
+                minPri = 0
+            else:
+                minPri = 1
+            while pri > minPri:
+                if audioCodes[ndx].duration <= minPage and ndx < 3:
+                    break
+
+                # Trim anything of priority pri, until we hit our minimum
+                # priority
+                ac = filter(lambda a: a.priority < pri, audioCodes[ndx].audioList)
+                pageDur = reduce(lambda a,b:a+b.duration, ac, 0)
+                rem = pageDur % 30
+                if rem > 0:
+                    pageDur = pageDur + ( 30 - rem)
+
+                audioCodes[ndx].audioList = ac
+                audioCodes[ndx].duration = pageDur
+                # If this reduces this page to below the page minimum, and
+                # we're not on the last page, we need to move on
+                if pageDur <= minPage:
+                    audioCodes[ndx].duration = minPage
+                    if ndx < 3:
+                        pri = minPri
+
+                if len(audioCodes[ndx].audioList) == 0:
+                    audioCodes.pop(ndx)
+                    break
+
+                # Check to see if we're now under our max
+                totDur = reduce(lambda a,b: a+b.duration, audioCodes, 0)
+                if totDur <= max:
+                    return audioCodes
+
+                # No? Trim again!
+                pri -= 1
+
+        # Reverse index, last two pages if they exist!
+        for ndx in range(len(audioCodes)-1,1,-1):
+            audioCodes.pop(ndx)
+            totDur = reduce(lambda a,b: a+b.duration, audioCodes, 0)
+            if totDur <= max:
+                return audioCodes
+    
+        # After all that crap, we still couldn't reduce it enough.. screw it
+        return None
+
+    def getAudioClips(self):
+        # This is for QA to get a list of the audio clips that will actually
+        # be used in the product. It is a list of Data() structures, 1 per
+        # page that looks a little something like this:
+        # twccommon.Data(duration=pageDuration,
+        #                audioList=[twc.Data(duration=clipDuration,
+        #                                   filename=audioFileName), ...]
+        # )
+        #
+        # The page durations aren't just the sum of the clip durations, but
+        # also of any partial filler of dead air to get the page to end on 1
+        # second boundries.
+        try:
+            return self._data.audioCodes
+        except:
+            twccommon.Log.warning("Trying to call TextForecast.getAudioClips() without first doing a get data. Are you daft?")
+            return None
+            
+
+    def _getDesiredDuration(self, min, max, opt):
+        if self._hasData == 0:
+            return 0
+
+        twccommon.Log.info("TextForecast optimal: %d, max: %d, min: %d" % (opt, max, min))
+        # Convert to frames, minus a little fudge factor for transitions
+        optimal= opt*30
+        min = min*30
+        max = max*30
+
+        # Take the codes we go, and trunc each to the max for each page
+        data = self.getData()
+        audioCodes = self._createMaxPages(data.audioCodes)
+
+        # Tally the total duration of the pages we gots
+        totDur = reduce(lambda a,b: a+b.duration, audioCodes, 0)
+
+        # If over our max for this product, make the most of it
+        if totDur > max:
+            audioCodes = self._createMaxDuration(audioCodes, max)
+            totDur = reduce(lambda a,b: a+b.duration, audioCodes, 0)
+        # If we're under, return the min, we'll add dead air in the product
+        if totDur < min:
+            totDur = min
+
+        data.audioCodes = audioCodes
+
+        # We just don't have the time to do any of this
+        if audioCodes == None:
+            return 0
+
+        twccommon.Log.info("TextForecast desired duration: %d" % (int(totDur/30)))
+        # Convert to seconds, rounding up
+        return int(totDur/30)
+
+    def _loadData(self):
+
+        params = self.getParams()
+
+        try:
+            # Find out what time it is in localtime
+            curr_time = time.time()
+            y, m, d, H, M, S, wd, day, dst = time.localtime(curr_time)
+
+            times = []
+            daypartPhrases = []
+            if (H < 4):
+                # Start with the 7PM yesterday to 7AM today data.
+                # The window for the start of this data (7PM) begins yesterday
+                # at noon (and extends to midnight).
+                # So, we are looking for the UTC of yesterday at noon.
+                times.append(time.mktime((y,m,d-1,12,0,0,0,0,-1)))
+                times.append(time.mktime((y,m,d,0,0,0,0,0,-1)))
+                times.append(time.mktime((y,m,d,12,0,0,0,0,-1)))
+                times.append(time.mktime((y,m,d+1,0,0,0,0,0,-1)))
+            elif (H < 16):
+                # Start with the data for 7AM - 7PM today
+                # This will be the UTC data of midnight today
+                times.append(time.mktime((y,m,d,0,0,0,0,0,-1)))
+                times.append(time.mktime((y,m,d,12,0,0,0,0,-1)))
+                times.append(time.mktime((y,m,d+1,0,0,0,0,0,-1)))
+                times.append(time.mktime((y,m,d+1,12,0,0,0,0,-1)))
+            else: 
+                # Start with the data for 7PM today to 7AM tomorrow
+                # This will be the UTC data of noon today.
+                times.append(time.mktime((y,m,d,12,0,0,0,0,-1)))
+                times.append(time.mktime((y,m,d+1,0,0,0,0,0,-1)))
+                times.append(time.mktime((y,m,d+1,12,0,0,0,0,-1)))
+                times.append(time.mktime((y,m,d+2,0,0,0,0,0,-1)))
+
+
+            valid = 0
+            data = []
+            testData = self.getTestData()
+            dsRaw = twc.Data()
+            for t in times:
+                key = 'textFcst.%s.%d' % (params.coopId, t)
+                fcst = dsm.defaultedGet(key)
+                setattr(dsRaw, key, fcst)
+                if fcst != None:
+                    fcst = twccommon.DefaultedData(fcst)
+                    res = (int(t), fcst)
+                    valid = 1
+
+                else:
+                    res = (int(t), None)
+
+                data.append(res)
+
+            if (not valid):
+                data = None
+
+            vocalLocalSchedule = dsm.defaultedConfigGet("VocalLocalSchedule",
+                twccommon.Data(OffTimes=((19, 3), )))
+            playVocal =  rsutil.playVocal(time.time(), 
+                vocalLocalSchedule.OffTimes)
+
+            audioCodes = self._parseAudioCodes(data)
+            self.updateTestData(ds=dsRaw)
+            testData.audioCodes = audioCodes
+            self.updateData(valid=valid, textFcst=data, audioCodes=audioCodes, playVocal=playVocal)
+            self._hasData = valid
+        except:
+            twccommon.Log.logCurrentException("TextForecast error:")
+            self.updateData(valid=0,textFcst=[],audioCodes=[],playVocal=1)
+            self._hasData = 0
+
+]]>
+</impl>
+
+<rs>
+<![CDATA[
+
+
+<%!
+
+params = prod.getParams()
+data = prod.getData()
+
+%>
+
+import string
+import os
+import time
+
+vocalLocalRoot='/rsrc/audio/vocalLocal'
+
+<%@'_ProductHeader.rs'%>
+<%@'_Background.rs'%>
+<%@'_Title.rs'%>
+
+def is_valid_clip(fn):
+    filename = '%s/%s.wav' % (vocalLocalRoot, fn)
+    if(os.access(filename, os.R_OK)):
+        return 1
+    else:
+        return 0
+
+_tempFilter = string.letters + string.punctuation + string.whitespace
+_tempFilter = dataUtil.removeChars(_tempFilter, '-')
+
+
+#####
+# GLOBAL VARS
+#
+daypartLabels = []
+audioIntros = []
+
+# audioCodes is a list of display periods.
+# each display period has a list of audio codes
+# each audio code is a tuple of (priority, filename)
+# priority = 1 implies it is mandatory
+audioCodes = []
+audioCodesRaw = []
+
+windDirCodes = {}
+
+windSpdCodes = {}
+
+
+def processText(curr_time, data, pageHeight):
+    daypartPhrases = []
+    # Indent the last line of text so it doesn't cover up the logo
+    indentList = [(0 , renderUtil.LEFT),
+                  (0 , renderUtil.LEFT),
+                  (0 , renderUtil.LEFT),
+                  (0 , renderUtil.LEFT),
+                  (0 , renderUtil.LEFT),
+                  (0 , renderUtil.LEFT),
+                  (84, renderUtil.RIGHT),
+                 ]
+    r,g,b,a = renderUtil.rgbaConvert(212,212,212)
+    textFont = TTFont("/rsrc/fonts/Interstate-RegularCondensed", 35, l=34, t=38)
+    delimiter = '.'
+
+    # Find out what time it is in localtime
+    y, m, d, H, M, S, wd, day, dst = time.localtime(curr_time)
+
+    period = 1
+    day = None
+    for curr_time, fcst in data:
+        if (period == 1):
+            # If the data has the daypartName
+            if (hasattr(fcst, 'daypartName')):
+                day = fcst.daypartName
+
+            if day is None:
+                # Do things the way the 36HourTextForecast did
+                if   (H < 4):           # Midnight - 4AM
+                    day = 'Overnight'
+                elif (H < 16):           # 4AM - 4PM
+                    day = 'Today'
+                else:                   # 4PM - MIDNIGHT
+                    day = 'Tonight'
+
+        if (period == 2):
+            if (H < 4):
+                day = dataUtil.formatDayOfWeek(wd)
+            elif (H < 16):
+                day = 'Tonight'
+            else:
+                day = dataUtil.formatDayOfWeek(wd+1)
+
+        if (period == 3):
+            if (H < 4):
+                day = '%s Night' % dataUtil.formatDayOfWeek(wd)
+            elif ( H < 16):
+                day = dataUtil.formatDayOfWeek(wd+1)
+            else:
+                day = '%s Night' % dataUtil.formatDayOfWeek(wd+1)
+
+        if (period == 4):
+            if (H < 4):
+                day =  dataUtil.formatDayOfWeek(wd+1)
+            elif ( H < 16):
+                day = '%s Night' % dataUtil.formatDayOfWeek(wd+1)
+            else:
+                day = dataUtil.formatDayOfWeek(wd+2)
+        #####
+        # Phrase data needs to fit on one page, truncate it if it
+        # takes more 
+        #
+       
+        if fcst is None:
+            phrase = 'Temporarily unavailable.'
+        else:
+            phrase = fcst.phrase
+        page = renderUtil.paginateIndentedText(textFont, (r,g,b,a), phrase, pageWidth, pageHeight, 
+                indentList, delimiter, 1)
+
+        daypartPhrases.append((day, page[0]))
+
+        period += 1
+    return daypartPhrases
+
+
+
+
+duration = <%-prod.getDuration()%>
+banner = CompositeRenderable()
+gr = renderUtil.getBevelBox(616,30)
+gr.setPosition(0,282)
+banner.addItem(gr)
+
+f = TTFont("/rsrc/fonts/Interstate-Bold", 24, t=50)
+gr = Text(f, <%-params.locName%>)
+gr.setPosition(11, 289)
+r,g,b,a = renderUtil.rgbaConvert(212,212,50)
+gr.setColor(r,g,b,a)
+banner.addItem(gr)
+banner.setPosition(51-720, 89)
+p.addItem(banner)
+es = EffectSequencer(banner)
+#es.addEffect(Slider(None, -720, 0), 1)
+es.addEffect(Slider(None, 72, 0), 10)
+es.addEffect(NullEffect(None), duration-20)
+es.addEffect(Slider(None, -72, 0), 10)
+p.addItem(es)
+
+gr = renderUtil.getBevelBox(616,282)
+gr.setPosition(51+720,89)
+p.addItem(gr)
+es = EffectSequencer(gr)
+#es.addEffect(Slider(None, 720, 0), 1)
+es.addEffect(Slider(None, -72, 0), 10)
+es.addEffect(NullEffect(None), duration-20)
+es.addEffect(Slider(None, -72, 0), 10)
+p.addItem(es)
+
+
+
+grset = []
+pageset = []
+pageHeight = 255
+pageWidth = 590
+yTop = 342
+ypos = 0
+dayFont = TTFont("/rsrc/fonts/Interstate-Regular", 32,l=34, t=40)
+r1,g1,b1,a1 = renderUtil.rgbaConvert(212,212,50)
+defaultFilename = '%s/%s' % ( 'Default_Phrases_Daypart', 'DAYPART_DEFAULT1')
+
+if not <%-data.valid%>:
+    renderTools.dataNotAvailable(page=p, 
+                                 text='Temporarily Unavailable',
+                                 displayDuration=duration)
+else:
+
+    textFcst = <%-data.textFcst%>
+    audioClips = <%-data.audioCodes%>
+
+    curr_time = time.time()
+    daypartPhrases = processText(curr_time, textFcst, pageHeight)
+
+    asList = []
+    vol = 1
+    masterSeq = AudioSequencer()
+    masterSeq.setBlendType(AudioRenderable.BLEND_MIX)
+    masterSeq.setVolLevel(vol)
+    masterEffectSeq = AudioEffectSequencer(masterSeq)
+
+    numPages = 0
+    pageDurs = []
+    totDur = 0
+    vocDur = 0
+    nullDur = 0
+    for audioPage in audioClips:
+        as = AudioSequencer()
+        for clip in audioPage.audioList:
+            filename = clip.filename
+            ac = AudioClip(filename)
+            ac.setBlendType(AudioRenderable.BLEND_MIX)
+            ac.setVolLevel(vol)
+            vocDur += nullDur + ac.duration()
+            nullDur = 0
+            as.addItem(ac)
+
+        if as.duration() < audioPage.duration:
+            ac = NullAudioClip(audioPage.duration-as.duration())
+            ac.setBlendType(AudioRenderable.BLEND_MIX)
+            ac.setVolLevel(vol)
+            nullDur = ac.duration()
+            as.addItem(ac)
+            
+        numPages+=1
+        totDur += vocDur + nullDur
+        asList.append(as)
+        
+
+    remDur = duration - totDur
+    dur = remDur / len(asList)
+    
+    for as in asList:
+        #ac = NullAudioClip(dur)
+        #ac.setBlendType(AudioRenderable.BLEND_MIX)
+        #ac.setVolLevel(vol)
+        #as.addItem(ac)
+        pageDurs.append(as.duration())
+        masterSeq.addItem(as)
+            
+
+    masterEffectSeq.addEffect(AudioFader(None, 0.0, 0.8, 5), 5)
+    masterEffectSeq.addEffect(AudioNullEffect(None), vocDur-20)
+    masterEffectSeq.addEffect(AudioFader(None, 0.8, 0.0, 15), 15)
+
+    if <%-data.playVocal%> and (<%-params.activeVocalCue%> or <%-params.activeVocal%>):
+        p.addItem(masterSeq)
+        p.addItem(masterEffectSeq)
+
+    for day, textCR in daypartPhrases:
+        cr = CompositeRenderable()
+
+        gr = Text(dayFont, day)
+        gr.setColor(r1,g1,b1,a1)
+        gr.setPosition(0,pageHeight)
+        cr.addItem(gr)
+
+        textCR.setPosition(0, 0)
+        cr.addItem(textCR)
+
+        cr.setPosition(62+720,yTop-pageHeight)
+        es = EffectSequencer(cr)
+        es.addEffect(Slider(None, -72, 0), 11)
+        es.addEffect(NullEffect(None), duration-20)
+        es.addEffect(Slider(None, -72, 0), 11)
+        p.addItem(es)
+
+        grset.append([cr])
+
+
+    renderTools.sequenceOnPage(p, grset[:numPages], pageDurs)
+
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

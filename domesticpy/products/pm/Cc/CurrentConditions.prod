@@ -1,0 +1,471 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+
+import twc
+import twc.products
+import twc.DataStoreInterface as ds
+import twccommon
+import twcWx.dataUtil as wxDataUtil
+import time
+import twc.dsmarshal
+from domestic import dataUtil
+import string
+dsm = twc.dsmarshal
+
+class Product(twc.products.Product):
+
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        testData = self.getTestData()
+        testData.myPageDuration = optimal
+        return optimal
+
+    def formatPressureTendency(self, pt):
+        if pt == 1:
+            return '/rsrc/images/ccPressureArrowUp'
+        elif pt == 2:
+            return '/rsrc/images/ccPressureArrowDown'
+        elif pt == 0:
+            return '/rsrc/images/ccPressureArrowSteady'
+        else:
+            return None
+
+    def formatVisibility(self, visibility):
+        if (visibility == 1):
+            value = '%s %s' % (visibility, 'mile')
+        elif ((visibility > 0) and (visibility < 1)):
+            s = '%0.1f' % visibility
+            value = '%s %s' % (s[1:], 'miles')
+        elif (visibility == 999):
+            value = 'unlimited'
+        elif (visibility != None):
+            value = '%s %s' % (visibility, 'miles')
+
+        else:
+            value = None
+        return value
+
+    def formatApparentTemp(self, windChill, heatIndex):
+        apparentTemp = None
+        atLabel, atVal = dataUtil.formatApparentTemp(windChill, heatIndex)
+        if atLabel is not None:
+            apparentTemp = '%s %s\260' % (string.lower(atLabel), atVal)
+        return apparentTemp
+
+    def formatGusts(self, gusts):
+        if ((gusts != None) and (gusts != 0)):
+            return gusts
+        else:
+            return None
+
+    def _loadData(self):
+
+        # load any data necessary; this method not invoked if not _active()
+        params = self.getParams()
+        testData = self.getTestData()
+        myRawData = twccommon.Data()
+
+        testData.locName = None
+        testData.obsStn = None
+        testData.temp = None
+        testData.iconFile = None
+        testData.textModifier = None
+        testData.skyCondition = None
+        testData.windDirection = None
+        testData.windSpeed = None
+        testData.gusts = None
+        testData.humidity = None
+        testData.dewpoint = None
+        testData.windChill = None
+        testData.altimeter = None
+        testData.pressureArrow = None
+        testData.visibility = None
+        testData.windString = None
+        testData.apparentTemp = None
+
+        # if we don't find a loc name later, we'll use the first one
+        # in the list to display in the header
+        try:
+            locName = params.locName[0]
+        except:
+            locName = None
+
+        try:
+            obsStations = params.obsStation
+        except:
+            obsStations = None
+
+        try:
+            locNames = params.locName
+        except:
+            locNames = None
+
+        # default obs object to None
+        obs = None
+
+        if ((obsStations != None) and (locNames != None)):
+            # determine which obs station has data and use that one
+            for stn, lname in zip(obsStations, locNames):
+
+                obs = dsm.defaultedGet('obs.%s' % (stn, ))
+                if obs != None:
+                    obs = twccommon.DefaultedData(obs)
+
+                    myRawData.obs = obs
+
+                    if obs.skyCondition != None:
+                        skyCond = wxDataUtil.formatSkyCondition(obs.skyCondition, "CcObservation", "INVALID")
+                        if skyCond != "INVALID":
+                            obs.iconFile = skyCond.iconFile
+                            obs.textModifier = string.replace(string.lower(skyCond.textModifier), '*', '\n')
+                        else:
+                            obs.skyCondition = None
+
+                    if obs.skyCondition == None and obs.temp == None:
+                        obs = None
+                    else:
+                        locName = lname
+
+                        obs.pressureArrow = self.formatPressureTendency(obs.pressureTendency)
+                        obs.visibility = self.formatVisibility(obs.visibility)
+                        if ((obs.windSpeed is not None) and (obs.windDirection is not None)):
+                            obs.windString = dataUtil.formatWindText(obs.windSpeed, obs.windDirection)
+                        obs.apparentTemp = self.formatApparentTemp(obs.windChill, obs.heatIndex)
+                        obs.gusts = self.formatGusts(obs.gusts)
+
+                        testData.obsStn = stn
+                        testData.temp = obs.temp 
+                        testData.iconFile = obs.iconFile
+                        testData.textModifier = obs.textModifier
+                        testData.skyCondition = obs.skyCondition
+                        testData.windDirection = obs.windDirection
+                        testData.windSpeed = obs.windSpeed
+                        testData.gusts = obs.gusts
+                        testData.humidity = obs.humidity
+                        testData.dewpoint = obs.dewpoint
+                        testData.windChill = obs.windChill
+                        testData.altimeter = obs.altimeter
+                        testData.pressureArrow = obs.pressureArrow
+                        testData.visibility = obs.visibility
+                        testData.windString = obs.windString
+                        testData.apparentTemp = obs.apparentTemp
+                        break
+
+        testData.locName = locName
+
+        # add whatever we got for obs to the internal object
+        self.updateData(locName=locName, obs=obs, ds=myRawData)
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+import os
+import twccommon
+
+# convert seconds to frames
+def convertElementDuration(elementDuration):
+    # convert the element duration into frames
+    if ((elementDuration == None) or (elementDuration == "") or (elementDuration <= 0)):
+        # default to 6 seconds
+        elementFrameDuration = 180
+    else:
+        elementFrameDuration = elementDuration * 30
+    return elementFrameDuration
+
+def loadClock(r, g, b, a):
+    font = TTFont('/rsrc/fonts/Frutiger_Bold', 15, shadow=0, t=0)
+    gr = Clock(font,"%l:%M:%S %p", justification=Clock.LEFT)
+    w, h = gr.size()
+    gr.setPosition(74, 303)
+    gr.setColor(r, g, b, a)
+    return gr
+
+def loadCurrentGradient(yPos):
+    gr = renderUtil.gradientBox(216, 156,[(0, 108, 138, 0), (0, 108, 138, 179), (0, 108, 138, 179), (0, 108, 138, 0)])
+    gr.setPosition(0, yPos)
+    return gr
+
+def loadSolidRule(yPos, r, g, b, a):
+    solidRule = Box()
+    solidRule.setColor(r,g,b,a)
+    solidRule.setPosition(0, yPos)
+    solidRule.setSize(216,3)
+    return solidRule
+
+def loadLocationName(locName, r, g, b, a):
+    gr = None
+    # LOCATION NAME
+    if (locName != None):
+        font = TTFont('/rsrc/fonts/Interstate-Bold', 18, shadow=0, t=12, l=18)
+
+        gr = Text(font, locName)
+        w, h = gr.size()
+        maxLocationNameWidth = 138
+
+        # try to break on a space
+        if (w > maxLocationNameWidth):
+            # create line break with paginateText
+            rt = renderUtil.paginateText(font, locName, maxLocationNameWidth, 37)
+            gr = Text(font, rt[0])
+            w, h = gr.size()
+
+        # if break on space didn't fit then break on /
+        if (w > maxLocationNameWidth):
+            # create line break with string replace
+            gr = Text(font, locName.replace('/', '/\n', 1))
+            w, h = gr.size()
+
+        # if break on space or / didn't fit then break on -
+        if (w > maxLocationNameWidth):
+            # create line break with string replace
+            gr = Text(font, locName.replace('-', '-\n', 1))
+            w, h = gr.size()
+
+        # if nothing we did fit, just use what we got back from paginateText
+        if (w > maxLocationNameWidth):
+            twccommon.Log.warning('Cc-CurrentConditions LocationName \'%s\' does not fit on one line, w = %s, maxLocationNameWidth = %s' % (locName, w, maxLocationNameWidth))
+            # recreate the paginateText one because we wrote over it earlier
+            gr = Text(font, rt[0])
+
+        offset = renderUtil.justifyGR(h, 37, renderUtil.CENTER)
+        gr.setPosition(74, 279 - offset)
+        gr.setColor(r, g, b, a)
+    return gr
+
+
+def loadNoReport(r, g, b, a):
+    # NO REPORT
+    font = TTFont('/rsrc/fonts/Interstate-Regular', 16, shadow=0, t=0, l=18)
+    gr = Text(font, 'What!!!!!!!!!')
+    gr.setPosition(74, 169)
+    gr.setColor(r, g, b, a)
+    return gr
+
+def loadNowLabel(r, g, b, a):
+    # PRODUCT TITLE 'now'
+    font = TTFont('/rsrc/fonts/Interstate-Black', 20, shadow=0, t=50)
+    gr = Text(font, 'NOW')
+    gr.setPosition(74, 234)
+    gr.setColor(r, g, b, a)
+    return gr
+
+
+def loadWxPictogram(iconFile):
+    # WEATHER PICTOGRAM
+    gr = None
+    filename = twc.findRsrc('/icons/small/%s' % iconFile, "mv")
+    if os.access('%s.mv' % (filename), os.R_OK):
+        gr = Icon(filename)
+        gr.setPosition(139, 183)
+    return gr
+
+
+def loadWxPhrase(textModifier, font):
+    # WEATHER PHRASE
+    gr = None
+    if (textModifier != None):
+        gr = Text(font, textModifier)
+    return gr
+
+
+def loadTemp(temp, r, g, b, a):
+    gr = None
+    # TEMPERATURE
+    font = TTFont('/rsrc/fonts/Interstate-Bold', 30, shadow=0, t=12)
+    if (temp != None):
+        gr = Text(font, '%s' % temp)
+        textWidth = gr.size()[0]
+        offset = renderUtil.justifyGR(textWidth, 70, renderUtil.LEFT)
+        gr.setPosition(74 + offset, 206)
+        gr.setColor(r, g, b, a)
+    return gr
+
+
+def setElementAttribs(gr, yPos, r, g, b, a):
+    gr.setPosition(74, yPos)
+    gr.setColor(r, g, b, a)
+    return gr
+
+
+# HEAT INDEX/WIND CHILL
+def loadApparentTemp(apparentTemp, font):
+    gr = None
+    if apparentTemp is not None:
+        gr = Text(font, apparentTemp)
+    return gr
+
+# PRESSURE
+def loadPressure(altimeter, pressureArrow, font):
+
+    cr = None
+
+    if ((altimeter != None) and (altimeter != "")):
+        cr = CompositeRenderable()
+        pressStr = '%*.*f' % (4, 2, altimeter)
+        gr = Text(font, 'pressure %s' % pressStr)
+        pressureStrWidth, pressureStrHeight = gr.size()
+        xPos, yPos = gr.position()
+        cr.addItem(gr)
+
+        # PRESSURE ARROW
+        if pressureArrow:
+            if os.access('%s.tif' % (pressureArrow), os.R_OK):
+                gr = TIFF_Image(pressureArrow)
+                gr.setPosition(xPos + pressureStrWidth + 3, yPos)
+                cr.addItem(gr)
+            else:
+                twccommon.Log.error('Error accessing %s.tif' % (pressureArrow))
+    return cr
+
+
+# VISIBILITY
+def loadVisibility(visibility, font):
+    gr = None
+    if (visibility != None):
+        gr = Text(font, 'visibility %s' % visibility)
+    return gr
+
+
+# WIND
+def loadWindDirection(windString, font):
+    gr = None
+    if windString:
+        gr = Text(font, 'wind %s' % windString)
+    return gr
+
+
+# WIND GUSTS
+def loadGusts(gusts, font):
+    gr = None
+    if (gusts != None):
+        gr = Text(font, 'gusts %s mph' % gusts)
+    return gr
+
+
+# HUMIDITY
+def loadHumidity(humidity, font):
+    gr = None
+    if (humidity != None):
+        gr = Text(font, 'humidity %s%%' % humidity)
+    return gr
+
+# DEW POINT
+def loadDewPoint(dewpoint, font):
+    gr = None
+    if (dewpoint != None):
+        gr = Text(font, 'dew point %s\260' % dewpoint)
+    return gr
+
+# build the gr lists used by renderUtil.sequenceOnPage
+def buildGRPanel(grList, yPos, r, g, b, a):
+    # add the gr's to this list
+    panel = []
+    for gr in grList:
+        if gr != None:
+            gr = setElementAttribs(gr, yPos, r, g, b, a)
+            panel.append(gr)
+    return panel
+
+<%!
+data = prod.getData()
+
+try:
+    elementDuration = params.elementDuration
+except:
+    # default to 6 seconds
+    elementDuration = 6
+
+testData = prod.getTestData()
+testData.elementDuration = elementDuration
+
+%>
+
+elementDuration = <%-elementDuration%>
+locName = <%-data.locName%>
+obs = <%-data.obs%>
+
+<%@'_ProductHeader.rs'%>
+
+<%@'_Background.rs'%>
+
+# convert seconds to frames, will default to 180
+elementFrameDuration = convertElementDuration(elementDuration)
+
+# solid rule colors
+r, g, b, a = renderUtil.rgbaConvert(0, 37, 90)
+
+# GRADIENT BEHIND CC DATA
+p.addItem(loadCurrentGradient(138))
+
+# UPPER SOLID RULE
+p.addItem(loadSolidRule(294, r, g, b, a))
+
+# LOWER SOLID RULE
+p.addItem(loadSolidRule(133, r, g, b, a))
+
+# elements colors
+r, g, b, a = renderUtil.rgbaConvert(229, 229, 229)
+
+# CLOCK
+p.addItem(loadClock(r, g, b, a))
+
+# LOCATION NAME
+gr = loadLocationName(locName, r, g, b, a)
+if (gr != None):
+    p.addItem(gr)
+
+# if we didn't get any obs at all then try to display No Report
+if (obs == None):
+    # dataNotAvailable uses the wrong font
+    p.addItem(loadNoReport(r, g, b, a))
+else:
+    # PRODUCT TITLE 'NOW'
+    p.addItem(loadNowLabel(r, g, b, a))
+
+    # TEMP
+    gr = loadTemp(obs.temp, r, g, b, a)
+    if (gr != None):
+        p.addItem(gr)
+
+    # WEATHER PICTOGRAM
+    gr = loadWxPictogram(obs.iconFile)
+    if gr != None:
+        p.addItem(gr)
+
+    # all of the data elements use the same font
+    elementFont = TTFont('/rsrc/fonts/Interstate-Bold', 16, shadow=0, t=0, l=18)
+
+    grList = []
+
+    # DATA ELEMENT TEXT STRINGS (decide what to do with these in the calling script)
+    grList.append(loadWxPhrase(obs.textModifier, elementFont))
+    grList.append(loadWindDirection(obs.windString, elementFont))
+    grList.append(loadGusts(obs.gusts, elementFont))
+    grList.append(loadHumidity(obs.humidity, elementFont))
+    grList.append(loadDewPoint(obs.dewpoint, elementFont))
+    grList.append(loadPressure(obs.altimeter, obs.pressureArrow, elementFont))
+    grList.append(loadVisibility(obs.visibility, elementFont))
+    grList.append(loadApparentTemp(obs.apparentTemp, elementFont))
+
+    listOfPanels = []
+    # each element goes on its own page
+    for gr in grList:
+        panel = buildGRPanel((gr,), 169, r, g, b, a)
+        if (len(panel) > 0):
+            listOfPanels.append(panel)
+
+    # show each element list on the screen for
+    renderUtil.sequenceOnPage(p, listOfPanels, elementFrameDuration, repeat=1)
+
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

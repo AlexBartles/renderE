@@ -1,0 +1,8 @@
+.DS_STORE
+config.py
+cimg.png
+setenv.sh
+screenshot.png
+ds.json
+__pycache__
+__pycache__/*

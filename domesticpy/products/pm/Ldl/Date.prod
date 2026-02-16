@@ -1,0 +1,80 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+import time
+import twccommon
+import twc.dsmarshal
+dsm = twc.dsmarshal
+
+class Product(twc.products.Product):
+
+    def _loadData(self):
+        data = self.getData()
+        data.bulletins = []
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+<%@'_Background.rs'%>
+
+<%!
+if params.ldlWarningMode:
+    titleColor = (239,192,49,255)
+else:
+    titleColor = (121,186,242,255)
+%>
+import time
+
+titleColor = <%-titleColor%>
+
+
+def locationHeader(title, location):
+    cr = CompositeRenderable()
+
+    # Title
+    f = TTFont('/rsrc/fonts/Interstate-Bold', 16, shadow=0, t=60)
+    t = Text(f, title)
+    t.setPosition(55, 60)
+    r,g,b,a = titleColor
+    r,g,b,a = renderUtil.rgbaConvert(r,g,b,a)
+    t.setColor(r,g,b,a)
+    cr.addItem(t)
+
+    # Location
+    f = TTFont('/rsrc/fonts/Interstate-Bold', 25, shadow=0, t=80)
+    t = Text(f, location)
+    t.setPosition(55, 37)
+    r,g,b,a = renderUtil.rgbaConvert(212,212,212,255)
+    t.setColor(r,g,b,a)
+    cr.addItem(t)
+
+    return cr
+
+cr = CompositeRenderable()
+r,g,b,a = renderUtil.rgbaConvert(212,212,212,255)
+
+date = time.strftime("%A, %B ")
+day  = time.localtime()[2]
+date += str(day)
+# Header
+hdr = locationHeader("CURRENTLY", date)
+cr.addItem(hdr)
+
+cr.setPosition(0,0)
+
+p.addItem(cr)
+
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

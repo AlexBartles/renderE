@@ -1,0 +1,378 @@
+
+<prod>
+
+<impl>
+
+<![CDATA[
+import prodLocal
+import os
+import string
+import twccommon
+import domestic
+import twc.products
+import twc.dsmarshal as dsm
+from twc import rsutil
+import time
+
+# Here are the radar products that we support:
+REGIONAL_DOPPLER_RADAR = "Local_RegionalDopplerRadar"
+METRO_DOPPLER_RADAR    = "Local_MetroDopplerRadar"
+
+# This product is Deactivateable because MetroDopplerRadar is optional. The
+# RegionalDopplerRadar should NOT be optional as set by SCMT
+class Product(twc.products.DeactivateableProduct, prodLocal.AnimatedMap):
+
+    def __init__(self, params):
+        prodLocal.AnimatedMap.__init__(self, params)
+
+
+    def _checkForPrecip(self, productName):
+        precip = 0
+
+        data = self.getData()
+
+        # check for radar echoes (for the appropriate product)
+        precip = domestic.checkRadarPrecip(productName, imageList=data.imageList)
+
+        # check for observed precip
+        if domestic.checkCurrentConditionsPrecip():
+            precip = 1
+
+        # check for forecast precip
+        if domestic.checkTextForecastPrecip():
+            precip = 1
+
+        return precip
+
+
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+
+        params      = self.getParams()
+        data        = self.getData()
+        productName = self.getName()
+
+        # if there's no image data, then figure out which product we are so we
+        # know what to do.
+        if data.noDataAvailable:
+
+            if productName == REGIONAL_DOPPLER_RADAR:
+                return optimal
+            elif productName == METRO_DOPPLER_RADAR:
+                return 0
+            else:
+                twccommon.Log.error("Unrecognized product name %s. Skipping product." % (productName,))
+                return 0
+
+        # check for active bulletins/storms
+        warnings = params.activeWarnings
+        twccommon.Log.info("activeWarnings=%d" % (warnings,))
+
+        # check for observed or forecasted precip
+        precip = self._checkForPrecip(productName)
+
+        # durations depend on which product we're running
+        if productName == REGIONAL_DOPPLER_RADAR:
+            if warnings == 0 and precip == 0:
+                return minimum
+            else:
+                return optimal
+
+        else: ## productName == METRO_DOPPLER_RADAR
+            if warnings == 0 and precip == 0:
+                return minimum
+            if warnings == 1 and precip == 1:
+                return maximum
+            else:
+                return optimal
+
+
+    def _loadData(self):
+        # set the max number of images that can be missing before the
+        # animation loop is cancelled
+        self._maxAllowedImageGap = 5   # image file count
+
+        # assume this radar image has some rain until we determine otherwise
+        self._radarReturns = 1
+
+        data = self.getData() # get imageRoot
+
+        # get any additional info about the map cut (in case we need it)
+        mapDataString = data.productString + '.MapData'
+        mapCutData = dsm.defaultedGet(mapDataString)
+
+        dataCutType = mapCutData.datacutType
+        dataCutInfo = dataCutType.split('.')
+        self.updateData(
+            # figure out the data type so we know what directory to look in
+            imageDir = data.imageRoot + '/%s/%s.cuts/' % (dataCutInfo[0], dataCutInfo[1]),
+
+            # set the image data parameters
+            imageFrequency     = 300, # seconds
+            maxImages          =  36, # image file count
+            imageDuration      =   3, # frame count
+            lastImageDuration  =  15, # frame count
+            mapLocation        = dataCutInfo[1]) # us, pr, ak, hi, etc
+
+        # all the data is loaded here in the AnimatedMap base class
+        prodLocal.AnimatedMap._loadData(self)
+        params = self.getParams()
+        data   = self.getData()
+
+        # set the data not available text for this product
+        data.noDataAvailableText = "Temporarily Unavailable"
+        data.regionalDopplerProductName = REGIONAL_DOPPLER_RADAR
+
+        vocalLocalSchedule = dsm.defaultedConfigGet("VocalLocalSchedule",
+            twccommon.Data(OffTimes=((19, 3), )))
+        data.playVocal =  rsutil.playVocal(time.time(), 
+            vocalLocalSchedule.OffTimes)
+
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+
+import twccommon
+# get the map data
+
+# get the map data
+mapData  = <%-prod.getData()%>
+duration = <%-prod.getDuration()%>
+productString  = mapData.productString
+
+# only display the valid time if we have a full count of images!
+# DEFINE the map data parameters:
+imageFrequency         = mapData.imageFrequency    # in seconds
+maxImages              = mapData.maxImages         # image file count
+lastImageDuration      = mapData.lastImageDuration # frame count
+imageDuration          = mapData.imageDuration     # frame count
+imageList              = mapData.imageList
+imageCount = len(imageList)
+conus      = mapData.mapLocation == 'us'
+
+<%!
+key = 'Config.' + dsm.getConfigVersion() + '.RegionalDopplerRadarIntroIndex'
+introIdx = dsm.defaultedGet(key)
+
+# initialize the index
+if introIdx is None:
+    introIdx = 1
+
+# there are 2 intros to cycle through, 1-2 (not 0-2)
+introIdx = introIdx % 2
+introIdx += 1
+
+dsm.set(key, introIdx, 0)
+ds.commit()
+
+configVersion = int(dsm.getConfigVersion())
+%>
+
+# Add the terrain image (If the map is available)
+# Outputs - Creates mapAvailable
+<%@'_MapHandler.rs'%>
+
+
+# Map Data Underlay
+# NOTE: The elements are added directly to the page (vs. a composite image)
+baseObj = p
+drawMask = 1
+<%@'_MapOverlay.rs'%>
+
+
+# New way to handle map data
+# Inputs - imageCount, mapAvailable, availableData
+# Outputs - imageFile, issueTime (if there is only one image)
+availableData = imageList
+<%@'_MapImageHandler.rs'%>
+
+
+#Map Overlay
+baseObj = None
+drawMask = 2
+<%@'_MapOverlay.rs'%>
+
+<%@'_Title.rs'%>
+
+# MAP LEGEND:
+
+# draw legend banner
+renderTools.drawMapBanner(p)
+
+# for conus maps, show winter radar legends, otherwise show normal rain
+# legend.
+if conus:
+    # legendInfo contains the label, x position of the label, x position of
+    # the legend, sizes of the color palettes and a list of color paletes to 
+    # create the legends
+    legendInfo = [('rain', 0, 44,
+                   [((28, 10), [( 64, 204, 85, 255),     # Light Green
+                                (  0, 153,  0, 255),
+                                (  0, 102,  0, 255)]),   # Dark Green
+                    ((16, 10), [(  0, 102,  0, 255),     # Dark Green
+                                (191, 204, 85, 255),
+                                (191, 204, 85, 255)]),   # Yellow
+                    ((18, 10), [(191, 204, 85, 255),     # Yellow
+                                (255,  51,  0, 255),     # Orange
+                                (191,  51,  0, 255)]),   # Medium Red
+                    ((13, 10), [(191,  51,  0, 255),     # Medium Red
+                                (128,   0,  0, 255),
+                                ( 64,   0,  0, 255)])]), # Dark Red
+
+                  ('mix/ice', 149, 224,
+                   [((36, 10), [(235, 130, 215, 255),    # Light Pink
+                                (208,  94, 176, 255),
+                                (190,  70, 150, 255),
+                                (170,  50, 130, 255)])]),# Dark Pink
+
+                  ('snow', 290, 344,
+                   [((36, 10), [(150, 150, 150, 255),    # Light Gray
+                                (180, 180, 180, 255),
+                                (210, 210, 210, 255),
+                                (230, 230, 230, 255)])]) # White
+                 ]
+else:
+    legendInfo = [('light', 0, 44,
+                   [((75, 10), [(121, 253, 121, 255),  # Lightest Green
+                                ( 98, 239,  98, 255),
+                                ( 81, 221,  81, 255),
+                                ( 66, 198,  69, 255),
+                                ( 47, 165,  57, 255),
+                                ( 44, 136,  47, 255),
+                                ( 47, 128,  44, 255),
+                                (126, 174,  58, 255),
+                                (224, 238,  77, 255),
+                                (255, 249,  76, 255),
+                                (255, 206,  59, 255),
+                                (255, 134,  56, 255),
+                                (255,  60,  56, 255),
+                                (207,  44,  40, 255),
+                                (138,  44,  32, 255),
+                                (113,  44,  33, 255)])]), # Darkest Red
+                                
+                  ('heavy', 125, 0, []) # empty color palette - only 1 legend
+                 ]   
+
+# draw the legend(s) and labels   
+cr = CompositeRenderable()
+f = TTFont("/rsrc/fonts/Interstate-Bold", 18, t=25, shadow=0)
+r, g, b, a  = renderUtil.rgbaConvert(212, 212, 212, 255) # white
+r1,g1,b1,a1 = renderUtil.rgbaConvert(16, 16, 16, 230)    # black
+
+for label, labelXPos, legendXPos, paletteInfo in legendInfo:
+    # add label
+    t = Text(f, label)
+    t.setPosition(labelXPos, 2)
+    t.setColor(r, g, b, a)
+    cr.addItem(t)
+
+    xPos = 0
+    palette = CompositeRenderable()
+    # add legend
+    if len(paletteInfo) > 0:
+        for paletteSize, colorPalettes in paletteInfo:
+            width, height = paletteSize
+            
+            # drop shadow for gradient box
+            # (drawn first)
+            bb = Box()
+            bb.setSize(width, height)
+            bb.setPosition(xPos+2, 0)
+            bb.setColor(r1, g1, b1, a1)
+            palette.addItem(bb)
+
+            gr = renderUtil.gradientBox(width, height, colorPalettes)
+            gr.setPosition(xPos, 2)
+            xPos += width 
+            palette.addItem(gr)
+        
+        palette.setPosition(legendXPos, 0)
+        cr.addItem(palette)
+
+cr.setPosition(62, 387)
+p.addItem(cr)
+
+# get product version (this is a generic script)
+product            = <%-params.product%>
+
+mapAvailable = dataUtil.isMapAvailable(<%-configVersion%>, product)
+
+#NOTE: Normally, imageCount should be equal to maxImages.
+#      The imageCount should never be greater than maxImages because
+#      standard.pyc should trim the list of files to the latest maxImages
+if imageCount >= maxImages and mapAvailable:
+##########################################################################
+# This block of code is commented out in case product changes its mind and
+# wants the slider bar back.  We didn't want to lose this code.
+##########################################################################
+    # only add the slider if the star receives non-conus imagery
+#    if not conus:
+        # Find out how many complete loops we have time for.
+#        loopLimit = int( <%-prod.getDuration()%> /
+#                    (lastImageDuration + ((maxImages - 1)*imageDuration)))
+
+        # if there is a full count of images, draw the time bar slider
+#        timeScale   = [ '-3', '-2', '-1', '0', ]
+#        scaleOffset = [    0,   58,   63,  50, ]
+
+#        slider = renderTools.drawValidTimeSlider(p, lastImageDuration,
+#            imageDuration, imageCount, timeScale, scaleOffset, loopLimit)
+
+    # Valid Time
+    f = TTFont('/rsrc/fonts/Interstate-BoldItalic',20,t=20,shadow=0)
+    txt = 'Past %d Hours' % ((maxImages * imageFrequency)/3600)
+    t = Text(f, txt)
+    r,g,b,a = renderUtil.rgbaConvert(20,20,20,255) # black
+    t.setColor(r,g,b,a)
+    t.setPosition(340, 415)
+    p.addItem(t)
+
+# only play the vocal clip IF we have a map, we have data, AND we're doing the
+# Regional version of this product (per the reqs) ANNNND its allowed by
+# the activeVocalCue parameter:
+if mapAvailable and \
+   imageCount > 0 and \
+   product == <%-data.regionalDopplerProductName%> and \
+   <%-params.activeVocalCue%> and  \
+   <%-data.playVocal%>:
+
+    # Vocal Local, dude!
+    aFile = 'LRADAR_DEFAULT%d' % <%-introIdx%>
+    intro = '/rsrc/audio/vocalLocal/Default_Phrases_Local_Radar/%s.wav' % aFile
+    ac = AudioClip(intro)
+    ac.setBlendType(AudioRenderable.BLEND_MIX)
+    ac.setVolLevel(1.0)
+
+    as = AudioSequencer()
+    as.addItem(NullAudioClip(8))
+    as.addItem(ac)
+    as.addItem(NullAudioClip(15))
+    p.addItem(as)
+
+    aes = AudioEffectSequencer(as)
+    aes.addEffect(AudioFader(None, 0.0, 0.8, 8), 8)
+    aes.addEffect(AudioNullEffect(None), as.duration() - 23)
+    aes.addEffect(AudioFader(None, 0.8, 0.0, 15), 15)
+    p.addItem(aes)
+
+    twccommon.Log.info('|RDR|%d|FadeIn:%s:FadeOut=%d|1|' %\
+        (duration, aFile, as.duration()))
+
+# finally, draw the No Data text on the top of everything (if needed)
+if ((not mapAvailable) or (imageCount == 0)):
+    renderTools.dataNotAvailable(page=p,
+                                 text=mapData.noDataAvailableText,
+                                 noDataBar=1,
+                                 displayDuration=duration)
+
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

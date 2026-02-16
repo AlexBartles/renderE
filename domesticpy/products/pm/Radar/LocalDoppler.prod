@@ -1,0 +1,269 @@
+
+<prod>
+
+<impl>
+
+<![CDATA[
+import radar
+import os
+import string
+import twccommon
+import twc.dsmarshal as dsm
+
+class Product(radar.AnimatedMap):
+
+    def __init__(self, params):
+        radar.AnimatedMap.__init__(self, params)
+
+        # set the max number of images that can be missing before the
+        # animation loop is cancelled
+        self._maxAllowedImageGap = 4   # image file count
+
+        # assume this radar image has some rain until we determine otherwise
+        self._radarReturns = 1
+
+        data = self.getData() # get imageRoot
+
+        # get any additional info about the map cut (in case we need it)
+        mapDataString = data.productString + '.MapData'
+        mapCutData = dsm.defaultedGet(mapDataString)
+
+        dataCutType = mapCutData.datacutType
+        dataCutInfo = dataCutType.split('.')
+        
+        self.updateData(
+            # this is where the image data lives
+            imageRoot = data.imageRoot +'/%s/%s.cuts/' % (dataCutInfo[0],
+                        dataCutInfo[1]),
+
+            # set the image data parameters
+            imageFrequency     = 300, # seconds
+            maxImages          =  36, # image file count
+            imageDuration      =   4, # frame count
+            lastImageDuration  =  40, # frame count
+            mapLocation        = dataCutInfo[1]) # us, pr, ak, hi, etc.
+            
+
+
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        data = self.getData()
+        # if there's no data (or if there's no map cut), then
+        # don't display this product
+        if data.noDataAvailable:
+            return 0
+
+        return optimal
+
+
+    def _getDesiredPageDurations(self, pageParams):
+        raise Exception("Multipage support not enabled for this product")
+
+
+    def _loadData(self):
+        radar.AnimatedMap._loadData(self)
+        params = self.getParams()
+        data   = self.getData()
+
+        # set the data not available text for this product
+        data.noDataAvailableText = "Temporarily Unavailable"
+
+        # check specifically for 'stats' files for this product
+        if data.noDataAvailable:
+            self._radarReturns = 0
+        else:
+            # does the most recent data image show significant amounts of rain?
+            issuetime, newestImageDataFileName = data.imageList[0]
+            fname, ftype = string.split(newestImageDataFileName, '.tif')
+            statsFile = fname + '.data.stats'
+
+            nsRain = {} # create private namespace
+            if os.path.isfile(statsFile):
+                execfile(statsFile, nsRain, nsRain)
+                twccommon.Log.info("%s rainDensity = %d" %
+                                  (params.product, nsRain['rainDensity'],))
+            else:
+                twccommon.Log.error("missing radar stats file %s" % statsFile)
+
+            # try to get the rainDensity out of the stats file, but if something went
+            # wrong, then assume that the radar image has significant rain echoes.
+            if nsRain.has_key('rainDensity'):
+                rainDensity = nsRain['rainDensity']
+            else:
+                msg = "Error reading stats file: %s. " % (statsFile,)
+                msg += "Assuming rainDensity > 5 (echoes present)."
+                twccommon.Log.warning(msg)
+
+            if rainDensity < 5:
+                self._radarReturns = 0
+                twccommon.Log.info("no rain, so radarReturns set to 0")
+            else:
+                twccommon.Log.info("rain echoes found (rainDensity > 5), radarReturns set to 1")
+                self._radarReturns = 1
+
+
+    def hasReturns(self):
+        return self._radarReturns
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+
+import twccommon
+# get the map data
+
+# get the map data
+mapData  = <%-prod.getData()%>
+duration = <%-prod.getDuration()%>
+productString  = mapData.productString
+
+# only display the valid time if we have a full count of images!
+# DEFINE the map data parameters:
+imageFrequency         = mapData.imageFrequency    # in seconds
+maxImages              = mapData.maxImages         # image file count
+lastImageDuration      = mapData.lastImageDuration # frame count
+imageDuration          = mapData.imageDuration     # frame count
+imageList              = mapData.imageList
+imageCount = len(imageList)
+conus      = mapData.mapLocation == 'us'
+
+print mapData.imageRoot
+
+# Add the terrain image (If the map is available)
+# Outputs - Creates mapAvailable
+<%@'_MapHandler.rs'%>
+
+
+# Map Data Underlay
+# NOTE: The elements are added directly to the page (vs. a composite image)
+baseObj = p
+drawMask = 1
+<%@'_MapOverlay.rs'%>
+
+
+# New way to handle map data
+# Inputs - imageCount, mapAvailable, availableData
+# Outputs - imageFile, issueTime (if there is only one image)
+availableData = imageList
+<%@'_MapImageHandler.rs'%>
+
+
+#Map Overlay
+baseObj = None
+drawMask = 2
+<%@'_MapOverlay.rs'%>
+
+# MAP LEGEND:
+def calculateLegendText():
+
+    global imageCount, imageFrequency
+
+    legendText = ''
+    timeSpanSeconds  = float(imageCount) * float(imageFrequency)
+    timeLapseMinutes = timeSpanSeconds / 60.0
+    timeLapseHours   = timeSpanSeconds / 3600.0
+    remainderSeconds = timeSpanSeconds % 3600.0
+
+    # if it's less than an hour, show 'MINS'
+    if timeSpanSeconds < 3600.0:
+        legendText = 'PAST %0.0f MINS' % (timeLapseMinutes,)
+
+    # Otherwise, show only whole hours or half-hours (per Product Team request)
+    # so if it's less than 1.5 hours, show 'HOUR'
+    # (above an hour, only update the legend every 1/2 hour)
+    elif timeSpanSeconds < 5400.0:
+        legendText = 'PAST %0.0f HOUR' % (timeLapseHours,)
+
+    else: # we're over the 'hour' bracket now...
+
+        if remainderSeconds < 1800.0:
+            # below x.5 round down to x (no decimal place)
+            legendText = 'PAST %0.0f HOURS' % (timeLapseHours,)
+        else:
+            # above x.5 round down to x.5
+            delta = remainderSeconds - 1800.0
+            nearestHalfHour = timeSpanSeconds - delta
+            timeLapseHours  = nearestHalfHour / 3600.0
+            legendText = 'PAST %0.1f HOURS' % (timeLapseHours,)
+
+    return legendText
+
+def drawLegend(x,y,p):
+
+    conusAdjustment = 0
+
+####################################################################################
+# This block of code is commented out in case product changes their minds and
+# wants the legend back for sqeezeback. 
+####################################################################################
+    # if conus, don't draw the legend and slide the "cool" legend over to the
+    # right edge, otherwise draw the "cool" legend and the legend color
+    # palette.
+#    if not conus:
+        # Color Boxes (per art doc)
+#        legendColors = [ (92,190,92,255),  # Lightest Green
+#                         (45,164,45,255),  # Light Green
+#                         (32,132,32,255),  # Medium Green
+#                         (20,90,20,255),   # Dark Green
+#                         (200,200,50,255), # Yellow
+#                         (220,150,30,255), # Orange
+#                         (186,0,32,255),   # Lightest Red
+#                         (96,23,11,255) ]  # Darkest Red
+    
+
+#        xOffset = x + 4 # per art doc
+#        width   = 7 # box width per art doc
+#        height  = 9 # box height per art doc
+#        conusAdjustment = -57
+
+#        for color in legendColors:
+
+            # actual boxes
+#            bb = Box()
+#            bb.setSize(width,height)
+#            bb.setPosition(xOffset+conusAdjustment,y-1)
+#            r,g,b,a = renderUtil.rgbaConvert(color[0], color[1], color[2], color[3])
+#            bb.setColor(r,g,b,a)
+#            p.addItem(bb)
+
+#           xOffset += 7 # per art doc
+
+    f = TTFont("/rsrc/fonts/Interstate-Bold", 12, t=10, shadow=0)
+    r,g,b,a = renderUtil.rgbaConvert(229,229,229)
+    # "cool" legend updates every 5 minutes until 1 hour
+    # then every 30 mins until 3 hours (3 hours = max.)
+    txt = calculateLegendText()
+    t = Text(f, txt)
+    xPos = renderUtil.justifyGR(t.size()[0], x, renderUtil.RIGHT)
+    t.setPosition(xPos+conusAdjustment, y)
+    t.setColor(r, g, b, a)
+    p.addItem(t)
+
+
+# Gradient Box
+gradientColors = [ (18,137,180,255),
+                   (8,121,157,255),
+                 ]
+
+# draw legend
+# WARNING: The coordinates below are adjusted to account
+# for the 'radar' viewport "shift" of -12, -12.
+
+gBox = renderUtil.gradientBox(216,19,gradientColors)
+gBox.setPosition(12,125) # (0,113) actual if viewport wasn't shifted
+# draw the gBox, then the legend (draw order counts!)
+p.addItem(gBox)
+
+# draw it!
+drawLegend(221,132, p) # (152,120) actual if viewport wasn't shifted
+
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

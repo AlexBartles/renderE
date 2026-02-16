@@ -1,0 +1,112 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+import prodLdl
+import time
+import twccommon
+import twc.dsmarshal
+dsm = twc.dsmarshal
+
+class Product(prodLdl.Observation):
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        if self._hasData:
+            for obs in self.getData().obs:
+                if obs == None:
+                    continue
+                if obs.dewpoint != None:
+                    return optimal
+                return 0
+
+        return 0
+
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+<%@'_Background.rs'%>
+
+<%!
+data = prod.getData()
+i = 0
+dewpoint = None
+for obs in data.obs:
+    locName = params.obsLocName[i]
+    i = i+1
+    if obs != None:
+        dewpoint = obs.dewpoint
+        break
+
+if params.ldlWarningMode:
+    titleColor = (239,192,49,255)
+else:
+    titleColor = (121,186,242,255)
+%>
+titleColor = <%-titleColor%>
+
+
+def locationHeader(title, location):
+    cr = CompositeRenderable()
+
+    # Title
+    f = TTFont('/rsrc/fonts/Interstate-Bold', 16, shadow=0, t=60)
+    t = Text(f, title)
+    t.setPosition(55, 60)
+    r,g,b,a = titleColor
+    r,g,b,a = renderUtil.rgbaConvert(r,g,b,a)
+    t.setColor(r,g,b,a)
+    cr.addItem(t)
+
+    # Location
+    f = TTFont('/rsrc/fonts/Interstate-Bold', 25, shadow=0, t=80)
+    t = Text(f, location)
+    t.setPosition(55, 37)
+    r,g,b,a = renderUtil.rgbaConvert(212,212,212,255)
+    t.setColor(r,g,b,a)
+    cr.addItem(t)
+
+    return cr
+
+cr = CompositeRenderable()
+r,g,b,a = renderUtil.rgbaConvert(212,212,212,255)
+dewpoint = <%-dewpoint%>
+
+# Header
+hdr = locationHeader("CURRENTLY", <%-locName%>)
+cr.addItem(hdr)
+
+if dewpoint != None:
+    # Dewpoint label
+    f = TTFont('/rsrc/fonts/Interstate-Bold', 16, shadow=0, t=50)
+    t = Text(f, "DEWPOINT:")
+    t.setPosition(323,37)
+    t.setColor(r,g,b,a)
+    cr.addItem(t)
+
+    # Dewpoint value
+    f1 = TTFont('/rsrc/fonts/Interstate-BlackCondensed', 25, shadow=0, t=20)
+    dewpoint = '%d\260' % (dewpoint)
+    t = Text(f1, dewpoint)
+    t.setPosition(432, 37)
+    t.setColor(r,g,b,a)
+    cr.addItem(t)
+else:
+    __skipPage = 1
+
+cr.setPosition(0,0)
+
+p.addItem(cr)
+
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>

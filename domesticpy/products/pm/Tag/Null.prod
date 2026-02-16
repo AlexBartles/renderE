@@ -1,0 +1,39 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc.products
+
+class Product(twc.products.Product):
+    pass
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+<%@'_init.rs'%>
+
+<%!
+params = prod.getParams()
+data   = prod.getData()
+
+if params.mediaNum != None:
+    loginfo = twccommon.Data()
+    loginfo.time     = params.startTime
+    loginfo.frame    = params.startFrameOffset
+    loginfo.duration = prod.getDuration()
+    loginfo.media    = params.mediaNum
+    loginfo.starId   = dsm.defaultedConfigGet('starId', None)
+    loginfo.fileMissing = 1
+
+    runlogEvents.append(('tag', loginfo))
+%>
+
+]]>
+</rs>
+
+</prod>

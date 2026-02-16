@@ -1,0 +1,143 @@
+
+<prod>
+
+<impl>
+<![CDATA[
+import twc
+import twc.dsmarshal as dsm
+import twc.products
+import twccommon
+
+
+class Product(twc.products.Product):
+
+    def _loadData(self):
+        params = self.getParams()
+        data = self.getData()
+        data.ds = twccommon.Data()
+        data.timeDuration = getattr(params, 'timeDuration', 8) * 30
+        data.tempDuration = getattr(params, 'tempDuration', 5) * 30
+        data.bulletinActive = getattr(params, 'bulletinActive', 0)
+        data.currTemp = None
+
+        for stn in params.obsStation:
+            obs = dsm.defaultedGet("obs.%s" % (stn))
+            if obs == None:
+                continue
+
+            temp = getattr(obs, 'temp', None)
+            if (temp == None):
+                continue
+
+            data.ds.obs = obs
+            data.currTemp = obs.temp
+            break
+
+        bulletinActive = data.bulletinActive
+
+        # default to not showing the temp (i.e. - only show the time)
+        showTemperature = 0
+
+        if bulletinActive:
+            data.timeTempColor = (212,212,212,255) # white text
+            data.clockTabColor = (20,20,20,255) # black "background"
+        else:
+            data.timeTempColor = (20,20,20,255) # black text
+            # these need to be '255' since we do a colorScale
+            # (i.e. - 100% of the color the object already is)
+            data.clockTabColor = (255,255,255,255) # white "background"
+
+            if data.currTemp != None:
+                showTemperature = 1
+
+        # do we show temp or not?
+        data.showTemp = showTemperature
+
+    def _getDesiredDuration(self, minimum, maximum, optimal):
+        return optimal
+
+
+]]>
+</impl>
+
+
+<rs>
+<![CDATA[
+
+<%@'_ProductHeader.rs'%>
+
+<%!
+data = prod.getData()
+%>
+
+timeTempColor = <%-data.timeTempColor%>
+clockTabColor = <%-data.clockTabColor%>
+currTemp = <%-data.currTemp%>
+showTemp = <%-data.showTemp%>
+
+# draw the infamous "butter knife"
+m = TIFF_Image('/rsrc/images/clockTab')
+m.setPosition(25,0)
+r,g,b,a = renderUtil.rgbaConvert(clockTabColor[0],
+                                 clockTabColor[1],
+                                 clockTabColor[2],
+                                 clockTabColor[3],)
+m.setColor(r,g,b,a)
+p.addItem(m)
+
+# set the time up first
+f = TTFont('/rsrc/fonts/Interstate-Black', 18, shadow=0)
+clock = Clock(f, "%l:%M", justification=Clock.LEFT)
+r,g,b,a = renderUtil.rgbaConvert(timeTempColor[0],
+                                 timeTempColor[1],
+                                 timeTempColor[2],
+                                 timeTempColor[3],)
+clock.setColor(r,g,b,a)
+clock.setPosition(40,4)
+clock.setVisibility(0)
+p.addItem(clock)
+
+# TODO: today, we don't show the temp during a bulletin because
+# the temperature won't update throughout the duration of the
+# bulletin. So for now, disable the temp if a bulletin is active
+if showTemp:
+    tempString = "%d\260" % (currTemp)
+
+    f = TTFont('/rsrc/fonts/Interstate-Black', 19, shadow=0, t=100)
+    t = Text(f, tempString)
+    t.setPosition(46, 4)
+    r,g,b,a = renderUtil.rgbaConvert(timeTempColor[0],
+                                     timeTempColor[1],
+                                     timeTempColor[2],
+                                     timeTempColor[3],)
+    t.setColor(r,g,b,a)
+    t.setVisibility(1)
+    p.addItem(t)
+
+    es = EffectSequencer(clock, repeat=1)
+    es.addEffect(NullEffect(None), <%-data.tempDuration%>-1)
+    es.addEffect(SetVisibility(None, 1), 1)
+    es.addEffect(Fader(None, 0, 1, 5), 5)
+    es.addEffect(NullEffect(None), <%-data.timeDuration%>)
+    es.addEffect(Fader(None, 1, 0, 5), 5)
+    p.addItem(es)
+
+    # only add the effect to fade the clock for temp if
+    # temp exists, of course
+    es = EffectSequencer(t, repeat=1)
+    es.addEffect(NullEffect(None), <%-data.tempDuration%>)
+    es.addEffect(Fader(None, 1, 0, 5), 5)
+    es.addEffect(NullEffect(None), <%-data.timeDuration%>)
+    es.addEffect(Fader(None, 0, 1, 5), 5)
+    p.addItem(es)
+else:
+    # Dude, no temp.. need the freakin' clock
+    clock.setVisibility(1)
+
+
+<%@'_ProductFooter.rs'%>
+
+]]>
+</rs>
+
+</prod>
