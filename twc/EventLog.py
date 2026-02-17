@@ -64,7 +64,7 @@ class EventLog:
         return
 
     def _open(self):
-        return open(self.workFile, 'a')
+        return file(self.workFile, 'a')
         return
 
     def _write(self, event):
@@ -119,7 +119,7 @@ def _getChildren(data):
     dtype = type(data)
     if dtype == types.InstanceType:
         return _sortChildrenByType(data.__dict__.items())
-    elif dtype == types.DictionaryType:
+    elif dtype == dict:
         return _sortChildrenByType(data.items())
     return None
     return

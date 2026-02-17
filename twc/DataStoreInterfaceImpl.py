@@ -27,7 +27,6 @@ class InterfaceImpl:
         (rc, values, notfound) = self.internalGet(keys, cachingEnabled)
         values.update(notfound)
         return (rc, values)
-        return
 
     def internalGet(self, keys, cachingEnabled=None):
         """Internal get implementation for get/getAll to use"""
@@ -38,22 +37,20 @@ class InterfaceImpl:
         for key in keys:
             if key in self.data:
                 res = self.data[key]
-                result[key] = res
+                result[key] = res[0]
             else:
                 notfound[key] = None
 
         return (rc, result, notfound)
-        return
 
     def set(self, entries):
         rc = 1
         
         for (key, data, expir) in entries:
             self.sessiondelete.discard(key)
-            self.sessiondata[key] = data
+            self.sessiondata[key] = (data, expir)
 
         return rc
-        return
 
     def remove(self, keys):
         rc = 1

@@ -51,17 +51,14 @@ for file in [datpath, statpath]:
         val = data[filepos:valix]
         filepos = valix + 1
         
-        expireix = data.find(fs, filepos)
+        expireix = data.find("\n", filepos)
         if expireix == -1:
             break
         
         expire = data[filepos:expireix]
         filepos = expireix + 1
         
-        nextix = data.find("\n", filepos)
-        filepos = nextix + 1
-        
-        dsdict[name] = val
+        dsdict[name] = [val, expire]
 
 with open("ds.json", "w") as f:
     f.write(json.dumps(dsdict, indent=4))
