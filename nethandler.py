@@ -44,7 +44,7 @@ def requestNetAssetExt(path : str, ext):
         if r.head(spath).ok:
             os.makedirs(os.path.dirname(out), exist_ok=True)
             f = open(out, "wb")
-            f.write(r.get(spath, allow_redirects=Ture).content)
+            f.write(r.get(spath, allow_redirects=True).content)
             f.close()
             return out
     return None
