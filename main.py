@@ -12,6 +12,7 @@ import twccommon.Log
 import socket
 import os
 import threading as th
+import time
 rl = rg.rl
 
 screensize = (720, 480)
@@ -77,9 +78,6 @@ def sockethandle():
             args = data.split(" ")
             if args[0] == "loadrs":
                 print("loadrs", args)
-            if args[0] == "loadprod":
-                print("loadprod", args)
-                loadprod(args[1], twccommon.Data(prodName="prodName", product="product"))
         conn.close()
 
 tth = th.Thread(target=sockethandle, daemon=True)
@@ -166,16 +164,20 @@ def fsplash():
     layers.append(["Foreground", l, 0, 0, 10, 0, 0, 0, 720, 480, 1, 1, 0, 0])
 
 def producttest():
+    global layers
     l = Layer()
     p = Page()
     l.addPage(p)
     pduration = 100
     
     bkg1 = twc.findRsrc("/backgrounds/%s" % ("domestic"), "tif", 1)
+    print(bkg1)
     background = TIFF_Image(bkg1)
     background.setTransitionable(0)
     background.setSize(720, 480)
     p.addItem(background)
+    
+    print("loadedbg")
 
 
     def center(areaStart, areaWidth, elemWidth):
@@ -208,7 +210,7 @@ def producttest():
         text1BkgColor,    text2BkgColor,
         text1Color,       text2Color,
         text1ShadowColor, text2ShadowColor)
-
+    print("title")
     #First add the title bevel
     crBev.setPosition(titleX, titleY)
     p.addItem(crBev)
@@ -219,7 +221,7 @@ def producttest():
 
     if ((fadeIn > 0) or ( fadeOut > 0)):
         renderUtil.fadeInOut(p, crTxt, dur, fadeIn, fadeOut)
-
+    print("fio")
     ww = 215
     hh = 282
     xpos =  52
@@ -517,8 +519,12 @@ def draw_item(item, extra={"tex": None}):
             draw_item(el)
     elif type(item) is TIFF_Image:
         #quad senior
+        if not item.texture:
+            item.texture = rl.load_texture_from_image(item.im2)
         draw_quad(item, item.texture)
     elif type(item) is JPEG_Image:
+        if not item.texture:
+            item.texture = rl.load_texture_from_image(item.im2)
         #quad junior
         draw_quad(item, item.texture)
     elif type(item) is Box:
@@ -554,6 +560,10 @@ def draw_item(item, extra={"tex": None}):
         
         draw_quad(item, item.cachedtex)
     elif isinstance(item, CompositeRenderable):
+        if not item.rtex:
+            item.rtex = rg.rl.load_render_texture(720, 480)
+        if not item.ftex:
+            item.ftex = rg.rl.load_render_texture(720, 480)
         rl.end_mode_3d()
         rl.begin_texture_mode(item.rtex)
         rl.clear_background(rl.Color(0, 0, 0, 0))
@@ -601,7 +611,7 @@ def draw_item(item, extra={"tex": None}):
         draw_poly(item)
     
 while not rl.window_should_close():
-    layers.sort(key=lambda x: x[4])
+    sortedLayers = sorted(layers)
     ee += 1
     rl.begin_drawing()
     rl.clear_background(rl.BLACK)
@@ -611,7 +621,7 @@ while not rl.window_should_close():
     
     rl.rl_enable_smooth_lines()
     
-    for l in layers:
+    for l in sortedLayers:
         draw_item(l[1])
 
     rl.end_mode_3d()

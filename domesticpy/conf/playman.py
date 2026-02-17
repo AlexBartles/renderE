@@ -5,7 +5,6 @@ import domestic
 import twc.EventLog as EventLog
 import twc.dsmarshal as dsm
 
-
 TWCDIR     = os.environ['TWCDIR']
 TWCCLIDIR  = os.environ['TWCCLIDIR']
 TWCPERSDIR = os.environ['TWCPERSDIR']

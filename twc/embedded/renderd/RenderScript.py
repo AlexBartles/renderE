@@ -558,8 +558,8 @@ class CompositeRenderable(GraphicRenderable):
 
     def __init__(self, debug=False):
         GraphicRenderable.__init__(self)
-        self.rtex = rg.rl.load_render_texture(720, 480)
-        self.ftex = rg.rl.load_render_texture(720, 480)
+        self.rtex = None
+        self.ftex = None
         self.size = (720, 480)
         self.items = []
         self.debug = debug

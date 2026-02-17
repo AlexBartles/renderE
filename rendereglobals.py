@@ -21,6 +21,9 @@ if os.path.exists("ds.json"):
 #you're expected to have the i1 files already
 #also, this is untested so it may not work
 
+os.environ["RENDEREROOT"] = os.path.dirname(os.path.abspath(__file__))
+os.environ["TWCPERSDIR"] = os.path.join(os.environ["RENDEREROOT"], "domesticpy")
+
 #os.environ["RENDEREROOT"] = "/path/to/renderE"
 #os.environ["RENDERERSRC"] = "/usr/local/twc/rsrc"
 #os.environ["RENDEREMEDIA"] = "/media"

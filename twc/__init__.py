@@ -5,6 +5,7 @@
 # Compiled at: 2007-01-12 11:17:30
 import glob, os, os.path, twccommon, twccommon.Log as Log, twc.dsmarshal as dsm, twc.psp, urllib, lxml.etree
 from . import SkyConditionCodes
+import nethandler
 Data = twccommon.Data
 DefaultedData = twccommon.DefaultedData
 
@@ -128,6 +129,19 @@ def findRsrc(rsrc, ext, req=1, language=None):
             if os.path.exists('%s.%s' % (languageSearchFile, ext)):
                 return languageSearchFile
         if os.path.exists('%s.%s' % (searchFile, ext)):
+            return searchFile
+
+    netRoot = ["/media", "/rsrc"]
+    for path in netRoot:
+        searchFile = '%s%s' % (path, rsrc)
+        if language:
+            splitSearchFile = os.path.split(searchFile)
+            languageSearchFile = '%s/%s/%s' % (splitSearchFile[0], language, splitSearchFile[1])
+            netf = nethandler.requestNetAssetExt(languageSearchFile, ext)
+            if netf:
+                return languageSearchFile
+        netf = nethandler.requestNetAssetExt(searchFile, ext)
+        if netf:
             return searchFile
 
     if req:

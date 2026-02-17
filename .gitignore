@@ -1,8 +1,10 @@
 .DS_STORE
-config.py
+scmtconfig.py
 cimg.png
 setenv.sh
 screenshot.png
 ds.json
 __pycache__
 __pycache__/*
+net
+net/**

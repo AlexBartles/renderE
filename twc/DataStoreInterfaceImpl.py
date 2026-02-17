@@ -71,7 +71,7 @@ class InterfaceImpl:
         for key in self.sessiondata:
             self.data[key] = self.sessiondata[key]
         
-        datas = json.dumps(self.data, indent=4, sort_keys=True)
+        datas = json.dumps(self.data, indent=4)
         
         try:
             with open("ds.json", "w") as f:

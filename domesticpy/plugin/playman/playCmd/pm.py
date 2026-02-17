@@ -471,7 +471,7 @@ def _cull():
     return
 
 
-_ROOT = '/twc/products/pm'
+_ROOT = os.path.join(os.environ["RENDEREDOMESTIC"], "products", "pm")
 _LOG_ROOT = '/twc/data/volatile/testlogs'
 _pl = _ProdLoader()
 _pluginMgr = None
