@@ -22,6 +22,7 @@ if os.path.exists("ds.json"):
 #also, this is untested so it may not work
 
 os.environ["RENDEREROOT"] = os.path.dirname(os.path.abspath(__file__))
+os.environ["TWCCLIDIR"] = ""
 os.environ["TWCPERSDIR"] = os.path.join(os.environ["RENDEREROOT"], "domesticpy")
 
 #os.environ["RENDEREROOT"] = "/path/to/renderE"
