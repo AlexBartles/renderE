@@ -141,20 +141,20 @@ def fsplash():
     gr.setColor(r,g,b,a)
     p.addItem(gr)
     
-    #cr = CompositeRenderable()
+    cr = CompositeRenderable()
 
     filename = "/rsrc/logos/twcLogo"
     gr = TIFF_Image(filename)
     gr.setPosition(600, 62)
-    p.addItem(gr)
-    #cr.addItem(gr)
+    #p.addItem(gr)
+    cr.addItem(gr)
     filename = "/rsrc/logos/wxScanLogo"
     gr = TIFF_Image(filename)
     gr.setPosition(490, 44)
-    p.addItem(gr)
-    #cr.addItem(gr)
+    #p.addItem(gr)
+    cr.addItem(gr)
     
-    #p.addItem(cr)
+    p.addItem(cr)
     
     # gr = renderUtil.getBevelBox(200, 200)
     # gr.setPosition(0, 0)
@@ -568,13 +568,16 @@ def draw_item(item, extra={"tex": None}):
         rl.begin_texture_mode(item.rtex)
         rl.clear_background(rl.Color(0, 0, 0, 0))
         rl.begin_mode_3d(camera)
-        
+        rl.rl_disable_depth_test()
+        rl.rl_disable_depth_mask()
         
         for ch in item.items:
             if isinstance(ch, CompositeRenderable):
                 draw_item(ch, extra={"tex": item.rtex})
                 rl.begin_texture_mode(item.rtex)
                 rl.begin_mode_3d(camera)
+                rl.rl_disable_depth_test()
+                rl.rl_disable_depth_mask()
             elif isinstance(ch, Polygon):
                 rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA_PREMULTIPLY)
                 draw_item(ch)
@@ -593,12 +596,16 @@ def draw_item(item, extra={"tex": None}):
         
         if not extra["tex"]:
             rl.begin_mode_3d(camera)
+            rl.rl_disable_depth_test()
+            rl.rl_disable_depth_mask()
             rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA)
             draw_quad(DummyQuad(*item.position, 720, 480, effects=item.effects), item.ftex.texture)
         else:
             rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA_PREMULTIPLY)
             rl.begin_texture_mode(extra["tex"])
             rl.begin_mode_3d(camera)
+            rl.rl_disable_depth_test()
+            rl.rl_disable_depth_mask()
             draw_quad(DummyQuad(*item.position, 720, 480, effects=item.effects), item.ftex.texture)
             rl.end_mode_3d()
             rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA)
