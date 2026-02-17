@@ -15,3 +15,15 @@ datastore = {}
 if os.path.exists("ds.json"):
     with open("ds.json", "r") as f:
         datastore = json.loads(f.read())
+
+#optionally, specify your environment vars here
+#make sure to modify them to the actual paths
+#you're expected to have the i1 files already
+#also, this is untested so it may not work
+
+#os.environ["RENDEREROOT"] = "/path/to/renderE"
+#os.environ["RENDERERSRC"] = "/usr/local/twc/rsrc"
+#os.environ["RENDEREMEDIA"] = "/media"
+#os.environ["RENDEREDOMESTIC"] = "/usr/twc/domestic"
+#os.environ["TWCCLIDIR"] = "/usr/twc"
+#os.environ["TWCPERSDIR"] = "/path/to/renderE/domesticpy"
