@@ -124,7 +124,7 @@ def process(key):
             if rc != 0:
                 err = 'Vector file(s) failed to cut for %s' % outName
                 twccommon.Log.error(err)
-                raise RuntimeError, err
+                raise RuntimeError(err)
             if os.path.exists(outName):
                 os.unlink(outName)
             os.rename(tmpName, outName)
@@ -142,7 +142,7 @@ def process(key):
         if rc != 0:
             err = 'Image file failed to cut for %s' % finalName
             twccommon.Log.error(err)
-            raise RuntimeError, err
+            raise RuntimeError(err)
         os.rename(tempName, finalName)
         twccommon.Log.info('Completed map cut for %s' % finalName)
     else:
@@ -168,5 +168,3 @@ def _buildKeyTuple(eventType):
     return tuple(eventType.split('.'))
     return
 
-
-return

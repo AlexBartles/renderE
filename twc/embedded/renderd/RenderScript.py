@@ -38,6 +38,7 @@ class Page(ObjectWrapper):
 
     def __init__(self, duration=0):
         """duration == 0 means page plays forever"""
+        self.timer = 0
         self._duration = duration
         self.started = False
         self.ended = False
@@ -275,7 +276,8 @@ class SetLayerCmd(RenderCommand):
 class AppendLayerCmd(RenderCommand):
 
     def __init__(self, lname, layer):
-        _renderd.createAppendLayer(self, lname, layer)
+        self.lname = lname
+        self.layer = layer
 
 
 class RemoveLayerCmd(RenderCommand):
@@ -890,16 +892,18 @@ class AudioRenderable(Renderable):
     BLEND_ADD = 2
 
     def setVolLevel(self, level):
-        return _renderd.AudioRenderable_setVolLevel(self, level)
+        self.level = level
         return
 
     def setMixLevel(self, level):
-        return _renderd.AudioRenderable_setMixLevel(self, level)
+        self.mix = level
         return
 
     def setBlendType(self, type):
-        return _renderd.AudioRenderable_setBlendType(self, type)
         return
+    
+    def addEffectSequencer(self, seq, repeat, loopLimit):
+        self.effects.append(seq)
 
 
 class Audio(AudioRenderable):
@@ -913,14 +917,15 @@ class AudioClip(AudioRenderable):
 
     def __init__(self, name, evict=0, duration_limit=0, loop_limit=1):
         _renderd.createAudioClip(self, name, evict, duration_limit, loop_limit)
+        self.effects = []
         return
 
     def setLoopLimit(self, limit):
-        _renderd.AudioClip_setLoopLimit(self, limit)
+        self.loop_limit = limit
         return
 
     def duration(self):
-        return _renderd.AudioClip_getDuration(self)
+        return self.file.get_length()
         return
 
     def size(self):
@@ -931,12 +936,11 @@ class AudioClip(AudioRenderable):
 class NullAudioClip(AudioRenderable):
 
     def __init__(self, duration_limit=0):
-        _renderd.createNullAudioClip(self, duration_limit)
+        _renderd.createAudioClip(self, "", 1, duration_limit, 1)
         return
 
     def duration(self):
-        return _renderd.NullAudioClip_getDuration(self)
-        return
+        return self.duration_limit
 
     def size(self):
         return _renderd.NullAudioClip_getSize(self)
@@ -996,6 +1000,9 @@ class ImageSequencer(Renderable):
 class AudioSequencer(AudioRenderable):
 
     def __init__(self, repeat=0):
+        self.timer = 0
+        self.done = False
+        self.playingidx = 0
         self.repeat = repeat
         self.audio = []
         return
@@ -1016,7 +1023,9 @@ class AudioSequencer(AudioRenderable):
 class AudioFader(AudioEffect):
 
     def __init__(self, target=None, startMixLevel=0, endMixLevel=1, frames=30):
-        _renderd.createAudioFader(self, startMixLevel, endMixLevel, frames)
+        self.startMixLevel = startMixLevel
+        self.endMixLevel = endMixLevel
+        self.frames = frames
         if target != None:
             self.setTarget(target)
         return
@@ -1025,18 +1034,22 @@ class AudioFader(AudioEffect):
 class AudioEffectSequencer(Renderable):
 
     def __init__(self, target, repeat=0):
-        _renderd.createAudioEffectSequencer(self, target, repeat)
+        self.effects = []
+        self.activeeffects = []
+        self.timer = -1 #first frame is time 0 but 1 gets added first
+        self.repeat = repeat
+        target.addEffectSequencer(self, repeat, 1)
         return
 
     def addEffect(self, effect, duration):
-        _renderd.AudioEffectSequencer_addEffect(self, effect, duration)
+        self.effects.append((effect, duration))
+        self.total += duration
         return
 
 
 class AudioNullEffect(AudioEffect):
 
     def __init__(self, target=None):
-        _renderd.createAudioNullEffect(self)
         if target != None:
             self.setTarget(target)
         return

@@ -48,7 +48,7 @@ def process(ftype, loc, iname):
         if rc != 0:
             err = 'Image failed to cut for %s.' % dataName
             twccommon.Log.error(err)
-            raise RuntimeError, err
+            raise RuntimeError(err)
         cmd = NICE_VALUE
         cmd += _config.imageCutTool
         cmd += ' -i %s -o %s -b %s -F 255' % (mapName, compositeName, dataName)
@@ -57,7 +57,7 @@ def process(ftype, loc, iname):
         if rc != 0:
             err = 'Image failed to composite for %s.' % compositeName
             twccommon.Log.error(err)
-            raise RuntimeError, err
+            raise RuntimeError(err)
         cmd = NICE_VALUE
         cmd += _config.imageCutTool
         cmd += ' -i %s -o %s -b %s' % (compositeName, tempName, mapName)
@@ -66,7 +66,7 @@ def process(ftype, loc, iname):
         if rc != 0:
             err = 'Image failed to alpha trim for %s.' % finalName
             twccommon.Log.error(err)
-            raise RuntimeError, err
+            raise RuntimeError(err)
         os.unlink(dataName)
         os.unlink(compositeName)
         os.rename(tempName, finalName)
@@ -76,4 +76,3 @@ def process(ftype, loc, iname):
 
 NICE_VALUE = 'nice -20 '
 _config = None
-return

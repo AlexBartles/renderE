@@ -3,7 +3,7 @@
 # Decompiled from: Python 3.13.7 (main, Aug 14 2025, 11:12:11) [Clang 17.0.0 (clang-1700.0.13.3)]
 # Embedded file name: altFeed.py
 # Compiled at: 2007-01-12 11:33:37
-import domestic, time, os, commands, twc.DataStoreInterface, twccommon, twccommon.Log, twc.dsmarshal
+import domestic, time, os, subprocess, twc.DataStoreInterface, twccommon, twccommon.Log, twc.dsmarshal
 ds = twc.DataStoreInterface
 dsm = twc.dsmarshal
 
@@ -31,7 +31,7 @@ def channelChange(channel):
         cmd = 'nice -20 snmpset -Le -v 2c -c private %s %s i %s' % (irdIpAddress, irdChannelOid, channel)
         time.sleep(6)
         twccommon.Log.debug('AltFeed: Cmd = "%s"' % (cmd,))
-        (rc, outlines) = commands.getstatusoutput(cmd)
+        (rc, outlines) = subprocess.getstatusoutput(cmd)
         if rc == 0:
             twccommon.Log.info('AltFeed: Successfully switched IRD channel to %s' % (channel,))
         else:
@@ -57,4 +57,3 @@ def resetChannel(channel='100'):
     return
 
 
-return

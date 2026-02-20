@@ -52,7 +52,7 @@ def process(ftype, loc, iname):
         if rc != 0:
             err = 'Image failed to cut for %s.' % dataName
             twccommon.Log.error(err)
-            raise RuntimeError, err
+            raise RuntimeError(err)
         os.rename(dataName, finalName)
 
     return
@@ -60,4 +60,3 @@ def process(ftype, loc, iname):
 
 NICE_VALUE = 'nice -20 '
 _config = None
-return

@@ -59,4 +59,3 @@ def process(ftype, loc, iname):
 
 NICE_VALUE = 'nice -20 '
 _config = None
-return

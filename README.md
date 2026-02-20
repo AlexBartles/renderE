@@ -8,9 +8,9 @@ RenderE is intended as a replacement for a VM emulating the IntelliStar 1, a sys
 
 1. Clone repository
 2. Install Python dependencies
-3. Load your IntellliStar 1 configuration file (using loadSCMTconfig.py)
-4. Run main.py
-5. You'll have to figure out the rest because there is absolutely no way to properly use it yet.
+3. Load your IntellliStar 1 configuration file (using loadSCMTconfig.py) (Not required right now)
+4. If you have i1 files downloaded, set environment variables. Currently, however, all assets can be downloaded at runtime from our servers.
+5. Run main.py to show the test page
 
 ## Environment Variables
 

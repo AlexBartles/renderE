@@ -3,6 +3,7 @@ import math
 from PIL import Image
 from io import BytesIO
 from twc.embedded.renderd.RenderScript import *
+import twc.embedded.renderd.RenderControl as RenderControl
 import twc.embedded.renderd.renderUtil as renderUtil
 import twc.psp
 import domestic.renderTools as renderTools
@@ -13,6 +14,7 @@ import socket
 import os
 import threading as th
 import time
+import random
 rl = rg.rl
 
 screensize = (720, 480)
@@ -86,8 +88,9 @@ tth.start()
 layers = rg.layers
 
 prodloader = twc.products.ProductLoader()
-def loadprod(path, params):
-    prodloader.loadProductFile(path, params)
+def runrsc(path):
+    with open(path, "r") as f:
+        exec(f.read())
 
 def fsplash():
     l = Layer()
@@ -160,15 +163,15 @@ def fsplash():
     # gr.setPosition(0, 0)
     # p.addItem(gr)
 
-    #name, layer, time, frameOffset, depth, repeat, x, y, w, h, sx, sy, tx, ty
-    layers.append(["Foreground", l, 0, 0, 10, 0, 0, 0, 720, 480, 1, 1, 0, 0])
+    #name, layer, time, frameOffset, depth, repeat, x, y, w, h, sx, sy, tx, ty, activated
+    layers.append(["Foreground", l, 0, 0, 10, 0, 0, 0, 720, 480, 1, 1, 0, 0, False])
 
 def producttest():
     global layers
     l = Layer()
     p = Page()
     l.addPage(p)
-    pduration = 100
+    pduration = 150
     
     bkg1 = twc.findRsrc("/backgrounds/%s" % ("domestic"), "tif", 1)
     print(bkg1)
@@ -185,8 +188,8 @@ def producttest():
 
     ru = renderUtil   # abbreviation
     
-    title = ("current", "conditions")
-    dur = 100
+    title = ("test", "product")
+    dur = pduration
 
     titleX = 52
     titleY = 479 - 74
@@ -262,7 +265,8 @@ def producttest():
         
     # transitions
     # add the locBox, iconBox, and tabBox into one Composite Renderable to slide off screen
-    slideCR = CompositeRenderable()        
+    slideCR = CompositeRenderable()
+    slideCR.setPosition(-720, 0)
     slideCR.addItem(locBox)
     slideCR.addItem(iconBox)
     slideCR.addItem(tabBox)
@@ -271,8 +275,15 @@ def producttest():
 
     # begin loc box
     es = EffectSequencer(slideCR)
-    es.addEffect(NullEffect(None), pduration - 10)
+    es.addEffect(Slider(None, 72, 0), 10)
+    es.addEffect(NullEffect(None), pduration - 20)
     es.addEffect(Slider(None, -72, 0), 10)
+    p.addItem(es)
+    
+    es = EffectSequencer(slideCR)
+    es.addEffect(Rotate(None, -36, zr=1), 10)
+    es.addEffect(NullEffect(None), pduration - 20)
+    es.addEffect(Rotate(None, 36, zr=1), 10)
     p.addItem(es)
 
     # begin right side data area
@@ -288,9 +299,27 @@ def producttest():
     es.addEffect(Slider(None, -72, 0), 10)
     p.addItem(es)
 
-    renderTools.dataNotAvailable(page=p, displayDuration=pduration)
+    renderTools.dataNotAvailable(page=p, displayDuration=pduration, text="renderE could be better with your help!")
     
-    layers.append(["Foreground", l, 0, 0, 10, 0, 0, 0, 720, 480, 1, 1, 0, 0])
+    ac = []
+    
+    aFile = 'CC_INTRO%d' % 1
+    intro = '/rsrc/audio/vocalLocal/Intros_Curr_Cond/%s.wav' % aFile
+    ac.append(AudioClip(intro))
+    audioClipTemp = '/rsrc/audio/vocalLocal/Temps_Specific/%d.wav' % (random.randint(1, 135))
+    ac.append(AudioClip(audioClipTemp))
+    audioClipSky = '/rsrc/audio/vocalLocal/Wx_Phrases_Curr_Cond/%d.wav'% 3000
+    ac.append(AudioClip(audioClipSky))
+    
+    aseq = AudioSequencer()
+    for i in range(len(ac)):
+        ac[i].setBlendType(AudioRenderable.BLEND_MIX)
+        ac[i].setVolLevel(1.0)
+        aseq.addItem(ac[i])
+    p.addItem(aseq)
+    
+    layers.append(["Foreground", l, 0, 0, 10, 0, 0, 0, 720, 480, 1, 1, 0, 0, True])
+
 producttest()
 whiteimg = rl.gen_image_color(1, 1, rl.WHITE)
 white = rl.load_texture_from_image(whiteimg)
@@ -485,6 +514,59 @@ def draw_poly(quad : TIFF_Image, tex=white):
             rl.rl_vertex3f(pts[i+1][0].x, pts[i+1][0].y, pts[i+1][0].z)
         rl.rl_end()
 
+def update_audio(item):
+    if not item.chan:
+        item.chan = item.file.play()
+    effects = item.effects
+    vol = item.level
+    mixl = item.mix
+    def applyeffect(effect : AudioEffect):
+        nonlocal mixl
+        if type(effect) == AudioFader:
+            dist = (effect.frame/effect.frames)
+            dist = min(dist, 1)
+            mixl = effect.startMixLevel*(1-dist) + effect.endMixLevel*dist
+        if hasattr(effect, "frame"):
+            if not effect.frozen:
+                effect.frame += 1
+        
+    def loopover(eflist):
+        for effect in eflist:
+            if type(effect) == AudioEffectSequencer:
+                updateseq(effect)
+                loopover(effect.activeeffects)
+            else:
+                applyeffect(effect)
+    loopover(effects)
+    
+    if item.chan:
+        item.chan.set_volume(vol*mixl)
+
+def update_audioseq(seq : AudioSequencer):
+    if seq.done:
+        return
+    seq.timer += 1
+    al = []
+    al.append(seq.audio[0].duration()*30)
+    if len(seq.audio) > 0:
+        for i in seq.audio[1:]:
+            al.append(al[-1]+i.duration()*30)
+    ea = 0
+    for i in range(len(seq.audio)):
+        if seq.timer < al[i]:
+            break
+        ea += 1
+    if seq.playingidx != ea:
+        if type(seq.audio[seq.playingidx]) != NullAudioClip:
+            seq.audio[seq.playingidx].file.stop()
+        seq.playingidx = ea
+    if seq.playingidx >= len(seq.audio):
+        seq.done = True
+        return
+    
+    update_audio(seq.audio[ea])
+    
+
 def draw_item(item, extra={"tex": None}):
     global once
     if type(item) == Layer:
@@ -492,7 +574,7 @@ def draw_item(item, extra={"tex": None}):
         al = []
         al.append(item.pages[0][1])
         if len(item.pages) > 0:
-            for i in item.pages:
+            for i in item.pages[1:]:
                 al.append(al[-1]+i[1])
         
         ea = 0
@@ -616,8 +698,16 @@ def draw_item(item, extra={"tex": None}):
         
     elif type(item) is Polygon:
         draw_poly(item)
-    
+    elif isinstance(item, AudioSequencer):
+        update_audioseq(item)
+
 while not rl.window_should_close():
+    removeix = []
+    for i, cmdlist in enumerate(rg.queuedcommands):
+        cmd, tm, fo, estimated = cmdlist
+        RenderControl.actuallyRunAQueuedCommand(cmd)
+    for i in removeix:
+        rg.queuedcommands.pop(i)
     sortedLayers = sorted(layers)
     ee += 1
     rl.begin_drawing()
@@ -629,9 +719,11 @@ while not rl.window_should_close():
     rl.rl_enable_smooth_lines()
     
     for l in sortedLayers:
-        draw_item(l[1])
+        if l[-1]:
+            draw_item(l[1])
 
     rl.end_mode_3d()
+    rl.draw_fps(10, 10)
     rl.end_drawing()
     if ee == 5:
         rl.take_screenshot("screenshot.png")

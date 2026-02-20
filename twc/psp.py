@@ -4,6 +4,7 @@
 # Embedded file name: psp.py
 # Compiled at: 2007-01-12 11:17:30
 import os.path, string, types, twc.dsmarshal, twc.rsutil as rsutil
+import nethandler
 from twc import DataStoreInterface
 _includePath = ['.']
 
@@ -52,10 +53,13 @@ def evalPage(page, namespace={}, includePath=None):
             if val == None:
                 continue
             val = str(val)
+            val.replace("/usr/twc/domestic", os.environ["RENDEREDOMESTIC"])
             fname = None
             if val[0] == '/':
                 if os.path.exists(val):
                     fname = val
+                elif nethandler.requestNetAssetExt(val):
+                    fname = nethandler.requestNetAssetExt(val)
             for path in includePath:
                 temp = '%s/%s' % (path, val)
                 if os.path.exists(temp):

@@ -33,13 +33,13 @@ def requestNetAsset(path : str, extensions):
                 return out
     return None
 
-def requestNetAssetExt(path : str, ext):
-    out = os.path.join(temp, path.strip("/"))+"."+ext
+def requestNetAssetExt(path : str, ext=None):
+    out = os.path.join(temp, path.strip("/"))+("."+ext if ext else "")
     if os.path.exists(out):
         return out
-    out = os.path.join(temp, path.strip("/"))+"."+ext
+    out = os.path.join(temp, path.strip("/"))+("."+ext if ext else "")
     for server in servers:
-        spath = os.path.join(server, path.strip("/"))+"."+ext
+        spath = os.path.join(server, path.strip("/"))+("."+ext if ext else "")
         print(spath)
         if r.head(spath).ok:
             os.makedirs(os.path.dirname(out), exist_ok=True)

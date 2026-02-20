@@ -7,7 +7,7 @@ from . import _renderd
 from .RenderScript import *
 import rendereglobals as rg
 
-def queueCommand(cmd, time=0, frameOffset=0, estimatedCmd=0):
+def actuallyRunAQueuedCommand(cmd):
     if isinstance(cmd, SetLayerCmd):
         i = -1
         for i, layer in enumerate(rg.layers):
@@ -30,7 +30,8 @@ def queueCommand(cmd, time=0, frameOffset=0, estimatedCmd=0):
             1,
             1,
             0,
-            0
+            0,
+            False
         ])
     elif isinstance(cmd, SetNamedLayerViewPortCmd):
         i = -1
@@ -53,7 +54,23 @@ def queueCommand(cmd, time=0, frameOffset=0, estimatedCmd=0):
                 break
         if i > -1:
             del rg.layers[i]
-    return
+    elif isinstance(cmd, ActivateLayerCmd):
+        i = -1
+        for i, layer in enumerate(rg.layers):
+            if layer[0] == cmd.name:
+                break
+        if i > -1:
+            rg.layers[i][14] = True
+    elif isinstance(cmd, DeactivateLayerCmd):
+        i = -1
+        for i, layer in enumerate(rg.layers):
+            if layer[0] == cmd.name:
+                break
+        if i > -1:
+            rg.layers[i][14] = False
+
+def queueCommand(cmd, time=0, frameOffset=0, estimatedCmd=0):
+    rg.queuedcommands.append([cmd, time, frameOffset, estimatedCmd])
 
 
 def createNamedLayer(name, depth, repeat=0, autoDestroy=1, time=0, frameOffset=0):

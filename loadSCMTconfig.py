@@ -28,8 +28,8 @@ def main():
         sys.exit(1)
 
     if len(sys.argv) < 2:
-        print('Usage: runomni %s {SCMT config script}' % sys.argv[0])
-        print('       i.e. - runomni %s config.py' % sys.argv[0])
+        print('Usage: python3 %s {SCMT config script}' % sys.argv[0])
+        print('       i.e. - python3 %s config.py' % sys.argv[0])
         sys.exit(1)
     configuration = sys.argv[1]
     if not os.path.exists(configuration):

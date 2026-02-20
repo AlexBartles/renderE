@@ -109,7 +109,7 @@ def process(ftype, loc, iname):
         if rc != 0:
             err = 'Image failed to cut for %s.' % dataName
             twccommon.Log.error(err)
-            raise RuntimeError, err
+            raise RuntimeError(err)
         if _config.enableSmoothing:
             if os.path.exists(smoothingApplication):
                 cmd = NICE_VALUE
@@ -120,20 +120,20 @@ def process(ftype, loc, iname):
                 if rc != 0:
                     err = 'Image failed to smooth for %s.' % dataName
                     twccommon.Log.error(err)
-                    raise RuntimeError, err
+                    raise RuntimeError(err)
                 cmd = 'mv %s %s' % (smoothName, dataName)
                 twccommon.Log.debug('Moving %s' % cmd)
                 rc = os.system(cmd)
                 if rc != 0:
                     err = 'Image failed to rename from %s to %s.' % (smoothName, dataName)
                     twccommon.Log.error(err)
-                    raise RuntimeError, err
+                    raise RuntimeError(err)
             else:
                 err = 'Application [%s] not found.' % smoothingApplication
                 twccommon.Log.error(err)
-                raise RuntimeError, err
+                raise RuntimeError(err)
         else:
-            print '_config.enableSmoothing NOT set'
+            print('_config.enableSmoothing NOT set')
         cmd = NICE_VALUE
         cmd += _config.imageCutTool
         cmd += ' -i %s -o %s -a0,0,0' % (dataName, tempName)
@@ -142,7 +142,7 @@ def process(ftype, loc, iname):
         if rc != 0:
             err = 'Image failed to adjust for %s.' % finalName
             twccommon.Log.error(err)
-            raise RuntimeError, err
+            raise RuntimeError(err)
         os.unlink(dataName)
         os.rename(tempName, finalName)
 
@@ -151,4 +151,3 @@ def process(ftype, loc, iname):
 
 NICE_VALUE = 'nice -20 '
 _config = None
-return

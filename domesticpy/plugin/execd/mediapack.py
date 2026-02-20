@@ -36,7 +36,7 @@ def install(pack, replace):
         packName = metadata['name']
         subdir = metadata['subdir']
         version_file = metadata['version_file']
-    except KeyError, e:
+    except KeyError as e:
         twccommon.Log.error('Missing required metadata %s for pack %s' % (e.__str__(), pack))
         _remove_dir(workdir)
         return
@@ -90,7 +90,7 @@ _INSTALL_SCRIPT = '+POST-INSTALL'
 def _makedirs(path):
     try:
         os.makedirs(path)
-    except OSError, e:
+    except OSError as e:
         if e.errno != errno.EEXIST:
             raise
 
@@ -103,7 +103,7 @@ def _mkdtemp(suffix):
         try:
             os.makedirs(workdir)
             return workdir
-        except OSError, e:
+        except OSError as e:
             if e.errno != errno.EEXIST:
                 raise
 
@@ -139,6 +139,3 @@ def _rename_dir(oldname, newname):
     if os.path.exists(oldname):
         os.system('mv %s %s' % (oldname, newname))
     return
-
-
-return

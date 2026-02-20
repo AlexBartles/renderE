@@ -3,7 +3,7 @@
 # Decompiled from: Python 3.13.7 (main, Aug 14 2025, 11:12:11) [Clang 17.0.0 (clang-1700.0.13.3)]
 # Embedded file name: traffic.py
 # Compiled at: 2007-01-12 11:33:37
-import domestic, domestic.dataUtil, time, os, commands, twc.DataStoreInterface, twccommon, twccommon.Log, twc.dsmarshal, xml.sax
+import domestic, domestic.dataUtil, time, os, twc.DataStoreInterface, twccommon, twccommon.Log, twc.dsmarshal, xml.sax
 ds = twc.DataStoreInterface
 dsm = twc.dsmarshal
 REV = 0
@@ -16,7 +16,7 @@ REQUIRED = 1
 def convertToInt(name, value):
     try:
         return int(value)
-    except Exception, e:
+    except Exception as e:
         twccommon.Log.error("integer conversion error: tag '%s' value '%s'" % (name, value))
         raise e
 
@@ -26,7 +26,7 @@ def convertToInt(name, value):
 def convertToFloat(name, value):
     try:
         return float(value)
-    except Exception, e:
+    except Exception as e:
         twccommon.Log.error("float conversion error: tag '%s' value '%s'" % (name, value))
         raise e
 
@@ -36,7 +36,7 @@ def convertToFloat(name, value):
 def convertToString(name, value):
     try:
         return str(value)
-    except Exception, e:
+    except Exception as e:
         twccommon.Log.error("string conversion error: tag '%s' value '%s'" % (name, value))
         raise e
 
@@ -48,7 +48,7 @@ def convertAttributesToData(attrs, elementTable):
     for (tag, ctype, required) in elementTable:
         try:
             value = attrs.getValueByQName(tag)
-        except Exception, e:
+        except Exception as e:
             value = None
             if required:
                 msg = "required attribute missing error: tag '%s'" % tag
@@ -132,7 +132,7 @@ class IncidentMsgHandler(twccommon.SubHandler):
                 value = None
             setattr(data, 'end', value)
             self.records.append((data.incId, 0, data))
-        except Exception, e:
+        except Exception as e:
             twccommon.Log.error("Exception '%s'" % e)
             msg = 'conversion error discarding incident record: ('
             names = attrs.getQNames()
@@ -241,13 +241,13 @@ def parseXML(path, subHandlerClass):
         parser.setContentHandler(handler)
         parser.parse(f)
         f.close()
-    except xml.sax.SAXParseException, e:
+    except xml.sax.SAXParseException as e:
         ds.abort()
         eLine = e.getLineNumber()
         eCol = e.getColumnNumber()
         twccommon.Log.error('%s: XML Line %d, CharPosition %d' % (e.getMessage(), e.getLineNumber(), e.getColumnNumber()))
         twccommon.Log.error('XML path=%s' % (path,))
-    except Exception, e:
+    except Exception as e:
         ds.abort()
         twccommon.Log.error('error processing %s: %s' % (path, str(e)))
 
@@ -263,5 +263,3 @@ def processIncidents(path):
     parseXML(path, IncidentMsgHandler)
     return
 
-
-return

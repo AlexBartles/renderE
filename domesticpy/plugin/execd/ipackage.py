@@ -48,6 +48,9 @@ def uninstall(pkg, path):
         os.system('rm -rf %s' % instPath)
     return
 
+def execfile(filename, globa, loca):
+    with open(filename, "rb") as f:
+        exec(compile(f.read(), filename, 'exec'), globa, loca)
 
 def _execScript(fname, instPath):
     ns = {'dsm': dsm, 'PKG_ROOT': instPath}
@@ -70,5 +73,3 @@ def _execUninstallScript(instPath):
         _execScript(fname, instPath)
     return
 
-
-return

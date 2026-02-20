@@ -53,3 +53,26 @@ def createTTFont(self, name, pointSize, shadow, sr=0.08, sg=0.08, sb=0.08, sa=1.
     self.ascent = self.font.get_ascent()
     self.descent = self.font.get_descent()
     self.cachedtex = None
+
+def createAudio(self):
+    return
+
+def createAudioClip(self, name, evict=0, duration_limit=0, loop_limit=1):
+    ogname = name+""
+    pname = parsePath(name)
+    if os.path.exists(pname):
+        name = ogname
+    else:
+        name = nethandler.requestNetAssetExt(name)
+    if not name:
+        print(f"No suitable image found for {ogname}!")
+        exit(1)
+    self.name = name
+    self.file = rg.pg.Sound(name)
+    self.chan = None
+    self.evict = evict
+    self.duration_limit = duration_limit
+    self.time_played = 0
+    self.loop_limit = loop_limit
+    self.level = 1
+    self.mix = 1

@@ -3,7 +3,7 @@
 # Decompiled from: Python 3.13.7 (main, Aug 14 2025, 11:12:11) [Clang 17.0.0 (clang-1700.0.13.3)]
 # Embedded file name: bulletin.py
 # Compiled at: 2007-01-12 11:33:37
-import exceptions, domestic, domestic.dataUtil, domestic.BulletinInfo, os, time, twc.dsmarshal, twc.DataStoreInterface, twccommon, twccommon.Log
+import domestic, domestic.dataUtil, domestic.BulletinInfo, os, time, twc.dsmarshal, twc.DataStoreInterface, twccommon, twccommon.Log
 ds = twc.DataStoreInterface
 dsm = twc.dsmarshal
 BulletinInfo = domestic.BulletinInfo
@@ -349,7 +349,7 @@ def _addBulletin(interestlist, bulletins, county, group):
         bulletin = BulletinInfo.loadBulletin(primaryCounty, county, group)
         _initBulletin(bulletin)
         bulletins[(county, group)] = bulletin
-    except BulletinInfo.InvalidBulletin, e:
+    except BulletinInfo.InvalidBulletin as e:
         Log.warning('invalid bulletin for %s.%d: %s' % (county, group, e))
     except KeyError:
         Log.warning('got a bulletin event for %s.%d; but could not properly load it' % (county, group))
