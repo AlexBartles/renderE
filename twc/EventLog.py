@@ -64,7 +64,7 @@ class EventLog:
         return
 
     def _open(self):
-        return file(self.workFile, 'a')
+        return open(self.workFile, 'a')
         return
 
     def _write(self, event):
@@ -102,7 +102,7 @@ def _sortChildrenByType(children):
     attrs = []
     content = []
     for (k, v) in children:
-        if type(v) == types.InstanceType:
+        if hasattr(v, "__dict__"):
             content.append((k, v))
         else:
             attrs.append((k, v))
@@ -117,10 +117,10 @@ def _getChildren(data):
         attrs = data.attributes()
         return (attrs, content)
     dtype = type(data)
-    if dtype == types.InstanceType:
-        return _sortChildrenByType(data.__dict__.items())
-    elif dtype == dict:
+    if dtype == dict:
         return _sortChildrenByType(data.items())
+    elif hasattr(dtype, "__dict__"):
+        return _sortChildrenByType(data.__dict__.items())
     return None
     return
 

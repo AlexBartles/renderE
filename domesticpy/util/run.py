@@ -4,7 +4,6 @@
 # Embedded file name: run.py
 # Compiled at: 2007-01-12 11:33:37
 import os.path, getopt, time, sys
-from omniORB import CORBA
 import twc, twc.DataStoreInterface, twc.corba, twccommon, twccommon.corba
 from domestic import wxdata
 ds = twc.DataStoreInterface

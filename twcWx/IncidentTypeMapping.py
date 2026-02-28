@@ -3,12 +3,12 @@
 # Decompiled from: Python 3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]
 # Embedded file name: IncidentTypeMapping.py
 # Compiled at: 2005-12-01 07:18:53
-import types, twc, twcWx.xmlUtil as xmlUtil, twcWx.mapping as mapping, os
+import types, twc, twcWx.xmlUtil as xmlUtil, twcWx.mapping as mapping, os, nethandler
 
 class IncidentTypeMappingHandler(xmlUtil.LookupSubHandler):
 
     def __init__(self, container):
-        self._elements = [('key', types.StringType, xmlUtil.REQUIRED), ('group', types.StringType, xmlUtil.REQUIRED), ('description', types.StringType, xmlUtil.REQUIRED)]
+        self._elements = [('key', str, xmlUtil.REQUIRED), ('group', str, xmlUtil.REQUIRED), ('description', str, xmlUtil.REQUIRED)]
         xmlUtil.LookupSubHandler.__init__(self, container)
         return
 
@@ -22,7 +22,7 @@ class IncidentTypeMappingHandler(xmlUtil.LookupSubHandler):
         return
 
 
-filePath = os.path.join(os.environ["RENDEREROOT"], '/mappings/traffic/')
+filePath = os.path.join(os.environ["RENDEREMEDIA"], '/mappings/traffic/')
 
 class IncidentTypeMapping(mapping.Map):
 
@@ -32,6 +32,8 @@ class IncidentTypeMapping(mapping.Map):
 
     def _load(self, data):
         path = filePath + data + '.xml'
+        if not os.path.exists(path):
+            path = nethandler.requestNetAssetExt(filePath+data, "xml")
         map = xmlUtil.parseXML(path, IncidentTypeMappingHandler)
         if map:
             return (map, path)

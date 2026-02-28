@@ -32,7 +32,7 @@ class PluginManager:
         fl = [('py', 'r', 'source'), ('pyc', 'rb', 'compiled')]
         for fattr in fl:
             (ext, mode, type) = fattr
-            fname = '%s/%s.%s' % (self._root, pluginName, ext)
+            fname = '%s/%s.%s' % (self._root, ".".join(pluginName.split(".")[:-1]), ext)
             if not os.path.exists(fname):
                 continue
             ft = os.path.getmtime(fname)
@@ -48,7 +48,7 @@ class PluginManager:
     def _loadPlugin(self, pluginName, fname, ftime, fattr, initFnArgs):
         (ext, mode, _type) = fattr
         plugin = twccommon.Data(mtime=ftime)
-        qualifiedName = '%s_%s' % (self._nameSpace, pluginName)
+        qualifiedName = '%s_%s' % (self._nameSpace, ".".join(pluginName.split(".")[:-1]))
 
         if ext == 'py':
             loader = importlib.machinery.SourceFileLoader(qualifiedName, fname)
@@ -103,7 +103,7 @@ class PluginManager:
         Return: 
         Returns true if the plugin has already been loaded.
         """
-        return self._plugins.has_key(pluginName)
+        return (pluginName in self._plugins)
         return
 
     def getPluginModule(self, pluginName):

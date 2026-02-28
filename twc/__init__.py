@@ -91,7 +91,6 @@ def getStaticItems():
     return values
     return
 
-
 def buildPyNamespace(default=None, **namespace):
     ns = {}
     if default != None:

@@ -36,7 +36,7 @@ def isInterested(**kw):
 
 
 def isInterestedItem(ilType, value):
-    if type(value) != types.ListType:
+    if type(value) != list:
         value = [value]
     il = getInterestList(ilType)
     for val in value:

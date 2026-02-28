@@ -52,6 +52,11 @@ d.activeVocalCue = 1
 dsm.setDefault('Config.1.Local_CurrentConditions', d)
 
 d = twc.Data()
+d.productTitle = ['your local on the 8s', None]
+d.bkgImage = ('domestic', None)
+dsm.setDefault('Config.1.Local_Intro', d)
+
+d = twc.Data()
 d.productTitle = ('daypart', 'forecast')
 d.bkgImage = ('domestic', None)
 d.titleFadeInDuration = 5

@@ -3,7 +3,7 @@
 # Decompiled from: Python 3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]
 # Embedded file name: psp.py
 # Compiled at: 2007-01-12 11:17:30
-import os.path, string, types, twc.dsmarshal, twc.rsutil as rsutil
+import os.path, string, types, twc.dsmarshal, twc.rsutil as rsutil, rsfix
 import nethandler
 from twc import DataStoreInterface
 _includePath = ['.']
@@ -12,7 +12,6 @@ def setIncludePath(path=[]):
     global _includePath
     _includePath = path
     return
-
 
 def evalPage(page, namespace={}, includePath=None):
     """Parses text looking for tags in the spirit of ASP tags and evaluates
@@ -60,23 +59,58 @@ def evalPage(page, namespace={}, includePath=None):
                     fname = val
                 elif nethandler.requestNetAssetExt(val):
                     fname = nethandler.requestNetAssetExt(val)
+            
             for path in includePath:
                 temp = '%s/%s' % (path, val)
                 if os.path.exists(temp):
                     fname = temp
                     break
+            if not fname:
+                for path in includePath:
+                    temp = '%s/%s' % (path, val)
+                    fn = nethandler.requestNetAssetExt(temp, check=True)
+                    if fn is not None:
+                        fname = fn
+                        break
+            if not fname:
+                for path in includePath:
+                    temp = '%s/%s' % (path, val)
+                    fn = nethandler.requestNetAssetExt(temp)
+                    if fn is not None:
+                        fname = fn
+                        break
+            print(fname, " found!")
+            if not fname:
+                includePath = ["/usr/twc/domestic/products/pm/incl/"]
+                for path in includePath:
+                    temp = '%s/%s' % (path, val)
+                    fn = nethandler.requestNetAssetExt(temp)
+                    if fn is not None:
+                        fname = fn
+                        break
 
             if fname == None:
                 raise RuntimeError('file %s in PSP include tag not found' % sub2)
             f = open(fname, 'r')
             sub2 = f.read()
             f.close()
-            res += evalPage(sub2, namespace, includePath)
+            try:
+                res += evalPage(sub2, namespace, includePath)
+            except Exception as e:
+                raise e
 
-        res += evalPage(sub3, namespace, includePath)
-        return res
+        #res += evalPage(sub3, namespace, includePath)
+        try:
+            res += evalPage(sub3, namespace, includePath)
+        except Exception as e:
+            raise e
+        return rsfix.fix(res)
     elif cmd == '!':
-        exec(sub2, globals=namespace)
+        #print(sub2[:100])
+        try:
+            exec(rsfix.fix_if(sub2), globals=namespace)
+        except Exception as e:
+            raise e
         return sub1 + evalPage(sub3, namespace, includePath)
     elif cmd == '=':
         return sub1 + str(eval(sub2, namespace)) + evalPage(sub3, namespace, includePath)
@@ -96,6 +130,5 @@ def evalRenderScript(page, namespace={}, includePath=None):
     namespace['ds'] = DataStoreInterface
     namespace['dsm'] = twc.dsmarshal
     return evalPage(page, namespace, includePath)
-    return
 
 

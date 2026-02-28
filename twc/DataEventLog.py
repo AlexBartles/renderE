@@ -3,7 +3,7 @@
 # Decompiled from: Python 3.13.7 (main, Aug 14 2025, 11:12:11) [Clang 17.0.0 (clang-1700.0.13.3)]
 # Embedded file name: DataEventLog.py
 # Compiled at: 2007-01-12 11:17:30
-import twccommon, EventLog
+import twccommon, twc.EventLog as EventLog
 
 class DataEventLog(EventLog.EventLog):
 

@@ -4,6 +4,7 @@
 # Embedded file name: bulletin.py
 # Compiled at: 2007-01-12 11:33:37
 import domestic, domestic.dataUtil, domestic.BulletinInfo, os, time, twc.dsmarshal, twc.DataStoreInterface, twccommon, twccommon.Log
+from functools import cmp_to_key
 ds = twc.DataStoreInterface
 dsm = twc.dsmarshal
 BulletinInfo = domestic.BulletinInfo
@@ -131,8 +132,8 @@ def load():
     pmDuration = durationFrames
     pmExpire = now + duration
     schedules = "[DynamicSchedule('%s')]" % (getPlaylistName(),)
-    twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.load', repr((id, pmDuration, pmExpire, schedules, params)))
-    twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.run', repr((id, 0, 0)))
+    #twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.load', repr((id, pmDuration, pmExpire, schedules, params)))
+    #twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.run', repr((id, 0, 0)))
     _firstLoad = 0
     return
 
@@ -154,8 +155,8 @@ def run(activate):
     params.immediateReplacement = 1
     params.bulletinCrawl = []
     schedules = "[DynamicSchedule('%s')]" % (getPlaylistName(),)
-    twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.load', repr((id, pmDuration, pmExpire, schedules, params)))
-    twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.load', repr((id, 0, 0)))
+    #twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.load', repr((id, pmDuration, pmExpire, schedules, params)))
+    #twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.load', repr((id, 0, 0)))
     _activate(activate)
     return
 
@@ -248,7 +249,7 @@ def _selectBulletinRotation(bulletins, windowSize):
     categories.reverse()
     bull = data[categories[0]]
     bull = _squashCrawlGroups(bull)
-    bull.sort(_compareBulletin)
+    bull.sort(key=cmp_to_key(_compareBulletin))
     return _debigulate(bull, windowSize)
     return
 
@@ -260,7 +261,7 @@ def _squashCrawlGroups(rotation):
         if key == None:
             res += blist
         else:
-            blist.sort(_compareCrawlGroupBulletin)
+            blist.sort(key=cmp_to_key(_compareCrawlGroupBulletin))
             res.append(blist[0])
 
     return res

@@ -3,8 +3,10 @@
 # Decompiled from: Python 3.13.7 (main, Aug 14 2025, 11:12:11) [Clang 17.0.0 (clang-1700.0.13.3)]
 # Embedded file name: pm.py
 # Compiled at: 2007-01-12 11:33:37
-import domestic, os, stat, sys, time, twc, twc.DataStoreInterface as ds, twc.MiscCorbaInterface, twc.dsmarshal as dsm, twc.playlist, twc.products, twc.DataEventLog as DataEventLog, twcWx.mapping, twccommon, twccommon.Log as Log, twccommon.PluginManager as PluginManager
+import domestic, os, stat, sys, time, twc, twc.DataStoreInterface as ds, twc.dsmarshal as dsm, twc.playlist, twc.products, twc.DataEventLog as DataEventLog, twcWx.mapping, twccommon, twccommon.Log as Log, twccommon.PluginManager as PluginManager
 from functools import reduce
+
+tempdir = os.path.join(os.environ["RENDEREROOT"], "temp")
 
 def init(config):
     global _config
@@ -13,7 +15,7 @@ def init(config):
     _config = twccommon.Data()
     _config.__dict__.update(config.__dict__)
     _pluginMgr = PluginManager.PluginManager(config.playlistPluginRoot)
-    _runlog = twc.EventLog.EventLog(_config.twcPersDir + '/data/volatile/eventlogs/runlog', 3600)
+    _runlog = twc.EventLog.EventLog(os.path.join(tempdir, "runlog"), 3600)
     return
 
 
@@ -22,7 +24,7 @@ def load(id, duration, expire, schedules, params, runlogEvents=None):
         if duration == 0:
             Log.error('request to load presentation %s with 0 duration ignored' % id)
             return
-        _pl._rmOldLocalModules(['%s/lib' % _ROOT])
+        #_pl._rmOldLocalModules(['%s/lib' % _ROOT])
         if runlogEvents == None:
             runlogEvents = []
         argData = twccommon.Data(id=id, duration=duration, expire=expire, schedules=schedules, params=params, expireTime=time.time() + expire / 30, runlogEvents=runlogEvents)
@@ -61,7 +63,7 @@ def run(id, startTime, startFrame, params=None):
             pparams.update(vpPres)
             (rsfname, searchPath) = _findFile(vpPres.prodType, 'Run.rs')
             vpPres.runScript = rsfname
-            vpPres.runInclPath = map((lambda e: '%s/incl' % e), searchPath)
+            vpPres.runInclPath = list(map((lambda e: '%s/incl' % e), searchPath))
             fname = _buildRenderScriptFile(rsfname, vpPres.runInclPath, params=pparams, runlogEvents=argData.runlogEvents)
             rsFiles.append(fname)
         except Exception:
@@ -96,7 +98,7 @@ class CompositeSchedule(ScheduleLoader):
         return
 
     def __str__(self):
-        return '%s(%s)' % (self.__class__.__name__, map((lambda e: str(e)), self._loaders))
+        return '%s(%s)' % (self.__class__.__name__, list(map((lambda e: str(e)), self._loaders)))
         return
 
     def details(self):
@@ -190,7 +192,7 @@ class _ProdLoader(twc.products.ProductLoader):
 
     def startProdType(self, prodType):
         libpath = ['%s/%s/lib' % (_ROOT, prodType)]
-        self._rmOldLocalModules(libpath)
+        #self._rmOldLocalModules(libpath)
         return
 
     def loadProduct(self, prodType, prodName, prodInst):
@@ -199,8 +201,8 @@ class _ProdLoader(twc.products.ProductLoader):
         pparams = getAttribs('%s_%s' % (prodType, prodName), params)
         params = twccommon.mergeStructs([params, pparams])
         (prodFile, searchPath) = _findFile(prodType, '%s.prod' % prodName)
-        libPath = map((lambda e: '%s/lib' % e), searchPath)
-        inclPath = map((lambda e: '%s/incl' % e), searchPath)
+        libPath = list(map((lambda e: '%s/lib' % e), searchPath))
+        inclPath = list(map((lambda e: '%s/incl' % e), searchPath))
         params.prodFile = prodFile
         params.searchPath = searchPath
         params.inclPath = inclPath
@@ -211,8 +213,15 @@ class _ProdLoader(twc.products.ProductLoader):
         params.product = '%s_%s' % (prodType, prodName)
         tmp = sys.path[:]
         try:
-            sys.path = libPath + sys.path
-            return self.loadProductFile(prodFile, params)
+            print(libPath, sys.path)
+            sys.path = list(libPath) + sys.path
+            try:
+                return self.loadProductFile(prodFile, params)
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                print("ERROR OCCURRED IN PROD", prodFile)
+                raise e
         finally:
             sys.path = tmp
         return
@@ -261,15 +270,29 @@ def getAttribs(product, params=None):
     return fullParams
     return
 
-
+import nethandler
 def _findFile(prodType, fname):
     paths = ['%s/%s' % (_ROOT, prodType), _ROOT]
+    paths2 = ['%s/%s' % (_NETROOT, prodType), _NETROOT]
+    paths3 = ['%s/%s' % (_NETROOT, prodType), _NETROOT]
     pathsSearched = paths
     while len(paths) > 0:
         fullname = paths[0] + '/%s' % fname
         if os.path.exists(fullname):
             return (fullname, paths)
         paths = paths[1:]
+    while len(paths2) > 0:
+        fullname = paths2[0] + '/%s' % fname
+        nt = nethandler.requestNetAssetExt(fullname, check=True)
+        if nt:
+            return (nt, paths2)
+        paths2 = paths2[1:]
+    while len(paths3) > 0:
+        fullname = paths3[0] + '/%s' % fname
+        nt = nethandler.requestNetAssetExt(fullname)
+        if nt:
+            return (nt, paths3)
+        paths3 = paths3[1:]
 
     raise Exception("couldn't locate file %s in %s" % (fname, pathsSearched))
     return
@@ -339,7 +362,7 @@ def _buildViewportPresentation(argData, prodType, playlist):
     vpPres.layerProps = dsm.configGet('viewport.%s' % prodType)
     vpPres.layerProps.name = '%s_%s' % (prodType, argData.id)
     vpPres.layerProps.expire = argData.expire
-    vpPres.prodSchedule = map((lambda e: (e.getName(), e.getDuration())), playlist)
+    vpPres.prodSchedule = list(map((lambda e: (e.getName(), e.getDuration())), playlist))
     startTime = 0
     startFrameOffset = 0
     for prod in playlist:
@@ -352,11 +375,11 @@ def _buildViewportPresentation(argData, prodType, playlist):
     params = argData.params.clone()
     params.preroll = _config.preroll
     params.layerProps = vpPres.layerProps
-    params.prodSchedule = map((lambda e: (e.fname, e.prod.getDuration())), vpPres.prodPresentations)
+    params.prodSchedule = list(map((lambda e: (e.fname, e.prod.getDuration())), vpPres.prodPresentations))
     runlogEvents = []
     (rsfname, searchPath) = _findFile(vpPres.prodType, 'Load.rs')
     vpPres.loadScript = rsfname
-    vpPres.loadInclPath = map((lambda e: '%s/incl' % e), searchPath)
+    vpPres.loadInclPath = list(map((lambda e: '%s/incl' % e), searchPath))
     vpPres.fname = _buildRenderScriptFile(rsfname, vpPres.loadInclPath, vpPres.layerProps.name, params=params, runlogEvents=runlogEvents)
     argData.runlogEvents.extend(runlogEvents)
     return vpPres
@@ -375,7 +398,7 @@ def _buildProductPresentation(argData, vpPres, prod):
 
 
 def _buildPresFile(prodType, prod, inclpaths, **ns):
-    (fname, f) = domestic.tmpFile(_config.tempDir, prod.getName(), 'rsc')
+    (fname, f) = domestic.tmpFile(tempdir, prod.getName(), 'rsc')
     prod.updateParams(fname=fname)
     rs = prod.genRenderScript(prodType, inclpaths, **ns)
     f.write(rs)
@@ -388,10 +411,10 @@ def _buildRenderScriptFile(rsfname, inclPath, dst=None, **kw):
     rs = _readFile(rsfname)
     rsc = twc.psp.evalRenderScript(rs, kw, inclPath)
     if dst != None:
-        fname = '%s/%s.rsc' % (_config.tempDir, dst)
+        fname = '%s/%s.rsc' % (tempdir, dst)
         f = open(fname, 'w')
     else:
-        (fname, f) = domestic.tmpFile(_config.tempDir, '', 'rsc')
+        (fname, f) = domestic.tmpFile(tempdir, '', 'rsc')
     f.write(rsc)
     f.close()
     return fname
@@ -400,7 +423,7 @@ def _buildRenderScriptFile(rsfname, inclPath, dst=None, **kw):
 
 def _runRenderScriptFiles(rsFileList):
     hdr = 'from twc.embedded.renderd import RenderControl\n'
-    (loaderFile, f) = domestic.tmpFile(_config.tempDir, '', 'ldr')
+    (loaderFile, f) = domestic.tmpFile(tempdir, '', 'ldr')
     f.write(hdr)
     for rs in rsFileList:
         f.write('RenderControl.loadPresentation("')
@@ -412,9 +435,10 @@ def _runRenderScriptFiles(rsFileList):
     _runRenderScriptFile(loaderFile)
     return
 
-
+import rendereglobals as rg
 def _runRenderScriptFile(rsfname):
-    twc.MiscCorbaInterface.runRenderScript(rsfname)
+    #twc.MiscCorbaInterface.runRenderScript(rsfname)
+    rg.runrsfunction(rsfname)
     return
 
 
@@ -472,7 +496,9 @@ def _cull():
 
 
 _ROOT = os.path.join(os.environ["RENDEREDOMESTIC"], "products", "pm")
-_LOG_ROOT = '/twc/data/volatile/testlogs'
+_NETROOT = '/usr/twc/domestic/products/pm'
+_LOG_ROOT = os.path.join(os.environ["RENDEREROOT"], "temp", "logs")
+os.makedirs(_LOG_ROOT, exist_ok=True)
 _pl = _ProdLoader()
 _pluginMgr = None
 _presentations = {}

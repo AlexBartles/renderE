@@ -1,6 +1,0 @@
- 
-<%@'_init.rs'%>
-
-# THIS RUN.RS IS HERE SO THAT WE DON'T CALL THE PARENT RUN.RS
-
-# NOOP

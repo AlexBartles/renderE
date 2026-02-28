@@ -10,7 +10,15 @@ RenderE is intended as a replacement for a VM emulating the IntelliStar 1, a sys
 2. Install Python dependencies
 3. Load your IntellliStar 1 configuration file (using loadSCMTconfig.py) (Not required right now)
 4. If you have i1 files downloaded, set environment variables. Currently, however, all assets can be downloaded at runtime from our servers.
-5. Run main.py to show the test page
+5. If you have IntelliStar 1 files that include a datastore, load them with loadi1datastore.py
+6. Load your configuration with loadSCMTconfig.py. I don't know why, but currently a ton of configs don't work.
+7. Run main.py
+
+### Commands
+
+- Run `load.py local flavor`, replacing flavor with the i1 flavor, to load a presentation. Currently only D and E are supported
+- Run `run.py` to run the loaded presentation
+- Run `toggleNationalLDL.py` with the next argument as either 1 or 0 to enable or disable the national LDL respectively.
 
 ## Environment Variables
 
@@ -22,5 +30,6 @@ RenderE uses the following environment variables for replacements to various pat
 - RENDEREDOMESTIC: The domestic data folder. On the i1, this is located at /usr/twc/domestic
 - TWCCLIDIR: Used by the the original i1, located at /usr/twc. There is no equivalent for renderE.
 - TWCPERSDIR: Used by the original i1. renderE's version is in the `domesticpy` folder.
+- TWCDIR: Used by the original i1, although it's the same as TWCCLIDIR for some reason.
 
 I suggest making a shell script to set your environment variables.

@@ -63,19 +63,18 @@ class Page(ObjectWrapper):
             return res
 
     def addOnStartCommand(self, cmd):
-        res = _renderd.Page_addOnBeginCommand(self, cmd)
         self._onStartCommands.append(cmd)
-        return res
+        return
 
     def addOnFrameCommand(self, cmd, activeFrame, forceAtEnd=0):
-        res = _renderd.Page_addOnFrameCommand(self, activeFrame, cmd, forceAtEnd)
+        #res = _renderd.Page_addOnFrameCommand(self, activeFrame, cmd, forceAtEnd)
         self._onFrameCommands.append([cmd, activeFrame, forceAtEnd])
-        return res
+        return 
 
     def addOnEndCommand(self, cmd):
-        res = _renderd.Page_addOnEndCommand(self, cmd)
+        #res = _renderd.Page_addOnEndCommand(self, cmd)
         self._onEndCommands.append(cmd)
-        return res
+        return 
 
     def elements(self):
         return self._elements
@@ -105,7 +104,7 @@ class Font(ObjectWrapper):
         return 0
 
     def leading(self):
-        return _renderd.Font_getLeading(self)
+        return self.font.get_linesize()
 
     def stringSize(self, str):
         bn = self.font.size(str)
@@ -145,14 +144,14 @@ class TTOutlineFont(Font):
 class Renderable(ObjectWrapper):
 
     def setAnimationState(self, animate):
-        return _renderd.Renderable_setAnimationState(self, animate)
+        return #_renderd.Renderable_setAnimationState(self, animate)
 
     def animationState(self):
-        return _renderd.Renderable_getAnimationState(self)
+        return #_renderd.Renderable_getAnimationState(self)
 
     def setVisibility(self, visible):
         self.visible = visible
-        return _renderd.Renderable_setVisibility(self, visible)
+        return
 
     def visibility(self):
         return self.visible
@@ -161,6 +160,7 @@ class Renderable(ObjectWrapper):
 class PageCommand(Renderable):
 
     def __init__(self, activeFrame=0):
+        self.timer = -1
         self._activeFrame = activeFrame
 
     def activeFrame(self):
@@ -171,77 +171,79 @@ class CreateNamedLayer(PageCommand):
 
     def __init__(self, activeFrame, lname, depth, repeat=0, autoDestroy=1):
         PageCommand.__init__(self, activeFrame)
-        _renderd.createCreateNamedLayer(self, lname, depth, repeat, autoDestroy)
+        self.lname = lname
+        self.depth = depth
+        self.repeat = repeat
+        self.autoDestroy = autoDestroy
 
 
 class DestroyNamedLayer(PageCommand):
 
     def __init__(self, activeFrame, lname):
         PageCommand.__init__(self, activeFrame)
-        _renderd.createDestroyNamedLayer(self, lname)
+        self.lname = lname
 
 
 class SetLayer(PageCommand):
 
     def __init__(self, activeFrame, lname, layer):
         PageCommand.__init__(self, activeFrame)
-        _renderd.createSetLayer(self, lname, layer)
+        self.lname = lname
+        self.layer = layer
 
 
 class AppendLayer(PageCommand):
 
     def __init__(self, activeFrame, lname, layer):
         PageCommand.__init__(self, activeFrame)
-        _renderd.createAppendLayer(self, lname, layer)
+        self.lname = lname
+        self.layer = layer
 
 
 class RemoveLayer(PageCommand):
 
     def __init__(self, activeFrame, lname):
         PageCommand.__init__(self, activeFrame)
-        _renderd.createRemoveLayer(self, lname)
+        self.lname = lname
 
 
 class ActivateLayer(PageCommand):
 
     def __init__(self, activeFrame, lname):
         PageCommand.__init__(self, activeFrame)
-        _renderd.createActivateLayer(self, lname)
+        self.lname = lname
 
 
 class DeactivateLayer(PageCommand):
 
     def __init__(self, activeFrame, lname):
         PageCommand.__init__(self, activeFrame)
-        _renderd.createDeactivateLayer(self, lname)
+        self.lname = lname
 
 
 class SelectInputSource(PageCommand):
 
     def __init__(self, activeFrame, src):
         PageCommand.__init__(self, activeFrame)
-        _renderd.createSelectInputSource(self, src, activeFrame)
 
 
 class LoadPresentation(PageCommand):
 
     def __init__(self, activeFrame, fileName):
         PageCommand.__init__(self, activeFrame)
-        _renderd.createLoadPresentation(self, fileName)
+        self.fileName = fileName
 
 
 class ActivateGpiPin(PageCommand):
 
     def __init__(self, activeFrame, pin):
         PageCommand.__init__(self, activeFrame)
-        _renderd.createActivateGpiPin(self, pin)
 
 
 class DeactivateGpiPin(PageCommand):
 
     def __init__(self, activeFrame, pin):
         PageCommand.__init__(self, activeFrame)
-        _renderd.createDeactivateGpiPin(self, pin)
 
 
 class RenderCommand(ObjectWrapper):
@@ -251,19 +253,30 @@ class RenderCommand(ObjectWrapper):
 class CreateNamedLayerCmd(RenderCommand):
 
     def __init__(self, lname, depth, repeat=0, autoDestroy=1):
-        _renderd.createCreateNamedLayer(self, lname, depth, repeat, autoDestroy)
+        self.lname = lname
+        self.depth = depth
+        self.repeat = repeat
+        self.autoDestroy = autoDestroy
 
 
 class DestroyNamedLayerCmd(RenderCommand):
 
     def __init__(self, lname):
-        _renderd.createDestroyNamedLayer(self, lname)
+        self.lname = lname
 
 
 class SetNamedLayerViewPortCmd(RenderCommand):
 
     def __init__(self, lname, x, y, w, h, sx=1, sy=1, tx=0, ty=0):
-        _renderd.createSetNamedLayerViewPort(self, lname, x, y, w, h, sx, sy, tx, ty)
+        self.lname = lname
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+        self.sx = sx
+        self.sy = sy
+        self.tx = tx
+        self.ty = ty
 
 
 class SetLayerCmd(RenderCommand):
@@ -283,19 +296,19 @@ class AppendLayerCmd(RenderCommand):
 class RemoveLayerCmd(RenderCommand):
 
     def __init__(self, lname):
-        _renderd.createRemoveLayer(self, lname)
+        self.lname = lname
 
 
 class ActivateLayerCmd(RenderCommand):
 
     def __init__(self, lname):
-        _renderd.createActivateLayer(self, lname)
+        self.lname = lname
 
 
 class DeactivateLayerCmd(RenderCommand):
 
     def __init__(self, lname):
-        _renderd.createDeactivateLayer(self, lname)
+        self.lname = lname
         
 
 
@@ -309,7 +322,7 @@ class SelectInputSourceCmd(RenderCommand):
 class LoadPresentationCmd(RenderCommand):
 
     def __init__(self, fileName):
-        _renderd.createLoadPresentation(self, fileName)
+        self.fileName = fileName
         
 
 
@@ -330,14 +343,19 @@ class DeactivateGpiPinCmd(RenderCommand):
 class ModifyNamedLayerCmd(RenderCommand):
 
     def __init__(self, name, newName, depth, repeat, autoDestroy):
-        _renderd.createModifyNamedLayer(self, name, newName, depth, repeat, autoDestroy)
+        self.name = name
+        self.newName = newName
+        self.depth = depth
+        self.repeat = repeat
+        self.autoDestroy = autoDestroy
         
 
 
 class ReplaceLayerCmd(RenderCommand):
 
     def __init__(self, name, layer):
-        _renderd.createReplaceLayer(self, name, layer)
+        self.name = name
+        self.layer = layer
         
 
 
@@ -422,7 +440,18 @@ class Clock(GraphicRenderable):
         timzoneDisplay is the string value that will replace '<z>' within the format string.
         """
         GraphicRenderable.__init__(self)
-        _renderd.createClock(self, font, format, lcase_ampm, justification, timezone, timezoneDisplay)
+        self.font = font
+        self.format = format
+        self.lcase_ampm = lcase_ampm
+        self.justification = justification
+        self.timezone = timezone
+        self.timezoneDisplay = timezoneDisplay
+        self.s = ''
+        self.lasts = ''
+        self.cachedtex = None
+        self.cachedimg = None
+        self.fnt = font
+        #_renderd.createClock(self, font, format, lcase_ampm, justification, timezone, timezoneDisplay)
         
 
 
@@ -430,7 +459,6 @@ class TimeCode(GraphicRenderable):
 
     def __init__(self, font):
         GraphicRenderable.__init__(self)
-        _renderd.createTimeCode(self, font)
         
 
 from io import BytesIO
@@ -449,6 +477,7 @@ class Text(GraphicRenderable):
         self.descent = self.fnt.font.get_descent()
         #sz = self.fnt.font.size(self.s)
         #text = rg.pg.Surface((sz[0], sz[1]))
+        
         
         self.textbase : rg.pg.Surface = self.fnt.font.render(self.s, True, (255, 255, 255))
         self.textbase = rg.pg.transform.smoothscale_by(self.textbase, (1, 0.91))
@@ -473,7 +502,7 @@ class Marquee(Text):
 
     def __init__(self, font, str, step=2, repeat=1):
         GraphicRenderable.__init__(self)
-        _renderd.createMarquee(self, font, str, step, repeat)
+        #_renderd.createMarquee(self, font, str, step, repeat)
         self.fnt = font
         self.s = str
         return
@@ -498,11 +527,12 @@ class QTMovie(GraphicRenderable):
         return _renderd.QTMovie_setLooping(self, looping)
         return
 
-
 class Icon(GraphicRenderable):
 
     def __init__(self, name, evict=0):
         GraphicRenderable.__init__(self)
+        self.name = name
+        self.evict = evict
         _renderd.createIcon(self, name, evict)
         return
 
@@ -531,11 +561,12 @@ class CompositedImage(Image):
 
     def __init__(self):
         Image.__init__(self)
-        _renderd.createCompositedImage(self)
+        #_renderd.createImage(self, os.path.join(os.environ["RENDEREROOT"], "compositedimage"), 0, 0, 0, 1, 1)
+        #_renderd.createCompositedImage(self)
         return
 
     def addItem(self, gr):
-        _renderd.CompositedImage_addItem(self, gr)
+        #_renderd.CompositedImage_addItem(self, gr)
         return
 
 
@@ -576,15 +607,17 @@ class ScrollingCompositeRenderable(CompositeRenderable):
 
     def __init__(self, step=2, spacing=2, repeat=1):
         GraphicRenderable.__init__(self)
-        _renderd.createScrollingCompositeRenderable(self, step, spacing, repeat)
+        self.step = step
+        self.spacing = spacing
+        self.repeat = repeat
         return
 
     def setSpeed(self, step):
-        _renderd.ScrollingCompositeRenderable_setSpeed(self, step)
+        self.step = step
         return
 
     def setSpacing(self, spacing):
-        _renderd.ScrollingCompositeRenderable_setSpacing(self, spacing)
+        self.spacing = spacing
         return
 
     def setBoundingBoxSize(self, w, h):
@@ -925,7 +958,7 @@ class AudioClip(AudioRenderable):
         return
 
     def duration(self):
-        return self.file.get_length()
+        return self.file.get_length()*30
         return
 
     def size(self):
@@ -936,7 +969,15 @@ class AudioClip(AudioRenderable):
 class NullAudioClip(AudioRenderable):
 
     def __init__(self, duration_limit=0):
-        _renderd.createAudioClip(self, "", 1, duration_limit, 1)
+        self.duration_limit = duration_limit
+        self.evict = 1
+        self.loop_limit = 1
+        self.level = 1
+        self.mix = 1
+        self.chan = None
+        self.name = ""
+        self.effects = []
+        #_renderd.createAudioClip(self, "", 1, duration_limit, 1)
         return
 
     def duration(self):
@@ -950,16 +991,16 @@ class NullAudioClip(AudioRenderable):
 class MP3_AudioClip(AudioRenderable):
 
     def __init__(self, name, evict=0, duration_limit=0, loop_limit=1):
-        _renderd.createAudioMP3Clip(self, name, evict, duration_limit, loop_limit)
+        _renderd.createAudioClip(self, name, evict, duration_limit, loop_limit)
+        self.effects = []
         return
 
     def setLoopLimit(self, limit):
-        _renderd.AudioMP3Clip_setLoopLimit(self, limit)
+        self.loop_limit = limit
         return
 
     def duration(self):
-        return _renderd.AudioMP3Clip_getDuration(self)
-        return
+        return self.file.get_length()*30
 
 
 class AudioEffect(Effect):
@@ -1005,6 +1046,7 @@ class AudioSequencer(AudioRenderable):
         self.playingidx = 0
         self.repeat = repeat
         self.audio = []
+        self.effects = []
         return
 
     def addItem(self, child):
@@ -1034,6 +1076,7 @@ class AudioFader(AudioEffect):
 class AudioEffectSequencer(Renderable):
 
     def __init__(self, target, repeat=0):
+        self.total = 0
         self.effects = []
         self.activeeffects = []
         self.timer = -1 #first frame is time 0 but 1 gets added first

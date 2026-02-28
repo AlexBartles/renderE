@@ -1,23 +1,39 @@
 import rendereglobals as rg
+import playmaninit
 import math
 from PIL import Image
 from io import BytesIO
 from twc.embedded.renderd.RenderScript import *
 import twc.embedded.renderd.RenderControl as RenderControl
 import twc.embedded.renderd.renderUtil as renderUtil
-import twc.psp
 import domestic.renderTools as renderTools
 import twc
-import twc.products
-import twccommon.Log
+import twccommon.embedded
 import socket
 import os
 import threading as th
 import time
 import random
-rl = rg.rl
+import loadtools
+import domesticpy.plugin.playman.playCmd.local as pmlc
+import domesticpy.plugin.playman.playCmd.pm as pm
+import domesticpy.plugin.playman.playCmd.ldl as pmldl
+import domestic.wxdata
+import json
+import string
+import traceback as tb
+from datetime import datetime
 
+string.__dict__["letters"] = string.ascii_letters
+string.__dict__["find"] = (lambda s, f : s.find(f))
+string.__dict__["upper"] = (lambda s : str(s).upper())
+string.__dict__["lower"] = (lambda s : str(s).lower())
+
+fov = 25
 screensize = (720, 480)
+zzz = 1
+rl = rg.rl
+rl.set_config_flags(rl.ConfigFlags.FLAG_WINDOW_UNDECORATED)
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 sock.bind(("localhost", 7245))
@@ -30,11 +46,11 @@ def loadtif(filename):
     im2 = rl.load_image_from_memory('.png', arr, len(arr))
     return (rl.load_texture_from_image(im2), im2.width, im2.height)
 
-e = os.popen("fortune disclaimer")
-rl.init_window(screensize[0], screensize[1], f"RenderE - {e.read()}")
-e.close()
+names = ["RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "ReReRenderD", "RemixD"]
 
-fov = 25
+e = os.popen("fortune disclaimer")
+rl.init_window(screensize[0], screensize[1], f"{random.choice(names)} - {e.read()}")
+e.close()
 
 camera = rl.Camera3D(
     rl.Vector3(0, 0, 0),
@@ -57,6 +73,7 @@ def frustum_size_at_z(z, fov_y_deg, aspect_ratio):
 zzz = rg.zzz
 
 xxx, yyy = frustum_size_at_z(zzz, fov, screensize[0]/screensize[1])
+print(xxx, yyy)
 # xxx = 2.6
 # yyy = 1.72
 
@@ -68,6 +85,38 @@ rl.rl_disable_backface_culling()
 
 ee = 0
 
+def jsontodata(jsond):
+    dt = twccommon.Data()
+    dt.__dict__ = json.loads(jsond)
+    return dt
+
+def apply(func, args, kwargs=None):
+    return func(*args) if kwargs is None else func(*args, **kwargs)
+def runrs(filename):
+    crs = loadtools.compilers(filename)
+    print(type(crs))
+    ns = {"apply": apply}
+    exec(crs, ns, ns)
+
+def unprint(stuff):
+    lines = stuff.split("\n")
+    finallines = []
+    for l in lines:
+        if l.strip().startswith("print"):
+            continue
+        finallines.append(l)
+    return "\n".join(finallines)
+
+def runrsc(filename):
+    dat = "global layerProps\n"
+    with open(filename, "r") as f:
+        dat += f.read()
+    ns = {"apply": apply}
+    exec(compile(unprint(dat), filename, "exec"), ns, ns)
+
+rg.runrsfunction = runrs
+rg.runrscfunction = runrsc
+
 def sockethandle():
     sock.listen()
     while True:
@@ -78,19 +127,47 @@ def sockethandle():
                 # if data is not received break
                 break
             args = data.split(" ")
-            if args[0] == "loadrs":
-                print("loadrs", args)
+            if args[0] == "runrs":
+                runrs(args[1])
+            elif args[0] == "runrsc":
+                try:
+                    runrsc(args[1])
+                except:
+                    tb.print_exc()
+            elif args[0] == "jsonload":
+                prodType = args[1]
+                dat = jsontodata(" ".join(args[2:]))
+                try:
+                    domestic.wxdata.loadData(prodType, dat)
+                except:
+                    tb.print_exc()
+            elif args[0] == "jsonrun":
+                prodType = args[1]
+                dat = jsontodata(" ".join(args[2:]))
+                try:
+                    domestic.wxdata.runData(prodType, dat)
+                except:
+                    tb.print_exc()
+            elif args[0] == "togglenat":
+                print("togglenat")
+                dat = json.loads(" ".join(args[1:]))
+                try:
+                    domestic.wxdata.toggleNationalLDL(*dat)
+                except:
+                    tb.print_exc()
+            elif args[0] == "activatel":
+                RenderControl.activateLayer(args[1], 0)
+            elif args[0] == "deactivatel":
+                RenderControl.deactivateLayer(args[1], 0)
+            elif args[0] == "createtest":
+                RenderControl.destroyNamedLayer("Foreground", 0)
+                producttest()
         conn.close()
 
 tth = th.Thread(target=sockethandle, daemon=True)
 tth.start()
 
-layers = rg.layers
-
-prodloader = twc.products.ProductLoader()
-def runrsc(path):
-    with open(path, "r") as f:
-        exec(f.read())
+prodloader = pm._ProdLoader()
 
 def fsplash():
     l = Layer()
@@ -164,10 +241,23 @@ def fsplash():
     # p.addItem(gr)
 
     #name, layer, time, frameOffset, depth, repeat, x, y, w, h, sx, sy, tx, ty, activated
-    layers.append(["Foreground", l, 0, 0, 10, 0, 0, 0, 720, 480, 1, 1, 0, 0, False])
+    rg.layers.append(["Foreground", l, 0, 0, 10, 0, 0, 0, 720, 480, 1, 1, 0, 0, False])
+
+def ebucolorbars():
+    RenderControl.createNamedLayer("Video", 25, 0, 0, 0, 0)
+    l = Layer()
+    p = Page()
+    l.addPage(p)
+    im = JPEG_Image(os.path.join(os.environ["RENDEREROOT"], "ebu"))
+    im.setSize(720, 480)
+    im.setPosition(0, 0)
+    p.addItem(im)
+    RenderControl.appendLayer("Video", l)
+    RenderControl.activateLayer("Video")
+
+#ebucolorbars()
 
 def producttest():
-    global layers
     l = Layer()
     p = Page()
     l.addPage(p)
@@ -299,7 +389,7 @@ def producttest():
     es.addEffect(Slider(None, -72, 0), 10)
     p.addItem(es)
 
-    renderTools.dataNotAvailable(page=p, displayDuration=pduration, text="renderE could be better with your help!")
+    renderTools.dataNotAvailable(page=p, displayDuration=pduration, text="renderE could be better with your help!", noDataBar=True)
     
     ac = []
     
@@ -317,10 +407,14 @@ def producttest():
         ac[i].setVolLevel(1.0)
         aseq.addItem(ac[i])
     p.addItem(aseq)
-    
-    layers.append(["Foreground", l, 0, 0, 10, 0, 0, 0, 720, 480, 1, 1, 0, 0, True])
+
+    RenderControl.createNamedLayer("Foreground", 10)
+    RenderControl.setLayer("Foreground", l, 0, 0)
 
 producttest()
+#RenderControl.queueCommand(ActivateLayerCmd("Foreground"), time.time()+10)
+
+#producttest()
 whiteimg = rl.gen_image_color(1, 1, rl.WHITE)
 white = rl.load_texture_from_image(whiteimg)
 once = True
@@ -354,24 +448,14 @@ def updateseq(seq : EffectSequencer):
             for ef in seq.effects:
                 ef[0].frozen = True
 
-def draw_quad(quad : TIFF_Image, tex=white, debug=False):
-    effects = quad.effects
-    plane.materials[0].maps.texture = tex
+activedrawlayer = None
+
+drawlevel = 0
+
+def calceffects(quad):
     qqx, qqy = quad.position
-    if isinstance(quad, Text):
-        test = "qypgj"
-        descending = False
-        for c in test:
-            if c in quad.s:
-                descending = True
-        if descending or True:
-            qqy += quad.descent
-        if quad.fnt.shadow:
-            qqx += quad.fnt.sx
-            #qqy -= quad.fnt.sy
+    effects = quad.effects
     qx, qy = qqx*1, qqy*1
-    xxw = (-qx-quad._size[0]/2)/720*(xxx*2)
-    yyw = (-qy-quad._size[1]/2)/480*(yyy*2)
     xw = quad._size[0]/720*(xxx*2)
     yw = quad._size[1]/480*(yyy*2)
     
@@ -379,7 +463,7 @@ def draw_quad(quad : TIFF_Image, tex=white, debug=False):
     mat = rl.matrix_multiply(mat, rl.matrix_scale(xw, yw, 1))
     fader = 1
     def applyeffect(effect : GraphicEffect):
-        nonlocal mat, xxw, yyw, fader
+        nonlocal mat, xxw, yyw, fader, qx, qy
         if type(effect) == Rotate:
             if effect.xr:
                 mat = rl.matrix_multiply(mat, rl.matrix_rotate_x(math.radians(effect.angle*effect.frame)))
@@ -388,23 +472,26 @@ def draw_quad(quad : TIFF_Image, tex=white, debug=False):
             if effect.zr:
                 mat = rl.matrix_multiply(mat, rl.matrix_rotate_z(math.radians(effect.angle*effect.frame)))
         elif type(effect) == Slider:
-            xxw -= (effect.dx*effect.frame/720*(xxx*2))
-            yyw -= (effect.dy*effect.frame/480*(yyy*2))
+            #xxw -= (effect.dx*effect.frame/720*(xxx*2))
+            #yyw -= (effect.dy*effect.frame/480*(yyy*2))
+            qx += effect.dx*effect.frame
+            qy += effect.dy*effect.frame
         elif type(effect) == Fader:
             dist = (effect.frame/effect.frames)
             dist = min(dist, 1)
             fader = effect.startAlpha*(1-dist) + effect.endAlpha*dist
         elif type(effect) == SetPosition:
-            quad.position = (effect.x, effect.y)
+            #xxw -= (effect.x)/720*(xxx*2)
+            #yyw -= (effect.y)/480*(yyy*2)
+            qx += effect.x
+            qy += effect.y
         elif type(effect) == SetSize:
             quad.size = (effect.w, effect.h)
         elif type(effect) == SetText:
             if isinstance(quad, Text):
                 quad.s = effect.s
         elif type(effect) == SetVisibility:
-            if not effect.fired:
-                quad.visible = effect.visible
-                effect.fired = True
+            fader = effect.visible
         if hasattr(effect, "frame"):
             if not effect.frozen:
                 effect.frame += 1
@@ -417,7 +504,123 @@ def draw_quad(quad : TIFF_Image, tex=white, debug=False):
             else:
                 applyeffect(effect)
     loopover(effects)
+    xxw = (-qx-quad._size[0]/2)/720*(xxx*2)
+    yyw = (-qy-quad._size[1]/2)/480*(yyy*2)
     mat = rl.matrix_multiply(mat, rl.matrix_translate(-xxx, -yyy, 0))
+    if drawlevel == 0:
+        xxw -= (activedrawlayer[6]/720*(xxx*2))
+        yyw -= (activedrawlayer[7]/480*(yyy*2))
+    return xxw, yyw, mat, fader
+
+def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False):
+    effects = quad.effects
+    #rl.set_texture_filter(tex, rl.TextureFilter.TEXTURE_FILTER_POINT)
+    plane.materials[0].maps.texture = tex
+    qqx, qqy = quad.position
+    if isinstance(quad, Text):
+        test = "qypgj"
+        descending = False
+        for c in test:
+            if c in quad.s:
+                descending = True
+        if descending or True:
+            qqy += quad.descent
+        if quad.fnt.shadow:
+            pass
+            #qqx -= quad.fnt.sx
+            #qqy += quad.fnt.sy
+    qx, qy = qqx*1, qqy*1
+    xw = quad._size[0]/720*(xxx*2)
+    yw = quad._size[1]/480*(yyy*2)
+    
+    mat = rl.matrix_rotate_xyz((math.radians(90), 0, math.radians(0)))
+    mat = rl.matrix_multiply(mat, rl.matrix_scale(xw, yw, 1))
+    fader = 1
+    def applyeffect(effect : GraphicEffect):
+        nonlocal mat, xxw, yyw, fader, qx, qy
+        if type(effect) == Rotate:
+            if effect.xr:
+                mat = rl.matrix_multiply(mat, rl.matrix_rotate_x(math.radians(effect.angle*effect.frame)))
+            if effect.yr:
+                mat = rl.matrix_multiply(mat, rl.matrix_rotate_y(math.radians(effect.angle*effect.frame)))
+            if effect.zr:
+                mat = rl.matrix_multiply(mat, rl.matrix_rotate_z(math.radians(effect.angle*effect.frame)))
+        elif type(effect) == Slider:
+            if not se:
+                # xxw -= (effect.dx*effect.frame/720*(xxx*2))
+                # yyw -= (effect.dy*effect.frame/480*(yyy*2))
+                qx += effect.dx*effect.frame
+                qy += effect.dy*effect.frame
+        elif type(effect) == Fader:
+            dist = (effect.frame/effect.frames)
+            if dist >= 1:
+                fader = effect.endAlpha
+            else:
+                dist = min(dist, 1)
+                fader = effect.startAlpha*(1-dist) + effect.endAlpha*dist
+        elif type(effect) == SetPosition:
+            if not se:
+                #xxw = (-quad._size[0]/2-effect.x)/720*(xxx*2)
+                # xxw -= (effect.x)/720*(xxx*2)
+                # yyw -= (effect.y)/480*(yyy*2)
+                qx += effect.x
+                qy += effect.y
+        elif type(effect) == SetSize:
+            if not se:
+                quad.size = (effect.w, effect.h)
+        elif type(effect) == SetText:
+            if not se:
+                if isinstance(quad, Text):
+                    quad.s = effect.s
+        elif type(effect) == SetVisibility:
+            fader = effect.visible
+        if hasattr(effect, "frame"):
+            if not effect.frozen and not se:
+                effect.frame += 1
+        
+    def loopover(eflist):
+        for effect in eflist:
+            if type(effect) == EffectSequencer:
+                if not se:
+                    updateseq(effect)
+                loopover(effect.activeeffects)
+            else:
+                applyeffect(effect)
+    loopover(effects)
+    xxw = (-qx-quad._size[0]/2)/720*(xxx*2)
+    yyw = (-qy-quad._size[1]/2)/480*(yyy*2)
+    mat = rl.matrix_multiply(mat, rl.matrix_translate(-xxx, -yyy, 0))
+    if drawlevel == 0:
+        xxw -= (activedrawlayer[6]/720*(xxx*2))
+        yyw -= (activedrawlayer[7]/480*(yyy*2))
+    plane.transform = mat
+    col = rl.Color(round(quad._color[0]*255), round(quad._color[1]*255), round(quad._color[2]*255), round(quad._color[3]*fader*255))
+    if isinstance(quad, Text):
+        col = rl.Color(255, 255, 255, int(255*fader))
+    if quad.visible:
+        rl.draw_model_ex(plane, rl.Vector3(-xxw, -yyw, -zzz), rl.Vector3(0, 0, 0), 0, rl.Vector3(1, 1, 1), col)
+
+def draw_quad_nocal(quad : TIFF_Image, tex=white, transform=None, fader=1):
+    #rl.set_texture_filter(tex, rl.TextureFilter.TEXTURE_FILTER_POINT)
+    plane.materials[0].maps.texture = tex
+    qqx, qqy = quad.position
+    if isinstance(quad, Text):
+        test = "qypgj"
+        descending = False
+        for c in test:
+            if c in quad.s:
+                descending = True
+        if descending or True:
+            qqy += quad.descent
+        if quad.fnt.shadow:
+            pass
+            #qqx -= quad.fnt.sx
+            #qqy += quad.fnt.sy
+    qx, qy = qqx*1, qqy*1
+    xxw = (-qx-quad._size[0]/2)/720
+    yyw = (-qy-quad._size[1]/2)/480
+    
+    mat = transform
     plane.transform = mat
     col = rl.Color(round(quad._color[0]*255), round(quad._color[1]*255), round(quad._color[2]*255), round(quad._color[3]*fader*255))
     if isinstance(quad, Text):
@@ -436,12 +639,11 @@ class DummyQuad():
         return self._size
 
 def draw_poly(quad : TIFF_Image, tex=white):
+    global drawlevel
     effects = quad.effects
     plane.materials[0].maps.texture = tex
     qqx, qqy = quad.position
     qx, qy = qqx*1, qqy*1
-    xxw = (-qx)/720*(xxx*2)
-    yyw = (-qy)/480*(yyy*2)
     xw = (xxx*2)/720
     yw = (yyy*2)/480
     
@@ -457,8 +659,10 @@ def draw_poly(quad : TIFF_Image, tex=white):
             if effect.zr:
                 mat = rl.matrix_multiply(mat, rl.matrix_rotate_z(math.radians(effect.angle*effect.frame)))
         elif type(effect) == Slider:
-            xxw -= (effect.dx*effect.frame/720*(xxx*2))
-            yyw -= (effect.dy*effect.frame/480*(yyy*2))
+            #xxw -= (effect.dx*effect.frame/720*(xxx*2))
+            #yyw -= (effect.dy*effect.frame/480*(yyy*2))
+            qx += effect.dx*effect.frame
+            qy += effect.dy*effect.frame
         elif type(effect) == Fader:
             dist = (effect.frame/effect.frames)
             dist = min(dist, 1)
@@ -466,7 +670,7 @@ def draw_poly(quad : TIFF_Image, tex=white):
         if hasattr(effect, "frame"):
             if not effect.frozen:
                 effect.frame += 1
-        
+    
     def loopover(eflist):
         for effect in eflist:
             if type(effect) == EffectSequencer:
@@ -475,8 +679,14 @@ def draw_poly(quad : TIFF_Image, tex=white):
             else:
                 applyeffect(effect)
     loopover(effects)
+    
+    xxw = (-qx)/720*(xxx*2)
+    yyw = (-qy)/480*(yyy*2)
     mat = rl.matrix_multiply(mat, rl.matrix_translate(-xxx, -yyy, 0))
     
+    if drawlevel == 0:
+        xxw -= (activedrawlayer[6]/720*(xxx*2))
+        yyw -= (activedrawlayer[7]/480*(yyy*2))
     mat = rl.matrix_multiply(mat, rl.matrix_translate(-xxw, -yyw, 0))
     
     pts2 = quad.vertices
@@ -514,8 +724,12 @@ def draw_poly(quad : TIFF_Image, tex=white):
             rl.rl_vertex3f(pts[i+1][0].x, pts[i+1][0].y, pts[i+1][0].z)
         rl.rl_end()
 
+audio_chans = []
+audio_vols = []
+audio_mixes = []
+
 def update_audio(item):
-    if not item.chan:
+    if not item.chan and not isinstance(item, NullAudioClip):
         item.chan = item.file.play()
     effects = item.effects
     vol = item.level
@@ -540,17 +754,19 @@ def update_audio(item):
     loopover(effects)
     
     if item.chan:
-        item.chan.set_volume(vol*mixl)
+        audio_chans.append(item.chan)
+        audio_vols.append(item.level)
+        audio_mixes.append(mixl)
 
 def update_audioseq(seq : AudioSequencer):
     if seq.done:
         return
     seq.timer += 1
     al = []
-    al.append(seq.audio[0].duration()*30)
+    al.append(seq.audio[0].duration())
     if len(seq.audio) > 0:
         for i in seq.audio[1:]:
-            al.append(al[-1]+i.duration()*30)
+            al.append(al[-1]+i.duration())
     ea = 0
     for i in range(len(seq.audio)):
         if seq.timer < al[i]:
@@ -565,10 +781,10 @@ def update_audioseq(seq : AudioSequencer):
         return
     
     update_audio(seq.audio[ea])
-    
 
-def draw_item(item, extra={"tex": None}):
+def draw_item(item, extra={"tex": None, "cam": None}):
     global once
+    global drawlevel
     if type(item) == Layer:
         item.timer += 1
         al = []
@@ -588,29 +804,41 @@ def draw_item(item, extra={"tex": None}):
         if len(item.pages) > 0:
             if not item.pages[0][0].started == True:
                 item.pages[0][0].started = True
-                #todo: add the hooks here
+                for cmd in item.pages[0][0]._onStartCommands:
+                    RenderControl.actuallyRunAQueuedCommand(cmd)
         if item.pa != (ea-1):
             item.pages[item.pa][0].ended = True
+            for cmd in item.pages[item.pa][0]._onEndCommands:
+                RenderControl.actuallyRunAQueuedCommand(cmd)
             #and here
             item.pa = (ea-1)
             item.pages[item.pa][0].started = True
             #...and here
+            for cmd in item.pages[item.pa][0]._onStartCommands:
+                RenderControl.actuallyRunAQueuedCommand(cmd)
+        else:
+            for cmd in item.pages[item.pa][0]._onFrameCommands:
+                if item.timer == cmd[1]:
+                    RenderControl.actuallyRunAQueuedCommand(cmd[0])
         draw_item(item.pages[item.pa][0])
     elif type(item) == Page:
         for el in item._elements:
             draw_item(el)
-    elif type(item) is TIFF_Image:
-        #quad senior
-        if not item.texture:
-            item.texture = rl.load_texture_from_image(item.im2)
-        draw_quad(item, item.texture)
-    elif type(item) is JPEG_Image:
-        if not item.texture:
-            item.texture = rl.load_texture_from_image(item.im2)
-        #quad junior
+    elif isinstance(item, Image):
+        if type(item) is not CompositedImage: #i'll figure out what a CompositedImage is later.
+            if not item.texture:
+                item.texture = rl.load_texture_from_image(item.im2)
+            draw_quad(item, item.texture)
+    elif isinstance(item, Icon):
+        if item.texture is None:
+            item.texture = rl.load_texture_from_image(item._kickstart)
+        else:
+            item.idx += 1
+            item.idx %= item.framect
+            rl.update_texture(item.texture, item._rframes[item.idx])
         draw_quad(item, item.texture)
     elif type(item) is Box:
-        #quad, i am your father's brother's nephew's cousin's former roommate
+        #the og quad
         draw_quad(item)
     elif isinstance(item, DummyQuad):
         draw_quad(item)
@@ -623,12 +851,37 @@ def draw_item(item, extra={"tex": None}):
             rl.unload_texture(item.cachedtex)
             item.cachedtex = None
             item.lasts = item.s
+            item._textsize = item.fnt.font.size(item.s)
         if item.cachedtex is None:
             if item.fnt.shadow:
                 newsurf = rg.pg.Surface((item._textsize[0]+abs(item.fnt.sx), item._textsize[1]+abs(item.fnt.sy)), rg.pg.SRCALPHA)
                 newsurf.fill((0, 0, 0, 0))
-                newsurf.blit(item.fnt.font.render(item.s, True, [c*255 for c in item.fnt.scol]), (max(0, item.fnt.sx), max(0, item.fnt.sy)))
-                newsurf.blit(item.fnt.font.render(item.s, True, [c*255 for c in item._color]), (max(0, -item.fnt.sx), max(0, -item.fnt.sy)))
+                newsurf.blit(item.fnt.font.render(item.s, True, [c*255 for c in item.fnt.scol]), (item.fnt.sx, item.fnt.sy))
+                newsurf.blit(item.fnt.font.render(item.s, True, [c*255 for c in item._color]), (0, 0))
+            else:
+                #newsurf = rg.pg.Surface(item._textsize, rg.pg.SRCALPHA)
+                newsurf = rg.pg.Surface(item._textsize, rg.pg.SRCALPHA)
+                newsurf.blit(item.fnt.font.render(item.s, True, [c*255 for c in item._color]), (0, 0))
+            newsurf = rg.pg.transform.smoothscale_by(newsurf, (1, 0.98))
+            item._size = newsurf.get_size()
+            buf = BytesIO()
+            rg.pg.image.save(newsurf, buf, ".bmp")
+            cimg = rl.load_image_from_memory(".bmp", buf.getvalue(), len(buf.getvalue()))
+            item.cachedtex = rl.load_texture_from_image(cimg)
+        
+        draw_quad(item, item.cachedtex)
+    elif isinstance(item, Clock):
+        item.s = datetime.now().strftime(item.format)
+        if (item.lasts != item.s) and item.cachedtex is not None:
+            rl.unload_texture(item.cachedtex)
+            item.cachedtex = None
+            item.lasts = item.s
+        if item.cachedtex is None:
+            if item.fnt.shadow:
+                newsurf = rg.pg.Surface((item._textsize[0]+abs(item.fnt.sx), item._textsize[1]+abs(item.fnt.sy)), rg.pg.SRCALPHA)
+                newsurf.fill((0, 0, 0, 0))
+                newsurf.blit(item.fnt.font.render(item.s, True, [c*255 for c in item.fnt.scol]), (item.fnt.sx, item.fnt.sy))
+                newsurf.blit(item.fnt.font.render(item.s, True, [c*255 for c in item._color]), (0, 0))
             else:
                 #newsurf = rg.pg.Surface(item._textsize, rg.pg.SRCALPHA)
                 newsurf = item.fnt.font.render(item.s, True, [c*255 for c in item._color])
@@ -642,6 +895,7 @@ def draw_item(item, extra={"tex": None}):
         
         draw_quad(item, item.cachedtex)
     elif isinstance(item, CompositeRenderable):
+        drawlevel += 1
         if not item.rtex:
             item.rtex = rg.rl.load_render_texture(720, 480)
         if not item.ftex:
@@ -649,15 +903,29 @@ def draw_item(item, extra={"tex": None}):
         rl.end_mode_3d()
         rl.begin_texture_mode(item.rtex)
         rl.clear_background(rl.Color(0, 0, 0, 0))
-        rl.begin_mode_3d(camera)
+        rl.rl_set_clip_planes(0.01, 10000)
+        
+        xx2, yy2, transfo, fader = calceffects(item)
+        
+        #print(xx2, yy2)
+        #xx2, yy2 = 0, 0
+        camera2 = rl.Camera3D(
+            rl.Vector3(xx2, yy2, 0),
+            rl.Vector3(xx2, yy2, -10),
+            rl.Vector3(0, 1, 0),
+            fov,
+            rl.CameraProjection.CAMERA_PERSPECTIVE
+        )
+        rl.begin_mode_3d(camera2)
         rl.rl_disable_depth_test()
         rl.rl_disable_depth_mask()
         
         for ch in item.items:
             if isinstance(ch, CompositeRenderable):
-                draw_item(ch, extra={"tex": item.rtex})
+                draw_item(ch, extra={"tex": item.rtex, "cam": camera2})
                 rl.begin_texture_mode(item.rtex)
-                rl.begin_mode_3d(camera)
+                rl.rl_set_clip_planes(0.01, 10000)
+                rl.begin_mode_3d(camera2)
                 rl.rl_disable_depth_test()
                 rl.rl_disable_depth_mask()
             elif isinstance(ch, Polygon):
@@ -676,19 +944,27 @@ def draw_item(item, extra={"tex": None}):
         rl.draw_texture(item.rtex.texture, 0, 0, rl.WHITE)
         rl.end_texture_mode()
         
+        drawlevel -= 1
+        
         if not extra["tex"]:
+            rl.rl_set_clip_planes(0.01, 10000)
             rl.begin_mode_3d(camera)
             rl.rl_disable_depth_test()
             rl.rl_disable_depth_mask()
             rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA)
-            draw_quad(DummyQuad(*item.position, 720, 480, effects=item.effects), item.ftex.texture)
+            #draw_quad_nocal(DummyQuad(0, 0, 720, 480), item.ftex.texture, transfo, fader)
+            draw_quad(DummyQuad(0, 0, 720, 480, effects=item.effects), item.ftex.texture, se=True)
         else:
             rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA_PREMULTIPLY)
             rl.begin_texture_mode(extra["tex"])
-            rl.begin_mode_3d(camera)
+            rl.rl_set_clip_planes(0.01, 10000)
+            rl.begin_mode_3d(extra["cam"])
             rl.rl_disable_depth_test()
             rl.rl_disable_depth_mask()
-            draw_quad(DummyQuad(*item.position, 720, 480, effects=item.effects), item.ftex.texture)
+            drawlevel += 1
+            #draw_quad_nocal(DummyQuad(0, 0, 720, 480), item.ftex.texture, transfo, fader)
+            draw_quad(DummyQuad(0, 0, 720, 480, effects=item.effects), item.ftex.texture, se=True)
+            drawlevel -= 1
             rl.end_mode_3d()
             rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA)
         
@@ -696,34 +972,63 @@ def draw_item(item, extra={"tex": None}):
             tex = rl.load_image_from_texture(item.rtex.texture)
             rl.export_image(tex, "image2.png")
         
+        
     elif type(item) is Polygon:
         draw_poly(item)
     elif isinstance(item, AudioSequencer):
         update_audioseq(item)
+    elif type(item) in (AudioClip, MP3_AudioClip):
+        if not item.single_play:
+            item.single_play = True
+            item.file.play()
+    elif isinstance(item, PageCommand):
+        item.timer += 1
+        if item.timer == item.activeFrame():
+            RenderControl.actuallyRunAQueuedCommand(item)
+    else:
+        pass
+        #print("drawing unrecognized type: ", type(item))
 
 while not rl.window_should_close():
-    removeix = []
+    audio_chans = []
+    audio_mixes = []
+    audio_vols = []
+    remove = []
     for i, cmdlist in enumerate(rg.queuedcommands):
         cmd, tm, fo, estimated = cmdlist
-        RenderControl.actuallyRunAQueuedCommand(cmd)
-    for i in removeix:
-        rg.queuedcommands.pop(i)
-    sortedLayers = sorted(layers)
+        if time.time() > tm:
+            print("runcmd ", cmd)
+            if type(cmd) in [SetNamedLayerViewPortCmd, ModifyNamedLayerCmd]:
+                print(cmd.__dict__)
+            RenderControl.actuallyRunAQueuedCommand(cmd)
+            remove.append(cmdlist)
+    for i in remove:
+        rg.queuedcommands.remove(i)
+    sortedLayers = sorted(rg.layers, key=lambda layer: layer[4])
     ee += 1
     rl.begin_drawing()
     rl.clear_background(rl.BLACK)
+    rl.rl_set_clip_planes(0.01, 10000)
     rl.begin_mode_3d(camera)
     rl.rl_disable_depth_test()
     rl.rl_disable_depth_mask()
     
-    rl.rl_enable_smooth_lines()
-    
     for l in sortedLayers:
         if l[-1]:
+            activedrawlayer = l
             draw_item(l[1])
-
+    
+    audio_finalvols = audio_vols.copy()
+    
+    # for i, mix in enumerate(audio_mixes):
+    #     for j in range(len(audio_finalvols)):
+    #         if i != j:
+    #             audio_finalvols[i] *= (1 - mix)
+    
+    for chan, vol in zip(audio_chans, audio_finalvols):
+        chan.set_volume(vol)
+        #print("set volume", vol)
+    
     rl.end_mode_3d()
-    rl.draw_fps(10, 10)
+    #rl.draw_fps(10, 10)
     rl.end_drawing()
-    if ee == 5:
-        rl.take_screenshot("screenshot.png")

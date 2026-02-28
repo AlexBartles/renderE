@@ -4,7 +4,9 @@
 # Embedded file name: Fallback60.py
 # Compiled at: 2007-01-12 11:33:37
 from functools import reduce
-s = {'Local': [('CurrentConditions', [8 * 30]), ('RegionalObservationMap', [8 * 30]), ('RegionalDopplerRadar', [8 * 30]), ('TextForecast', [20 * 30]), ('7DayForecast', [16 * 30])], 'BackgroundMusic': [('Default', [60 * 30])], 'Tag': [('Null', [50 * 30]), ('Default', [10 * 30])]}
+s = {'Local': [('Intro', [8*30]), ('CurrentConditions', [8 * 30]), ('RegionalObservationMap', [8 * 30]), ('RegionalDopplerRadar', [8 * 30]), ('TextForecast', [20 * 30]), ('7DayForecast', [16 * 30])], 'BackgroundMusic': [('Default', [60 * 30])], 'Tag': [('Null', [50 * 30]), ('Default', [10 * 30])]}
+#s = {'Local': [('CurrentConditions', [8 * 30]), ('7DayForecast', [8 * 30]), ('7DayForecast', [8 * 30]), ('7DayForecast', [20 * 30]), ('7DayForecast', [16 * 30])], 'BackgroundMusic': [('Default', [60 * 30])], 'Tag': [('Null', [50 * 30]), ('Default', [10 * 30])]}
+
 
 def getSchedule(duration):
     return _adjustScheduleLength(s, duration)

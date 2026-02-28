@@ -4,6 +4,7 @@
 # Embedded file name: local.py
 # Compiled at: 2007-01-12 11:33:37
 import domestic, domestic.wxdata, domestic.BulletinInfo as BulletinInfo, os, copy, time, glob, twc.EventLog as EventLog, twccommon, twccommon.Log as Log, twccommon.PluginManager, twc.dsmarshal as dsm, twc.MiscCorbaInterface
+import domesticpy.plugin.playman.playCmd.pm as pcpm
 CHANNEL_NAME = 'SystemEventChannel'
 TAG_DELAY = 50
 
@@ -17,7 +18,8 @@ def init(config):
     _config.defaultPlaylistGroup = 'DefaultUS'
     _params = twccommon.Data()
     _params.root = _config.root
-    _params.tempDir = '%s/local' % (_config.tempDir,)
+    _params.tempDir = os.path.join(os.environ["RENDEREROOT"], "temp", "local")
+    os.makedirs(_params.tempDir, exist_ok=True)
     return
 
 
@@ -59,15 +61,15 @@ def load(argData):
         pres.version = 0
         pres.squeezeBack = 0
 
-    pres.durationSeconds = pres.duration / 30
+    pres.durationSeconds = (pres.duration / 30)
     pres.hasLdl = not pres.squeezeBack
     if pres.hasLdl:
         (pres.ldlBulletins, pres.ldlWarningMode, pres.activeWarnings) = _activeBulletins()
         pres.nationalLdl = 0
         pres.lasCrawlText = _getLasCrawlText()
-    pres.bkgAudioFilename = None
-    if pres.channelChangeRequest == 1 or pres.alternateFeedActive == 1:
-        pres.bkgAudioFilename = _getBkgAudioFilename()
+    pres.bkgAudioFilename = _getBkgAudioFilename()
+    #if pres.channelChangeRequest == 1 or pres.alternateFeedActive == 1:
+    #    pres.bkgAudioFilename = _getBkgAudioFilename()
     scheds = _selectSchedule(pres)
     if scheds != None:
         _load(id, pres.duration, pres.expire, scheds, pres)
@@ -143,9 +145,10 @@ def _getLasCrawlText():
     return text
     return
 
-
+import math
 def _getBkgAudioFilename():
-    files = glob.glob('/rsrc/audio/background/*mp3')
+    files = glob.glob(os.path.join(os.environ["RENDEREROOT"], 'bgm', '*'))
+    print(files)
     files.sort()
     numFiles = len(files)
     if numFiles == 0:
@@ -153,7 +156,7 @@ def _getBkgAudioFilename():
     else:
         (y, m, d, H, M, S, dw, jd, dst) = time.gmtime()
         ndx = ((m + 5) / 10 + H + dw) % numFiles
-        return files[ndx]
+        return files[math.floor(ndx)]
     return
 
 
@@ -228,16 +231,17 @@ def _selectSchedule(pres):
 
 
 def _load(id, duration, expire, scheds, params):
-    _signalRPC('playman.playCmd.pm.load', (id, duration, expire, scheds, params))
+    #_signalRPC('playman.playCmd.pm.load', (id, duration, expire, scheds, params))
+    pcpm.load(id, duration, expire, scheds, params)
     return
 
 
 def _run(id, startTime, startFrame, params=None):
-    _signalRPC('playman.playCmd.pm.run', (id, startTime, startFrame, params))
+    #_signalRPC('playman.playCmd.pm.run', (id, startTime, startFrame, params))
+    pcpm.run(id, startTime, startFrame, params)
     return
 
 
 def _signalRPC(rpcName, args):
-    twc.MiscCorbaInterface.signalEvent(CHANNEL_NAME, rpcName, repr(args))
     return
 

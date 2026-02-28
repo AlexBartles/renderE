@@ -4,6 +4,7 @@
 # Embedded file name: dataUtil.py
 # Compiled at: 2007-01-12 11:33:26
 import glob, os, os.path, string, time, twc, twccommon, twccommon.Log
+from functools import cmp_to_key
 Log = twccommon.Log
 
 def apply(func, args, kwargs=None):
@@ -173,7 +174,7 @@ def getValidFileList(dataPath='./', prefix=None, suffix=None, startTimeNdx=None,
             returnList.append((0, filename))
 
     if sortIndex and len(returnList):
-        returnList.sort(sortByIssueTime)
+        returnList.sort(key=cmp_to_key(sortByIssueTime))
     return returnList
     return
 
@@ -212,7 +213,7 @@ def getValidImageList(dataPath, productString, ignoreExpiration=0):
         data = (issueTime, filename)
         sortedList.append(data)
 
-    sortedList.sort(sortByIssueTime)
+    sortedList.sort(key=cmp_to_key(sortByIssueTime))
     return sortedList
     return
 
@@ -290,7 +291,7 @@ def formatPrimaryPollutant(primaryPollutant):
 
 def formatTrafficType(trafficType):
     trafficGroup = {'ACC': 'Incident', 'ACC?': 'Incident', 'ACC>S': 'Incident', 'ACCLR': 'Incident', 'ACCS': 'Incident', 'BFIR': 'Incident', 'BFIR?': 'Incident', 'CRFR': 'Incident', 'CRFR?': 'Incident', 'DBUS': 'Incident', 'DBUS?': 'Incident', 'DTRK': 'Incident', 'DTRK?': 'Incident', 'DTT': 'Incident', 'DTT?': 'Incident', 'DVEH': 'Incident', 'DVEH?': 'Incident', 'JTT': 'Incident', 'JTT?': 'Incident', 'MCACC': 'Incident', 'MVACC': 'Incident', 'MVACC?': 'Incident', 'OCAR': 'Incident', 'OCAR?': 'Incident', 'OTRK': 'Incident', 'OTRK?': 'Incident', 'OTT': 'Incident', 'OTT?': 'Incident', 'OVEH': 'Incident', 'OVEH?': 'Incident', 'SPILL': 'Incident', 'SPILL?': 'Incident', 'STT': 'Incident', 'STT?': 'Incident', 'TRKFR': 'Incident', 'TRKFR?': 'Incident', 'TTACC': 'Incident', 'TTFR': 'Incident', 'TTFR?': 'Incident', 'VFR': 'Incident', 'VFR?': 'Incident', 'CONST': 'Construction', 'CONST?': 'Construction'}
-    if trafficGroup.has_key(trafficType):
+    if trafficType in trafficGroup:
         type = trafficGroup[trafficType]
     else:
         type = None

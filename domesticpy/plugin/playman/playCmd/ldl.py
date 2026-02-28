@@ -7,6 +7,7 @@ import domestic, time, twccommon, twccommon.Log, twc.MiscCorbaInterface, twc.dsm
 from domestic import BulletinInfo
 dsm = twc.dsmarshal
 
+_activate = 0
 def init(config):
     global _activate
     global _config
@@ -42,7 +43,7 @@ def _ldlBulletins():
 def _getPlaylistName(ldlWarningMode):
     _dispMode = {'A': (twc.Data(playlistName='Ldl.nationalDefaultUp')), 'B': (twc.Data(playlistName='Ldl.nationalLongformUp'))}
     dispMode = dsm.defaultedGet('displayMode')
-    if _dispMode.has_key(dispMode):
+    if dispMode in _dispMode:
         playListName = _dispMode[dispMode].playlistName
     else:
         playListName = _config.defaultPlaylistName
@@ -61,16 +62,19 @@ def _getPlaylistName(ldlWarningMode):
     return playListName
     return
 
-
+import domesticpy.plugin.playman.playCmd.pm as pcpm
 def load(playlistId, playlistName, duration, bulletins):
     tmpLdlWarningMode = _getLdlWarningMode(bulletins)
-    eventValue = repr((playlistId, duration, _config.expiration, "[DynamicSchedule('%s')]" % playlistName, twccommon.Data(ldlBulletins=bulletins, ldlWarningMode=tmpLdlWarningMode, nationalLdl=1)))
-    twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.load', eventValue)
+    eventValue = (playlistId, duration, _config.expiration, "[DynamicSchedule('%s')]" % playlistName, twccommon.Data(ldlBulletins=bulletins, ldlWarningMode=tmpLdlWarningMode, nationalLdl=1))
+    #twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.load', eventValue)
+    pcpm.load(*eventValue)
     return
 
 
 def toggleNationalLDL(id, activate, time=0, frame=0):
     global _activate
+    if _activate not in vars():
+        _activate = 0
     id = int(id)
     time = int(time)
     frame = int(frame)
@@ -85,8 +89,9 @@ def toggleNationalLDL(id, activate, time=0, frame=0):
         return
     playlistName = _getPlaylistName(ldlWarningMode)
     load(_config.playlistId, playlistName, _config.duration, bulletins)
-    eventValue = repr((_config.playlistId, time, frame, twccommon.Data(nationalLdl=1)))
-    twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.run', eventValue)
+    eventValue = (_config.playlistId, time, frame, twccommon.Data(nationalLdl=1))
+    #twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.run', eventValue)
+    pcpm.run(*eventValue)
     return
 
 

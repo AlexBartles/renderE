@@ -83,7 +83,7 @@ def logCurrentException(prefix=''):
         if prefix:
             msg = [prefix] + msg
         for mstr in msg:
-            _getInterface().error(mstr)
+            error(mstr)
 
     finally:
         etype = val = tb = None

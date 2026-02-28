@@ -14,9 +14,9 @@ zzz = 10
 layers = []
 queuedcommands = []
 datastore = {}
-if os.path.exists("ds.json"):
-    with open("ds.json", "r") as f:
-        datastore = json.loads(f.read())
+configs = {}
+runrsfunction = None
+runrscfunction = None
 
 #optionally, specify your environment vars here
 #make sure to modify them to the actual paths
@@ -29,6 +29,11 @@ os.environ["RENDEREDOMESTIC"] = ""
 os.environ["RENDEREROOT"] = os.path.dirname(os.path.abspath(__file__))
 os.environ["TWCCLIDIR"] = ""
 os.environ["TWCPERSDIR"] = os.path.join(os.environ["RENDEREROOT"], "domesticpy")
+os.environ["TWCDIR"] = ""
+
+if os.path.exists(os.path.join(os.environ["RENDEREROOT"], "ds.json")):
+    with open(os.path.join(os.environ["RENDEREROOT"], "ds.json"), "r") as f:
+        datastore = json.loads(f.read())
 
 #os.environ["RENDEREROOT"] = "/path/to/renderE"
 #os.environ["RENDERERSRC"] = "/usr/local/twc/rsrc"
@@ -36,3 +41,4 @@ os.environ["TWCPERSDIR"] = os.path.join(os.environ["RENDEREROOT"], "domesticpy")
 #os.environ["RENDEREDOMESTIC"] = "/usr/twc/domestic"
 #os.environ["TWCCLIDIR"] = "/usr/twc"
 #os.environ["TWCPERSDIR"] = "/path/to/renderE/domesticpy"
+#os.environ["TWCDIR"] = "/usr/twc"

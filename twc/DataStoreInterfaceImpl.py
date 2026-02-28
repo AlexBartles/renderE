@@ -8,7 +8,7 @@
 import os
 import rendereglobals as rg
 import json
-import twc
+import time
 
 class InterfaceImpl:
 
@@ -36,6 +36,11 @@ class InterfaceImpl:
         
         for key in keys:
             if key in self.data:
+                if (float(self.data[key][1]) < time.time()) and (float(self.data[key][1]) != 0):
+                    notfound[key] = None
+                    self.remove(key)
+                    #self.commit()
+                    continue
                 res = self.data[key]
                 result[key] = res[0]
             else:
@@ -71,7 +76,7 @@ class InterfaceImpl:
         datas = json.dumps(self.data, indent=4)
         
         try:
-            with open("ds.json", "w") as f:
+            with open(os.path.join(os.environ["RENDEREROOT"], "ds.json"), "w") as f:
                 f.write(datas)
         except:
             rc = 0

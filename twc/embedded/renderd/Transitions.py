@@ -4,7 +4,7 @@
 # Embedded file name: Transitions.py
 # Compiled at: 2007-01-12 11:17:28
 import traceback
-from RenderScript import *
+from .RenderScript import *
 
 def add(transName, page):
     if transName == None:

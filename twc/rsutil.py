@@ -4,6 +4,7 @@
 # Embedded file name: rsutil.py
 # Compiled at: 2007-01-12 11:17:30
 import glob, os, os.path, string, time, twc
+from functools import cmp_to_key
 from twc import SkyConditionCodes
 from twc.SkyConditionCodes import _EnglishFcstSkyConditionTable
 from twc.SkyConditionCodes import _EnglishObsSkyConditionTable
@@ -76,7 +77,7 @@ def getValidImageList(dataPath, productString):
         data = (issueTime, filename)
         sortedList.append(data)
 
-    sortedList.sort(sortByIssueTime)
+    sortedList.sort(key=cmp_to_key(sortByIssueTime))
     return sortedList
     return
 

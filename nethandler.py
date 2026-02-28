@@ -4,13 +4,13 @@ import os
 servers = [
     "https://archive.lewolfyt.cc/PerrisLive/",
     "https://archive.lewolfyt.cc/FlatRockLive/",
-    "https://archive.lewolfyt.cc/WxScanLive/"
+#    "https://archive.lewolfyt.cc/WxScanLive/"
 ]
 temp = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     "net"
 )
-def requestNetAsset(path : str, extensions):
+def requestNetAsset(path : str, extensions, check=False):
     fonts = ["ttf", "otf"]
     gfx = ["tif", "jpg", "tiff", "jpeg", "png"]
     aud = ["wav", "mp3"]
@@ -20,6 +20,8 @@ def requestNetAsset(path : str, extensions):
         out = os.path.join(temp, path.strip("/"))+"."+ex
         if os.path.exists(out):
             return out
+    if check:
+        return
     for ex in emap[extensions]:
         out = os.path.join(temp, path.strip("/"))+"."+ex
         for server in servers:
@@ -33,11 +35,12 @@ def requestNetAsset(path : str, extensions):
                 return out
     return None
 
-def requestNetAssetExt(path : str, ext=None):
+def requestNetAssetExt(path : str, ext=None, check=False):
     out = os.path.join(temp, path.strip("/"))+("."+ext if ext else "")
     if os.path.exists(out):
         return out
-    out = os.path.join(temp, path.strip("/"))+("."+ext if ext else "")
+    if check:
+        return
     for server in servers:
         spath = os.path.join(server, path.strip("/"))+("."+ext if ext else "")
         print(spath)

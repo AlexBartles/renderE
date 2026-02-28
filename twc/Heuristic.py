@@ -4,6 +4,7 @@
 # Embedded file name: Heuristic.py
 # Compiled at: 2007-01-12 11:17:30
 import twccommon
+from functools import cmp_to_key
 DISP_POS = 0
 PRI_POS = 1
 PRODNM_POS = 2
@@ -66,11 +67,11 @@ class Heuristic:
         return
 
     def sortDisplay(self, list):
-        list.sort(displayOrder)
+        list.sort(key=cmp_to_key(displayOrder))
         return
 
     def sortPriorityDisplay(self, list):
-        list.sort(priorityDisplayOrder)
+        list.sort(key=cmp_to_key(priorityDisplayOrder))
         return
 
     def isExclusiveInList(self, exclusive, list):

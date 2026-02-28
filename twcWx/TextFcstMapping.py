@@ -3,12 +3,12 @@
 # Decompiled from: Python 3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]
 # Embedded file name: TextFcstMapping.py
 # Compiled at: 2005-12-01 07:18:53
-import types, twcWx.xmlUtil as xmlUtil, twcWx.mapping as mapping, twc, os
+import types, twcWx.xmlUtil as xmlUtil, twcWx.mapping as mapping, twc, os, nethandler
 
 class TextFcstMappingHandler(xmlUtil.LookupSubHandler):
 
     def __init__(self, container):
-        self._elements = [('key', types.StringType, xmlUtil.REQUIRED), ('text', types.StringType, xmlUtil.REQUIRED)]
+        self._elements = [('key', str, xmlUtil.REQUIRED), ('text', str, xmlUtil.REQUIRED)]
         xmlUtil.LookupSubHandler.__init__(self, container)
         return
 
@@ -22,7 +22,7 @@ class TextFcstMappingHandler(xmlUtil.LookupSubHandler):
         return
 
 
-filePath = os.path.join(os.environ["RENDEREROOT"], '/mappings/textForecast/')
+filePath = os.path.join(os.environ["RENDEREMEDIA"], '/mappings/textForecast/')
 
 class TextFcstMapping(mapping.Map):
 
@@ -32,6 +32,8 @@ class TextFcstMapping(mapping.Map):
 
     def _load(self, data):
         path = filePath + data + '.xml'
+        if not os.path.exists(path):
+            path = nethandler.requestNetAssetExt(filePath+data, "xml")
         map = xmlUtil.parseXML(path, TextFcstMappingHandler)
         if map:
             return (map, path)

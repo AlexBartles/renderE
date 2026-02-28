@@ -4,6 +4,7 @@
 # Embedded file name: traffic.py
 # Compiled at: 2007-01-12 11:33:37
 import domestic, domestic.dataUtil, time, os, twc.DataStoreInterface, twccommon, twccommon.Log, twc.dsmarshal, xml.sax
+from functools import cmp_to_key
 ds = twc.DataStoreInterface
 dsm = twc.dsmarshal
 REV = 0
@@ -174,7 +175,7 @@ class IncidentMsgHandler(twccommon.SubHandler):
         newRecords = []
         lastId = None
         record = None
-        self.records.sort(incidentOrder)
+        self.records.sort(key=cmp_to_key(incidentOrder))
         for (incId, cnt, data) in self.records:
             if incId != lastId:
                 if lastId != None:

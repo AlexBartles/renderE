@@ -7,20 +7,63 @@ from . import _renderd
 from .RenderScript import *
 import rendereglobals as rg
 
+def unloadLayer(l):
+    if isinstance(l, Layer):
+        for page in l.pages:
+            unloadLayer(page)
+    elif isinstance(l, Page):
+        for item in l.elements:
+            unloadLayer(item)
+    elif isinstance(l, CompositeRenderable):
+        for item in l.items:
+            unloadLayer(item)
+        rg.rl.unload_render_texture(l.rtex)
+        rg.rl.unload_render_texture(l.ftex)
+    elif isinstance(l, AudioSequencer):
+        for item in l.audio:
+            unloadLayer(item)
+    elif isinstance(l, Text):
+        rg.rl.unload_texture(l.cachedtex)
+    elif isinstance(l, Image):
+        if l.im2:
+            rg.rl.unload_image(l.im2)
+        if l.texture:
+            rg.rl.unload_texture(l.texture)
 def actuallyRunAQueuedCommand(cmd):
-    if isinstance(cmd, SetLayerCmd):
-        i = -1
+    if type(cmd) in (SetLayer, SetLayerCmd):
+        ix = -1
         for i, layer in enumerate(rg.layers):
-            if layer[0] == cmd.name:
+            if layer[0] == cmd.lname:
+                ix = i+0
                 break
-        if i > -1:
-            rg.layers[i][1] = cmd[cmd.layer]
-    elif isinstance(cmd, CreateNamedLayerCmd):
+        if ix > -1:
+            unloadLayer(rg.layers[ix][1])
+            rg.layers[ix][1] = cmd.layer
+    elif type(cmd) in (AppendLayer, AppendLayerCmd):
+        ix = -1
+        for i, layer in enumerate(rg.layers):
+            if layer[0] == cmd.lname:
+                ix = i+0
+                break
+        if ix > -1:
+            if rg.layers[ix][1] is None:
+                rg.layers[ix][1] = cmd.layer
+            else:
+                for p in cmd.layer.pages:
+                    rg.layers[ix][1].pages.append(p)
+    elif type(cmd) in (CreateNamedLayer, CreateNamedLayerCmd):
+        ix = -1
+        for i, layer in enumerate(rg.layers):
+            if layer[0] == cmd.lname:
+                ix = i+0
+                break
+        if ix != -1:
+            unloadLayer(rg.layers[ix][1])
         rg.layers.append([
-            cmd.name,
+            cmd.lname,
             None,
-            cmd.time,
-            cmd.frameOffset,
+            0,
+            0,
             cmd.depth,
             cmd.repeat,
             0,
@@ -34,40 +77,65 @@ def actuallyRunAQueuedCommand(cmd):
             False
         ])
     elif isinstance(cmd, SetNamedLayerViewPortCmd):
-        i = -1
+        ix = -1
+        for i, layer in enumerate(rg.layers):
+            if layer[0] == cmd.lname:
+                ix = i+0
+                break
+        if ix > -1:
+            rg.layers[ix][6] = cmd.x
+            rg.layers[ix][7] = cmd.y
+            rg.layers[ix][8] = cmd.w
+            rg.layers[ix][9] = cmd.h
+            rg.layers[ix][10] = cmd.sx
+            rg.layers[ix][11] = cmd.sy
+            rg.layers[ix][12] = cmd.tx
+            rg.layers[ix][13] = cmd.ty
+    elif isinstance(cmd, ModifyNamedLayerCmd):
+        ix = -1
         for i, layer in enumerate(rg.layers):
             if layer[0] == cmd.name:
+                ix = i+0
                 break
-        if i > -1:
-            rg.layers[i][6] = cmd.x
-            rg.layers[i][7] = cmd.y
-            rg.layers[i][8] = cmd.w
-            rg.layers[i][9] = cmd.h
-            rg.layers[i][10] = cmd.sx
-            rg.layers[i][11] = cmd.sy
-            rg.layers[i][12] = cmd.tx
-            rg.layers[i][13] = cmd.ty
-    elif isinstance(cmd, DestroyNamedLayerCmd):
-        i = -1
+        if ix > -1:
+            rg.layers[ix][0] = cmd.newName
+            rg.layers[ix][4] = cmd.depth
+            rg.layers[ix][5] = cmd.repeat
+    elif type(cmd) in (DestroyNamedLayer, DestroyNamedLayerCmd):
+        ix = -1
+        for i, layer in enumerate(rg.layers):
+            if layer[0] == cmd.lname:
+                ix = i+0
+                break
+        if ix > -1:
+            unloadLayer(rg.layers[ix][1])
+            del rg.layers[ix]
+    elif isinstance(cmd, ReplaceLayerCmd):
+        ix = -1
         for i, layer in enumerate(rg.layers):
             if layer[0] == cmd.name:
+                ix = i+0
                 break
-        if i > -1:
-            del rg.layers[i]
-    elif isinstance(cmd, ActivateLayerCmd):
-        i = -1
+        if ix > -1:
+            rg.layers[ix][1] = cmd.layer
+    elif type(cmd) in (ActivateLayer, ActivateLayerCmd):
+        ix = -1
         for i, layer in enumerate(rg.layers):
-            if layer[0] == cmd.name:
+            if layer[0] == cmd.lname:
+                ix = i+0
                 break
-        if i > -1:
-            rg.layers[i][14] = True
-    elif isinstance(cmd, DeactivateLayerCmd):
-        i = -1
+        if ix > -1:
+            rg.layers[ix][14] = True
+    elif type(cmd) in (DeactivateLayer, DeactivateLayerCmd):
+        ix = -1
         for i, layer in enumerate(rg.layers):
-            if layer[0] == cmd.name:
+            if layer[0] == cmd.lname:
+                ix = i+0
                 break
-        if i > -1:
-            rg.layers[i][14] = False
+        if ix > -1:
+            rg.layers[ix][14] = False
+    elif type(cmd) in (LoadPresentation, LoadPresentationCmd):
+        rg.runrscfunction(cmd.fileName)
 
 def queueCommand(cmd, time=0, frameOffset=0, estimatedCmd=0):
     rg.queuedcommands.append([cmd, time, frameOffset, estimatedCmd])

@@ -5,6 +5,7 @@
 # Compiled at: 2007-01-12 11:33:37
 import os, sys
 import rendereglobals as rg
+#import playmaninit
 import twc
 import twccommon.Log
 import twc.dsmarshal
@@ -18,6 +19,9 @@ wxdata = domestic.wxdata
 def execfile(filename, globa=None, loca=None):
     with open(filename, "rb") as f:
         exec(compile(f.read(), filename, 'exec'), globa, loca)
+
+def do_absolutely_nothing(*args, **kwargs):
+    return
 
 def main():
     try:
@@ -38,9 +42,9 @@ def main():
     ds.init()
     print('Loading configuration: %s' % sys.argv[1])
     twccommon.Log.setIdent('loadSCMTconfig')
-    twccommon.Log.info('Loading new configuration %s' % sys.argv[1])
+    twccommon.Log.info('Loading new configuration %s' % sys.argv[1])  
     try:
-        execfile(sys.argv[1])
+        execfile(sys.argv[1], {"abortMsg": do_absolutely_nothing, "Log": Log, "ds": ds, "dsm": dsm, "wxdata": wxdata, "twc": twc, "twccommon": twccommon})
     except SyntaxError:
         twccommon.Log.info('scmt configuration failed with a SyntaxError')
         raise

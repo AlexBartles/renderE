@@ -4,7 +4,9 @@
 # Embedded file name: products.py
 # Compiled at: 2007-01-12 11:17:30
 import lxml.etree, string, twc.DataStoreInterface as ds, twc.dsmarshal as dsm, twc.psp, twccommon, xml.dom.minidom
-
+from functools import reduce
+import loadtools
+import os
 class Product:
 
     def __init__(self, params):
@@ -103,7 +105,12 @@ class Product:
         ns = twc.buildPyNamespace(default=ns, params=self.__params, prod=self)
         if self.__rs:
             self.__params.layerName = layerName
-            rsc = twc.psp.evalPage(self.__rs, ns, pspIncludePath)
+
+            inclpaths = list(pspIncludePath)
+            reppaths = [e.replace("/usr/twc/domestic", os.environ["RENDEREDOMESTIC"]) for e in inclpaths]
+
+            print(reppaths)
+            rsc = twc.psp.evalPage(self.__rs, ns, reppaths+inclpaths)
             return rsc
         elif self.__pres:
             return twc.presToRenderScript(self.__pres, layerName, **ns)
@@ -219,14 +226,16 @@ def _toString(node):
     return s
     return
 
-
+import functools
 def _processImpls(impls):
     if len(impls) == 0:
         return Product
     impl = impls[-1]
     py = _toString(impl)
     ns = twc.buildPyNamespace()
-    exec(py, ns, ns)
+    ns["reduce"] = reduce
+    ns["functools"] = functools
+    exec(loadtools.fixsort(py), ns, ns)
     prodClass = ns['Product']
     return prodClass
     return

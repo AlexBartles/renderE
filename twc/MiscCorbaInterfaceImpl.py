@@ -4,7 +4,6 @@
 # Embedded file name: MiscCorbaInterfaceImpl.py
 # Compiled at: 2007-01-12 11:17:30
 import twccommon
-from omniORB import CORBA
 import twccommon.corba, twccommon.corba.CosEventComm__POA, twc.corba.ClientCore
 CHANNEL_IOR = 'corbaname::localhost:4000#%s'
 

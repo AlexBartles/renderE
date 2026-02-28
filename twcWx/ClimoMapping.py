@@ -3,7 +3,7 @@
 # Decompiled from: Python 3.13.7 (main, Aug 14 2025, 11:12:11) [Clang 17.0.0 (clang-1700.0.13.3)]
 # Embedded file name: ClimoMapping.py
 # Compiled at: 2005-12-01 07:18:53
-import os, types, twc, twcWx.xmlUtil as xmlUtil, twcWx.mapping as mapping, twccommon, twccommon.Log
+import os, types, twc, twcWx.xmlUtil as xmlUtil, twcWx.mapping as mapping, twccommon, twccommon.Log, nethandler
 
 class ClimoMappingHandler(xmlUtil.LookupSubHandler):
 
@@ -32,6 +32,8 @@ class ClimoMapping(mapping.Map):
 
     def _load(self, data):
         path = filePath + data + '.xml'
+        if not os.path.exists(path):
+            path = nethandler.requestNetAssetExt(filePath+data, "xml")
         map = xmlUtil.parseXML(path, ClimoMappingHandler)
         if map:
             return (map, path)

@@ -206,7 +206,7 @@ def calcSunRiseSet(lon, lat, date=None):
         (min, hour) = math.modf(t)
         localTime[3] = int(hour - timeDiff)
         localTime[4] = int(min * 60)
-        sunRST.append(localTime)
+        sunRST.append(tuple(localTime))
 
     return sunRST
     return

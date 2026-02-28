@@ -7,6 +7,8 @@ import twc.dsmarshal as dsm
 from twc.Heuristic import *
 
 def getSchedule(schedName, duration, prodLoader):
+    print("GETSCHED")
+    print(duration)
     playlist = DynamicPlaylist(schedName, duration, prodLoader)
     return playlist.getSchedule()
     return
@@ -111,7 +113,7 @@ class DynamicPlaylist(Playlist):
                 raise Exception('abandoning playlist - heuristic loop > 100')
 
         prods = self._convertRunlist(runlist)
-        if schedDict.has_key(self._data.prodPrefix):
+        if self._data.prodPrefix in schedDict:
             schedDict[self._data.prodPrefix].extend(prods)
         else:
             schedDict[self._data.prodPrefix] = prods

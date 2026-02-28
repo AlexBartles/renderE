@@ -3,12 +3,12 @@
 # Decompiled from: Python 3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]
 # Embedded file name: SkyCondMapping.py
 # Compiled at: 2005-12-01 07:18:53
-import types, twc, twcWx.xmlUtil as xmlUtil, twcWx.mapping as mapping, os
+import types, twc, twcWx.xmlUtil as xmlUtil, twcWx.mapping as mapping, os, nethandler
 
 class SkyCondMappingHandler(xmlUtil.LookupSubHandler):
 
     def __init__(self, container):
-        self._elements = [('key', types.IntType, xmlUtil.REQUIRED), ('iconFile', types.StringType, xmlUtil.REQUIRED), ('textModifier', types.StringType, xmlUtil.REQUIRED), ('group', types.IntType, xmlUtil.OPTIONAL), ('precipitation', types.IntType, xmlUtil.OPTIONAL)]
+        self._elements = [('key', int, xmlUtil.REQUIRED), ('iconFile', str, xmlUtil.REQUIRED), ('textModifier', str, xmlUtil.REQUIRED), ('group', int, xmlUtil.OPTIONAL), ('precipitation', int, xmlUtil.OPTIONAL)]
         xmlUtil.LookupSubHandler.__init__(self, container)
         return
 
@@ -22,7 +22,7 @@ class SkyCondMappingHandler(xmlUtil.LookupSubHandler):
         return
 
 
-filePath = os.path.join(os.environ["RENDEREROOT"], '/mappings/skyCondLocales/')
+filePath = os.path.join(os.environ["RENDEREMEDIA"], '/mappings/skyCondLocales/')
 
 class SkyCondMapping(mapping.Map):
 
@@ -32,6 +32,8 @@ class SkyCondMapping(mapping.Map):
 
     def _load(self, data):
         path = filePath + data + '.xml'
+        if not os.path.exists(path):
+            path = nethandler.requestNetAssetExt(filePath+data, "xml")
         map = xmlUtil.parseXML(path, SkyCondMappingHandler)
         if map:
             return (map, path)

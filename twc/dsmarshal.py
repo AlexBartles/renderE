@@ -377,13 +377,13 @@ def _makeInst(field, data, moduleName, className, makers):
 
     mod = sys.modules[moduleName]
     cl = mod.__dict__[className]
-    print("_makeInst called!")
+    #makeinst is used for making data and i have no clue why you would ever need it.
     
     isdata = (cl is twccommon.Data)
     if isdata:
-        print("PHEW it's just data")
         return twccommon.Data(**dict)
     else:
+        print("makeinst has been used on not-data. this is very bad.")
         print(cl)
         print(dict)
         sys.exit(1)

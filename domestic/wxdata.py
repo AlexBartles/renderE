@@ -4,6 +4,7 @@
 # Embedded file name: wxdata.py
 # Compiled at: 2007-01-12 11:33:26
 import re, time, types, shutil, twc.dsmarshal, twc.DataStoreInterface, twc.InterestList, twc.MiscCorbaInterface, twccommon, twccommon.Log, domestic.BulletinInfo, os, glob
+import domesticpy.plugin.playman.playCmd.pm as pcpm
 ds = twc.DataStoreInterface
 dsm = twc.dsmarshal
 BulletinInfo = domestic.BulletinInfo
@@ -100,7 +101,7 @@ def setDaypartData(loc, type, data, validTime, numDayparts, expiration, update=0
     (Y, M, D, h, m, s, wday, day, dst) = time.localtime(validTime)
     window = 24 / numDayparts
     h = h / window * window
-    validTime = time.mktime((Y, M, D, h, 0, 0, wday, day, -1))
+    validTime = time.mktime((int(Y), int(M), int(D), int(h), 0, 0, int(wday), int(day), -1))
     key = '%s.%s.%d' % (type, str(loc), validTime)
     _setData(key, data, expiration, update)
     twccommon.Log.debug('set %s' % (key,))
@@ -217,9 +218,13 @@ def setMapData(key, data, expiration, update=0):
     return
 
 
-def setInterestList(ilType, configVersion, val):
-    return #todo
-    if type(val) != types.ListType:
+def setInterestList(*args):
+    if len(args) == 3:
+        ilType, configVersion, val = args
+    elif len(args) == 2:
+        ilType, val = args
+        configVersion = 1
+    if type(val) != list:
         raise RuntimeError('invalid interest list; should be a list of strings')
     key = 'Config.%s.interestlist.%s' % (configVersion, ilType)
     try:
@@ -232,7 +237,7 @@ def setInterestList(ilType, configVersion, val):
         ds.commit()
         twccommon.Log.info('setting %s to: %s' % (key, val))
         twc.InterestList.getInterestList(ilType, updateCache=1)
-        if _ilistSignalMap.has_key(ilType):
+        if ilType in _ilistSignalMap:
             for fnName in _ilistSignalMap[ilType]:
                 _signalRPC(fnName, (val,))
 
@@ -401,7 +406,13 @@ def _signalEvent(type, value):
 
 
 def _signalRPC(rpcName, args):
-    twc.MiscCorbaInterface.signalEvent(CHANNEL_NAME, rpcName, repr(args))
+    #twc.MiscCorbaInterface.signalEvent(CHANNEL_NAME, rpcName, repr(args))
+    fullname = "domesticpy.plugin."+rpcName
+    #this is the single unholiest function i have ever written.
+    fn = fullname.split(".")[-1]
+    di = __import__(".".join(fullname.split(".")[:-1]), fromlist=[fn])
+    #print(vars(di))
+    di.__dict__[fn](*args)
     return
 
 
@@ -450,19 +461,20 @@ def _processStateVal(kw, valName):
 def _pmLoad(id, duration, expire, scheds, params):
     args = (id, duration, expire, scheds, params)
     twccommon.Log.info('signalling load of %s (%s, %s, %s, %s)' % args)
-    _signalRPC('playman.playCmd.pm.load', args)
+    pcpm.load(*args)
     return
 
 
 def _pmRun(id, startTime, startFrame):
     args = (id, startTime, startFrame)
     twccommon.Log.info('signalling run of %s (%s, %s)' % args)
-    _signalRPC('playman.playCmd.pm.run', args)
+    pcpm.run(*args)
     return
 
 
 def _runPlayCmd(prodType, playCmd, *params):
     twccommon.Log.info('signalling %s of %s %s' % (playCmd, prodType, str(params)))
+    print('signalling %s of %s %s' % (playCmd, prodType, str(params)))
     fnName = 'playman.playCmd.%s.%s' % (prodType, playCmd)
     _signalRPC(fnName, params)
     return
