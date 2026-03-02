@@ -346,7 +346,7 @@ class ForecastMap(twc.products.Product):
         # This list can be used to avoid displaying the city name if the data isn't valid.
         # The current rule is the location is valid if any part (temp, icon, ...) is valid
         if (validValueList and validIconList):
-            timePeriodData.validLocList = map((lambda a,b: a or b), validValueList, validIconList)
+            timePeriodData.validLocList = list(map((lambda a,b: a or b), validValueList, validIconList))
         elif (validValueList):
             timePeriodData.validLocList = validValueList
         elif (validIconList):

@@ -23,22 +23,39 @@ import json
 import string
 import traceback as tb
 from datetime import datetime
-
 string.__dict__["letters"] = string.ascii_letters
 string.__dict__["find"] = (lambda s, f : s.find(f))
 string.__dict__["upper"] = (lambda s : str(s).upper())
 string.__dict__["lower"] = (lambda s : str(s).lower())
+oldtime = time.struct_time
+
+#i've said it before but THIS is my most cursed python code
+def yes_i_am_real_struct_time(seq=None, tm_year=0, tm_mon=0, tm_mday=0, tm_hour=0, tm_min=0, tm_sec=0, tm_wday=0, tm_yday=0, tm_isdst=0):
+    if seq:
+        return oldtime(seq)
+    return oldtime((tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst))
+time.__dict__["struct_time"] = yes_i_am_real_struct_time
 
 fov = 25
 screensize = (720, 480)
 zzz = 1
 rl = rg.rl
+#rl.set_config_flags(rl.ConfigFlags.FLAG_WINDOW_UNDECORATED | rl.ConfigFlags.FLAG_WINDOW_TRANSPARENT)
 rl.set_config_flags(rl.ConfigFlags.FLAG_WINDOW_UNDECORATED)
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 sock.bind(("localhost", 7245))
 
-def loadtif(filename):
+im = rl.load_image(os.path.join(os.environ["RENDEREROOT"], "icon.png"))
+im2 = rl.load_image(os.path.join(os.environ["RENDEREROOT"], "icon.png"))
+rl.image_resize(im2, 128, 128)
+im3 = rl.load_image(os.path.join(os.environ["RENDEREROOT"], "icon.png"))
+rl.image_resize(im3, 64, 64)
+im4 = rl.load_image(os.path.join(os.environ["RENDEREROOT"], "icon.png"))
+rl.image_resize(im4, 32, 32)
+rl.set_window_icons((im, im2, im3, im4), 4)
+
+def loadtif(filename): 
     im = Image.open(filename)
     arr = BytesIO()
     im.save(arr, format="PNG")
@@ -453,7 +470,7 @@ activedrawlayer = None
 drawlevel = 0
 
 def calceffects(quad):
-    qqx, qqy = quad.position
+    qqx, qqy = quad._position
     effects = quad.effects
     qx, qy = qqx*1, qqy*1
     xw = quad._size[0]/720*(xxx*2)
@@ -486,7 +503,7 @@ def calceffects(quad):
             qx += effect.x
             qy += effect.y
         elif type(effect) == SetSize:
-            quad.size = (effect.w, effect.h)
+            quad._size = (effect.w, effect.h)
         elif type(effect) == SetText:
             if isinstance(quad, Text):
                 quad.s = effect.s
@@ -504,8 +521,10 @@ def calceffects(quad):
             else:
                 applyeffect(effect)
     loopover(effects)
-    xxw = (-qx-quad._size[0]/2)/720*(xxx*2)
-    yyw = (-qy-quad._size[1]/2)/480*(yyy*2)
+    # xxw = (-qx-quad._size[0]/2)/720*(xxx*2)
+    # yyw = (-qy-quad._size[1]/2)/480*(yyy*2)
+    xxw = -qx/720*(xxx*2)
+    yyw = -qy/480*(yyy*2)
     mat = rl.matrix_multiply(mat, rl.matrix_translate(-xxx, -yyy, 0))
     if drawlevel == 0:
         xxw -= (activedrawlayer[6]/720*(xxx*2))
@@ -516,7 +535,10 @@ def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False):
     effects = quad.effects
     #rl.set_texture_filter(tex, rl.TextureFilter.TEXTURE_FILTER_POINT)
     plane.materials[0].maps.texture = tex
-    qqx, qqy = quad.position
+    #rl.set_texture_filter(tex, rl.TextureFilter.TEXTURE_FILTER_TRILINEAR)
+    qqx, qqy = quad._position
+    qqx = round(qqx)
+    qqy = round(qqy)
     if isinstance(quad, Text):
         test = "qypgj"
         descending = False
@@ -567,7 +589,7 @@ def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False):
                 qy += effect.y
         elif type(effect) == SetSize:
             if not se:
-                quad.size = (effect.w, effect.h)
+                quad._size = (effect.w, effect.h)
         elif type(effect) == SetText:
             if not se:
                 if isinstance(quad, Text):
@@ -587,12 +609,13 @@ def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False):
             else:
                 applyeffect(effect)
     loopover(effects)
-    xxw = (-qx-quad._size[0]/2)/720*(xxx*2)
-    yyw = (-qy-quad._size[1]/2)/480*(yyy*2)
     mat = rl.matrix_multiply(mat, rl.matrix_translate(-xxx, -yyy, 0))
     if drawlevel == 0:
-        xxw -= (activedrawlayer[6]/720*(xxx*2))
-        yyw -= (activedrawlayer[7]/480*(yyy*2))
+        xxw = (-qx-quad._size[0]/2-activedrawlayer[6])/720*(xxx*2)
+        yyw = (-qy-quad._size[1]/2-activedrawlayer[7])/480*(yyy*2)
+    else:
+        xxw = (-qx-quad._size[0]/2)/720*(xxx*2)
+        yyw = (-qy-quad._size[1]/2)/480*(yyy*2)
     plane.transform = mat
     col = rl.Color(round(quad._color[0]*255), round(quad._color[1]*255), round(quad._color[2]*255), round(quad._color[3]*fader*255))
     if isinstance(quad, Text):
@@ -603,7 +626,7 @@ def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False):
 def draw_quad_nocal(quad : TIFF_Image, tex=white, transform=None, fader=1):
     #rl.set_texture_filter(tex, rl.TextureFilter.TEXTURE_FILTER_POINT)
     plane.materials[0].maps.texture = tex
-    qqx, qqy = quad.position
+    qqx, qqy = quad._position
     if isinstance(quad, Text):
         test = "qypgj"
         descending = False
@@ -630,27 +653,44 @@ def draw_quad_nocal(quad : TIFF_Image, tex=white, transform=None, fader=1):
 
 class DummyQuad():
     def __init__(self, x, y, w, h, effects=[]):
-        self.position = (x, y)
+        self._position = (x, y)
         self._size = (w, h)
         self.effects = effects
         self._color = (1, 1, 1, 1)
         self.visible = True
     def size(self):
         return self._size
+    def position(self):
+        return self._position
+
+def crop_text(surf: rg.pg.Surface):
+    final_left = 0
+    found_left = False
+    for x in range(surf.get_width()):
+        for y in range(surf.get_height()):
+            c = surf.get_at((x, y))
+            if c.a != 0:
+                found_left = True
+                break
+        if found_left:
+            break
+        final_left += 1
+    return surf.subsurface(rg.pg.Rect(final_left, 0, surf.get_width()-final_left, surf.get_height()))
 
 def draw_poly(quad : TIFF_Image, tex=white):
     global drawlevel
     effects = quad.effects
     plane.materials[0].maps.texture = tex
-    qqx, qqy = quad.position
+    qqx, qqy = quad._position
     qx, qy = qqx*1, qqy*1
     xw = (xxx*2)/720
     yw = (yyy*2)/480
     
     mat = rl.matrix_scale(xw, yw, 1)
     fader = 1
+    pts2 = quad.vertices
     def applyeffect(effect : GraphicEffect):
-        nonlocal mat, xxw, yyw, fader
+        nonlocal mat, xxw, yyw, fader, pts2
         if type(effect) == Rotate:
             if effect.xr:
                 mat = rl.matrix_multiply(mat, rl.matrix_rotate_x(math.radians(effect.angle*effect.frame)))
@@ -667,6 +707,12 @@ def draw_poly(quad : TIFF_Image, tex=white):
             dist = (effect.frame/effect.frames)
             dist = min(dist, 1)
             fader = effect.startAlpha*(1-dist) + effect.endAlpha*dist
+        elif type(effect) == Sizer:
+            pX = effect.frame*effect.percentX
+            if pX == 0:
+                pX = 1
+            pY = effect.frame*effect.percentY
+            pts2 = [(rl.Vector3(p[0].x*pX, p[0].y*pY, p[0].z), p[1], p[2], p[3], p[4]) for p in pts2]
         if hasattr(effect, "frame"):
             if not effect.frozen:
                 effect.frame += 1
@@ -689,40 +735,25 @@ def draw_poly(quad : TIFF_Image, tex=white):
         yyw -= (activedrawlayer[7]/480*(yyy*2))
     mat = rl.matrix_multiply(mat, rl.matrix_translate(-xxw, -yyw, 0))
     
-    pts2 = quad.vertices
     pts = []
     
     for p in pts2:
         pts.append((rl.vector3_transform(p[0], mat), p[1], p[2], p[3], p[4]))
     #pts = pts2
     
-    if len(pts) == 4:
-        rl.rl_begin(rl.RL_QUADS)
+    rl.rl_begin(rl.RL_TRIANGLES)
+    for i in range(1, len(pts) - 1):
+        # Triangle 1: Vertex 0, i, i+1
+        # Setting color per vertex
         rl.rl_color4f(pts[0][1], pts[0][2], pts[0][3], pts[0][4]*fader)
         rl.rl_vertex3f(pts[0][0].x, pts[0][0].y, pts[0][0].z)
         
-        rl.rl_color4f(pts[1][1], pts[1][2], pts[1][3], pts[1][4]*fader)
-        rl.rl_vertex3f(pts[1][0].x, pts[1][0].y, pts[1][0].z)
+        rl.rl_color4f(pts[i][1], pts[i][2], pts[i][3], pts[i][4]*fader)
+        rl.rl_vertex3f(pts[i][0].x, pts[i][0].y, pts[i][0].z)
         
-        rl.rl_color4f(pts[2][1], pts[2][2], pts[2][3], pts[2][4]*fader)
-        rl.rl_vertex3f(pts[2][0].x, pts[2][0].y, pts[2][0].z)
-        
-        rl.rl_color4f(pts[3][1], pts[3][2], pts[3][3], pts[3][4]*fader)
-        rl.rl_vertex3f(pts[3][0].x, pts[3][0].y, pts[3][0].z)
-    else:
-        rl.rl_begin(rl.RL_TRIANGLES)
-        for i in range(1, len(pts) - 1):
-            # Triangle 1: Vertex 0, i, i+1
-            # Setting color per vertex
-            rl.rl_color4f(pts[0][1], pts[0][2], pts[0][3], pts[0][4]*fader)
-            rl.rl_vertex3f(pts[0][0].x, pts[0][0].y, pts[0][0].z)
-            
-            rl.rl_color4f(pts[i][1], pts[i][2], pts[i][3], pts[i][4]*fader)
-            rl.rl_vertex3f(pts[i][0].x, pts[i][0].y, pts[i][0].z)
-            
-            rl.rl_color4f(pts[i+1][1], pts[i+1][2], pts[i+1][3], pts[i+1][4]*fader)
-            rl.rl_vertex3f(pts[i+1][0].x, pts[i+1][0].y, pts[i+1][0].z)
-        rl.rl_end()
+        rl.rl_color4f(pts[i+1][1], pts[i+1][2], pts[i+1][3], pts[i+1][4]*fader)
+        rl.rl_vertex3f(pts[i+1][0].x, pts[i+1][0].y, pts[i+1][0].z)
+    rl.rl_end()
 
 audio_chans = []
 audio_vols = []
@@ -863,13 +894,15 @@ def draw_item(item, extra={"tex": None, "cam": None}):
                 newsurf = rg.pg.Surface(item._textsize, rg.pg.SRCALPHA)
                 newsurf.blit(item.fnt.font.render(item.s, True, [c*255 for c in item._color]), (0, 0))
             newsurf = rg.pg.transform.smoothscale_by(newsurf, (1, 0.98))
-            item._size = newsurf.get_size()
             buf = BytesIO()
-            rg.pg.image.save(newsurf, buf, ".bmp")
-            cimg = rl.load_image_from_memory(".bmp", buf.getvalue(), len(buf.getvalue()))
-            item.cachedtex = rl.load_texture_from_image(cimg)
-        
+            rg.pg.image.save(crop_text(newsurf), buf, ".bmp")
+            item.cimg = rl.load_image_from_memory(".bmp", buf.getvalue(), len(buf.getvalue()))
+            #rl.image_alpha_premultiply(cimg)
+            item.cachedtex = rl.load_texture_from_image(item.cimg)
+        item._size = (item.cimg.width, item.cimg.height)
+        #rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA_PREMULTIPLY)
         draw_quad(item, item.cachedtex)
+        #rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA)
     elif isinstance(item, Clock):
         item.s = datetime.now().strftime(item.format)
         if (item.lasts != item.s) and item.cachedtex is not None:
@@ -891,7 +924,6 @@ def draw_item(item, extra={"tex": None, "cam": None}):
             rg.pg.image.save(newsurf, buf, ".bmp")
             cimg = rl.load_image_from_memory(".bmp", buf.getvalue(), len(buf.getvalue()))
             item.cachedtex = rl.load_texture_from_image(cimg)
-            rl.export_image(cimg, "cimg.png")
         
         draw_quad(item, item.cachedtex)
     elif isinstance(item, CompositeRenderable):
@@ -1007,7 +1039,7 @@ while not rl.window_should_close():
     sortedLayers = sorted(rg.layers, key=lambda layer: layer[4])
     ee += 1
     rl.begin_drawing()
-    rl.clear_background(rl.BLACK)
+    rl.clear_background(rl.BLANK)
     rl.rl_set_clip_planes(0.01, 10000)
     rl.begin_mode_3d(camera)
     rl.rl_disable_depth_test()

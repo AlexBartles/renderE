@@ -369,7 +369,7 @@ class SignalEventCmd(RenderCommand):
 class GraphicRenderable(Renderable):
 
     def __init__(self):
-        self.position = (0, 0)
+        self._position = (0, 0)
         self._size = (0, 0)
         self.effects = []
         self.sequencer = None
@@ -397,11 +397,11 @@ class GraphicRenderable(Renderable):
         return
 
     def setPosition(self, x, y):
-        self.position = (x, y)
+        self._position = (x, y)
         return
 
     def position(self):
-        return self.position
+        return self._position
         return
 
     def setSize(self, w, h):
@@ -475,6 +475,7 @@ class Text(GraphicRenderable):
         self.buf = BytesIO()
         self.ascent = self.fnt.font.get_ascent()
         self.descent = self.fnt.font.get_descent()
+        self.cimg = None
         #sz = self.fnt.font.size(self.s)
         #text = rg.pg.Surface((sz[0], sz[1]))
         
@@ -593,7 +594,7 @@ class CompositeRenderable(GraphicRenderable):
         GraphicRenderable.__init__(self)
         self.rtex = None
         self.ftex = None
-        self.size = (720, 480)
+        self._size = (720, 480)
         self.items = []
         self.debug = debug
         return
@@ -650,7 +651,7 @@ class Polygon(GraphicRenderable):
             self.rightmost = x
         if y < self.bottommost:
             self.bottommost = y
-        self.size = (abs(self.rightmost-self.leftmost), abs(self.topmost-self.bottommost))
+        self._size = (abs(self.rightmost-self.leftmost), abs(self.topmost-self.bottommost))
         return
 
 
@@ -739,6 +740,8 @@ class Slider(GraphicEffect):
 class Sizer(GraphicEffect):
 
     def __init__(self, target=None, percentX=1, percentY=1):
+        self.frame = 0
+        self.frozen = False
         self.percentX = percentX
         self.percentY = percentY
         if target != None:
@@ -903,7 +906,7 @@ class SetRotationAngle(PropertyEffect):
 class SetAnimationState(Effect):
 
     def __init__(self, target=None, state=1):
-        _renderd.createSetAnimationState(self, state)
+        self.state = state
         if target != None:
             self.setTarget(target)
         return

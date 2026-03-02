@@ -153,6 +153,7 @@ class ProductLoader:
         return
 
     def loadProductFile(self, fname, params):
+        print("LOADPRODUCTFILE ", fname)
         try:
             (prodClass, rs, pres) = self.__prodMap[fname]
         except KeyError:
