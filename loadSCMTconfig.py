@@ -5,6 +5,7 @@
 # Compiled at: 2007-01-12 11:33:37
 import os, sys
 import rendereglobals as rg
+import playmaninit
 #import playmaninit
 import twc
 import twccommon.Log

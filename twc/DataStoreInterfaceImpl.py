@@ -10,6 +10,9 @@ import rendereglobals as rg
 import json
 import time
 
+def confchange(text):
+    return text.replace("Config.0", "Config.1")
+
 class InterfaceImpl:
 
     def __init__(self):
@@ -36,15 +39,15 @@ class InterfaceImpl:
         
         for key in keys:
             if key in self.data:
-                if (float(self.data[key][1]) < time.time()) and (float(self.data[key][1]) != 0):
-                    notfound[key] = None
+                if (float(self.data[confchange(key)][1]) < time.time()) and (float(self.data[confchange(key)][1]) != 0):
+                    notfound[confchange(key)] = None
                     self.remove(key)
                     #self.commit()
                     continue
-                res = self.data[key]
-                result[key] = res[0]
+                res = self.data[confchange(key)]
+                result[confchange(key)] = res[0]
             else:
-                notfound[key] = None
+                notfound[confchange(key)] = None
 
         return (rc, result, notfound)
 
@@ -52,8 +55,8 @@ class InterfaceImpl:
         rc = 1
         
         for (key, data, expir) in entries:
-            self.sessiondelete.discard(key)
-            self.sessiondata[key] = (data, expir)
+            self.sessiondelete.discard(confchange(key))
+            self.sessiondata[confchange(key)] = (data, expir)
 
         return rc
 
@@ -61,8 +64,8 @@ class InterfaceImpl:
         rc = 1
         for key in keys:
             if key in self.sessiondata:
-                del self.sessiondata[key]
-                self.sessiondelete.add(key)
+                del self.sessiondata[confchange(key)]
+                self.sessiondelete.add(confchange(key))
 
         return rc
         return
