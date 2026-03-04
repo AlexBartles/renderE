@@ -23,6 +23,7 @@ import json
 import string
 import traceback as tb
 from datetime import datetime
+import nethandler
 string.__dict__["letters"] = string.ascii_letters
 string.__dict__["find"] = (lambda s, f : s.find(f))
 string.__dict__["upper"] = (lambda s : str(s).upper())
@@ -444,6 +445,9 @@ def updateseq(seq : EffectSequencer):
         for i in seq.effects[1:]:
             al.append(al[-1]+i[1])
     
+    if seq.timer >= al[-1] and seq.repeat:
+        seq.timer = 0
+    
     ea = 0
     for i in range(len(seq.effects)):
         ea += 1
@@ -481,6 +485,9 @@ def calceffects(quad):
     fader = 1
     def applyeffect(effect : GraphicEffect):
         nonlocal mat, xxw, yyw, fader, qx, qy
+        if hasattr(effect, "frame"):
+            if not effect.frozen:
+                effect.frame += 1
         if type(effect) == Rotate:
             if effect.xr:
                 mat = rl.matrix_multiply(mat, rl.matrix_rotate_x(math.radians(effect.angle*effect.frame)))
@@ -508,10 +515,7 @@ def calceffects(quad):
             if isinstance(quad, Text):
                 quad.s = effect.s
         elif type(effect) == SetVisibility:
-            fader = effect.visible
-        if hasattr(effect, "frame"):
-            if not effect.frozen:
-                effect.frame += 1
+            quad.visible = effect.visible
         
     def loopover(eflist):
         for effect in eflist:
@@ -535,7 +539,8 @@ def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False):
     effects = quad.effects
     #rl.set_texture_filter(tex, rl.TextureFilter.TEXTURE_FILTER_POINT)
     plane.materials[0].maps.texture = tex
-    #rl.set_texture_filter(tex, rl.TextureFilter.TEXTURE_FILTER_TRILINEAR)
+    if isinstance(quad, Icon):
+        rl.set_texture_filter(tex, rl.TextureFilter.TEXTURE_FILTER_TRILINEAR)
     qqx, qqy = quad._position
     qqx = round(qqx)
     qqy = round(qqy)
@@ -560,6 +565,9 @@ def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False):
     fader = 1
     def applyeffect(effect : GraphicEffect):
         nonlocal mat, xxw, yyw, fader, qx, qy
+        if hasattr(effect, "frame"):
+            if not effect.frozen and not se:
+                effect.frame += 1
         if type(effect) == Rotate:
             if effect.xr:
                 mat = rl.matrix_multiply(mat, rl.matrix_rotate_x(math.radians(effect.angle*effect.frame)))
@@ -595,10 +603,7 @@ def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False):
                 if isinstance(quad, Text):
                     quad.s = effect.s
         elif type(effect) == SetVisibility:
-            fader = effect.visible
-        if hasattr(effect, "frame"):
-            if not effect.frozen and not se:
-                effect.frame += 1
+            quad.visible = effect.visible
         
     def loopover(eflist):
         for effect in eflist:
@@ -691,6 +696,9 @@ def draw_poly(quad : TIFF_Image, tex=white):
     pts2 = quad.vertices
     def applyeffect(effect : GraphicEffect):
         nonlocal mat, xxw, yyw, fader, pts2
+        if hasattr(effect, "frame"):
+            if not effect.frozen:
+                effect.frame += 1
         if type(effect) == Rotate:
             if effect.xr:
                 mat = rl.matrix_multiply(mat, rl.matrix_rotate_x(math.radians(effect.angle*effect.frame)))
@@ -713,9 +721,9 @@ def draw_poly(quad : TIFF_Image, tex=white):
                 pX = 1
             pY = effect.frame*effect.percentY
             pts2 = [(rl.Vector3(p[0].x*pX, p[0].y*pY, p[0].z), p[1], p[2], p[3], p[4]) for p in pts2]
-        if hasattr(effect, "frame"):
-            if not effect.frozen:
-                effect.frame += 1
+        elif type(effect) == SetVisibility:
+            quad.visible = effect.visible
+        
     
     def loopover(eflist):
         for effect in eflist:
@@ -725,6 +733,9 @@ def draw_poly(quad : TIFF_Image, tex=white):
             else:
                 applyeffect(effect)
     loopover(effects)
+    
+    if not quad.visible:
+        return
     
     xxw = (-qx)/720*(xxx*2)
     yyw = (-qy)/480*(yyy*2)
@@ -804,14 +815,17 @@ def update_audioseq(seq : AudioSequencer):
             break
         ea += 1
     if seq.playingidx != ea:
-        if type(seq.audio[seq.playingidx]) != NullAudioClip:
+        if type(seq.audio[seq.playingidx]) not in (NullAudioClip, AudioSequencer):
             seq.audio[seq.playingidx].file.stop()
         seq.playingidx = ea
     if seq.playingidx >= len(seq.audio):
         seq.done = True
         return
     
-    update_audio(seq.audio[ea])
+    if type(seq.audio[ea]) == AudioSequencer:
+        update_audioseq(seq.audio[ea])
+    else:
+        update_audio(seq.audio[ea])
 
 def draw_item(item, extra={"tex": None, "cam": None}):
     global once
@@ -893,7 +907,7 @@ def draw_item(item, extra={"tex": None, "cam": None}):
                 #newsurf = rg.pg.Surface(item._textsize, rg.pg.SRCALPHA)
                 newsurf = rg.pg.Surface(item._textsize, rg.pg.SRCALPHA)
                 newsurf.blit(item.fnt.font.render(item.s, True, [c*255 for c in item._color]), (0, 0))
-            newsurf = rg.pg.transform.smoothscale_by(newsurf, (1, 0.98))
+            newsurf = rg.pg.transform.smoothscale_by(newsurf, (1, 0.96))
             buf = BytesIO()
             rg.pg.image.save(crop_text(newsurf), buf, ".bmp")
             item.cimg = rl.load_image_from_memory(".bmp", buf.getvalue(), len(buf.getvalue()))
@@ -918,7 +932,7 @@ def draw_item(item, extra={"tex": None, "cam": None}):
             else:
                 #newsurf = rg.pg.Surface(item._textsize, rg.pg.SRCALPHA)
                 newsurf = item.fnt.font.render(item.s, True, [c*255 for c in item._color])
-            newsurf = rg.pg.transform.smoothscale_by(newsurf, (1, 0.98))
+            newsurf = rg.pg.transform.smoothscale_by(newsurf, (1, 0.96))
             item._size = newsurf.get_size()
             buf = BytesIO()
             rg.pg.image.save(newsurf, buf, ".bmp")

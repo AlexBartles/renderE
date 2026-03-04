@@ -8,7 +8,7 @@ import os, types, twc, twcWx.xmlUtil as xmlUtil, twcWx.mapping as mapping, twcco
 class ClimoMappingHandler(xmlUtil.LookupSubHandler):
 
     def __init__(self, container):
-        self._elements = [('loc', types.StringType, xmlUtil.REQUIRED), ('year', types.IntType, xmlUtil.REQUIRED), ('month', types.IntType, xmlUtil.REQUIRED), ('day', types.IntType, xmlUtil.REQUIRED), ('avgHigh', types.StringType, xmlUtil.OPTIONAL), ('avgLow', types.StringType, xmlUtil.OPTIONAL), ('recHigh', types.StringType, xmlUtil.OPTIONAL), ('recHighYear', types.StringType, xmlUtil.OPTIONAL), ('recLow', types.StringType, xmlUtil.OPTIONAL), ('recLowYear', types.StringType, xmlUtil.OPTIONAL)]
+        self._elements = [('loc', str, xmlUtil.REQUIRED), ('year', int, xmlUtil.REQUIRED), ('month', int, xmlUtil.REQUIRED), ('day', int, xmlUtil.REQUIRED), ('avgHigh', str, xmlUtil.OPTIONAL), ('avgLow', str, xmlUtil.OPTIONAL), ('recHigh', str, xmlUtil.OPTIONAL), ('recHighYear', str, xmlUtil.OPTIONAL), ('recLow', str, xmlUtil.OPTIONAL), ('recLowYear', str, xmlUtil.OPTIONAL)]
         xmlUtil.LookupSubHandler.__init__(self, container)
         return
 

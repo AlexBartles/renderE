@@ -227,7 +227,28 @@ def _toString(node):
     return s
     return
 
-import functools
+import functools, nethandler
+def newaccess(path, mode):
+    if not os.path.exists(path):
+        newpath = nethandler.requestNetAssetExt(path)
+        if newpath:
+            return True
+        else:
+            return False
+    else:
+        return os.access(path, mode)
+
+def newstat(path):
+    if path.startswith(os.path.join(os.path.dirname(os.path.abspath(__file__)), "net")):
+        return os.stat(path)
+    if not os.access(path, os.R_OK):
+        newpath = nethandler.requestNetAssetExt(path)
+        if newpath:
+            return os.stat(newpath)
+        else:
+            return os.stat(path)
+    else:
+        return os.stat(path)
 def _processImpls(impls):
     if len(impls) == 0:
         return Product
@@ -236,7 +257,9 @@ def _processImpls(impls):
     ns = twc.buildPyNamespace()
     ns["reduce"] = reduce
     ns["functools"] = functools
-    exec(loadtools.fixsort(py), ns, ns)
+    ns["newaccess"] = newaccess
+    ns["newstat"] = newstat
+    exec(loadtools.fixsort(py.replace("os.access", "newaccess").replace("os.stat", "newstat")), ns, ns)
     prodClass = ns['Product']
     return prodClass
     return
