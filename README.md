@@ -11,7 +11,7 @@ RenderE is intended as a replacement for a VM emulating the IntelliStar 1, a sys
 3. Load your IntellliStar 1 configuration file (using loadSCMTconfig.py) (Not required right now)
 4. If you have i1 files downloaded, set environment variables. Currently, however, all assets can be downloaded at runtime from our servers.
 5. If you have IntelliStar 1 files that include a datastore, load them with loadi1datastore.py
-6. Load your configuration with loadSCMTconfig.py. I don't know why, but currently a ton of configs don't work.
+6. Load your configuration with loadSCMTconfig.py. 2005 configs should work fine.
 7. Run main.py
 
 ### Commands
