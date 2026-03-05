@@ -18,7 +18,7 @@ dsm = twc.dsmarshal
 wxdata = domestic.wxdata
 
 def execfile(filename, globa=None, loca=None):
-    with open(filename, "rb") as f:
+    with open(filename, "r", encoding="windows-1252") as f:
         exec(compile(f.read(), filename, 'exec'), globa, loca)
 
 def do_absolutely_nothing(*args, **kwargs):
