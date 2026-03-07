@@ -17,6 +17,8 @@ obs = dsm.get(f"Config.{cver}.interestlist.obsStation")
 coopid = dsm.get(f"Config.{cver}.interestlist.coopId")
 primarycoop = dsm.get(f"primaryCoopId")
 textfcstcoop = dsm.get(f"Config.{cver}.Local_TextForecast").coopId
+daypartcoop = dsm.get(f"Config.{cver}.Local_DaypartForecast").coopId[0]
+sevendaycoop = dsm.get(f"Config.{cver}.Local_7DayForecast").coopId
 
 cur = db.cursor()
 
@@ -137,28 +139,45 @@ except:
 
 dsm.ds.commit()
 
-exit()
-for cid in coopid:
-    if cid not in cidmap:
-        print(f"Skipping coopId {cid}'s data (not found earlier?)")
-        continue
-    try:
-        dat = r.get(f"https://wx.lewolfyt.cc?geo={cidmap[cid]}").json()
+print("starting local hourly!")
+try:
+    print(cidmap[daypartcoop])
+    dat = r.get(f"https://wx.lewolfyt.cc?geo={','.join(cidmap[daypartcoop])}").json()
+    
+    for hr in dat["hourly"]:
         data = twccommon.Data()
-        data.skyCondition = dat["current"]["info"]["narrationCode"]
-        data.temp = dat["current"]["conditions"]["temperature"]
-        data.humidity = dat["current"]["conditions"]["humidity"]
-        data.dewpoint = dat["current"]["conditions"]["dewPoint"]
-        data.altimeter = dat["current"]["conditions"]["pressure"]
-        data.visibility = dat["current"]["conditions"]["visibility"]
-        data.windDirection = windmap[dat["current"]["conditions"]["windCardinal"]]
-        data.windSpeed = dat["current"]["conditions"]["windSpeed"]
-        data.gusts = dat["current"]["conditions"]["windGusts"]
-        data.heatIndex = dat["current"]["conditions"]["heatIndex"]
-        data.windChill = dat["current"]["conditions"]["windChill"]
-        data.pressureTendency = dat["current"]["conditions"]["pressureTendency"]
-        #wxdata.setData(f"obs", stat, data, dat["current"]["info"]["expires"])
-        dsm.set(f"obs.{stat}", data, dat["current"]["info"]["expires"])
-    except:
-        print(traceback.print_exc())
-        print(f"obs failure for {stat}")
+        data.skyCondition = hr["narrationCode"]
+        data.temp = round(hr["temperature"])
+        data.windDir = windmap[hr["windCardinal"]]
+        data.windSpeed = hr["windSpeed"]
+        data.heatIndex = round(hr["heatIndex"])
+        data.windChill = round(hr["windChill"])
+        dsm.set(f"hourlyFcst.{daypartcoop}.{hr['valid']}", data, hr["expires"])
+except:
+    print(traceback.print_exc())
+    print(f"daypart failure for {daypartcoop}")
+
+print("starting 7 day forecast!")
+try:
+    print(cidmap[daypartcoop])
+    dat = r.get(f"https://wx.lewolfyt.cc?geo={','.join(cidmap[sevendaycoop])}&extendeddays=10").json()
+    
+    for i in range(8):
+        j = i + (dat["extended"]["daily"][0]["partiallyObserved"])
+        jj = (i*2+1) if dat["extended"]["daily"][0]["partiallyObserved"] else (i*2)
+        dailydat = dat["extended"]["daily"][j]
+        daypartdat = dat["extended"]["daypart"][jj]
+        
+        y,m,d,H,M,S,wday,jday,dst = time.localtime(dailydat["valid"])
+        ktime = time.mktime((y,m,d,0,0,0,wday,jday,-1))
+        
+        data = twccommon.Data()
+        data.daySkyCondition = daypartdat["narrationCode"]
+        data.highTemp = dailydat["calendarTempMax"]
+        data.lowTemp = dailydat["calendarTempMin"]
+        dsm.set(f"dailyFcst.{sevendaycoop}.{int(ktime)}", data, dailydat["expires"])
+except:
+    print(traceback.print_exc())
+    print(f"7day failure for {sevendaycoop}")
+
+dsm.ds.commit()
