@@ -330,11 +330,11 @@ RED = 1
 YELLOW = 2
 GREEN = 3
 
-def getBevelBox(w, h, color=None):
+def getBevelBox(w, h, color=None, debug=False):
     bevelWidth = 3
     if color is None or len(color) != 5:
         color = [[(113, 143, 178, 255), (59, 98, 148, 255)], [(24, 51, 92, 255), (15, 34, 67, 255)], [(39, 79, 133, 255), (61, 100, 150, 255)], [(14, 32, 65, 255), (27, 57, 107, 255)], [(20, 51, 141, 153), (64, 91, 153, 153)]]
-    tombstone = RenderScript.CompositeRenderable()
+    tombstone = RenderScript.CompositeRenderable(debug)
     topEdge = RenderScript.Polygon()
     bottomEdge = RenderScript.Polygon()
     leftEdge = RenderScript.Polygon()

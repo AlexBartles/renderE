@@ -30,6 +30,7 @@ def unloadLayer(l):
         if l.texture:
             rg.rl.unload_texture(l.texture)
 def actuallyRunAQueuedCommand(cmd):
+    print(f"processing command: {type(cmd).__name__}")
     if type(cmd) in (SetLayer, SetLayerCmd):
         ix = -1
         for i, layer in enumerate(rg.layers):
@@ -41,16 +42,22 @@ def actuallyRunAQueuedCommand(cmd):
             rg.layers[ix][1] = cmd.layer
     elif type(cmd) in (AppendLayer, AppendLayerCmd):
         ix = -1
+        print("appendlayer debug:")
+        print(cmd.lname)
+        print(cmd.layer.pages)
         for i, layer in enumerate(rg.layers):
             if layer[0] == cmd.lname:
                 ix = i+0
                 break
+        print(ix)
         if ix > -1:
             if rg.layers[ix][1] is None:
                 rg.layers[ix][1] = cmd.layer
             else:
-                for p in cmd.layer.pages:
-                    rg.layers[ix][1].pages.append(p)
+                pg1 = cmd.layer.pages
+                for p in pg1:
+                    if p not in rg.layers[ix][1].pages:
+                        rg.layers[ix][1].pages.append(p)
     elif type(cmd) in (CreateNamedLayer, CreateNamedLayerCmd):
         ix = -1
         for i, layer in enumerate(rg.layers):
@@ -102,6 +109,8 @@ def actuallyRunAQueuedCommand(cmd):
             rg.layers[ix][4] = cmd.depth
             rg.layers[ix][5] = cmd.repeat
     elif type(cmd) in (DestroyNamedLayer, DestroyNamedLayerCmd):
+        print("destroynamedlayer debug:")
+        print(cmd.lname)
         ix = -1
         for i, layer in enumerate(rg.layers):
             if layer[0] == cmd.lname:
@@ -136,6 +145,7 @@ def actuallyRunAQueuedCommand(cmd):
             rg.layers[ix][14] = False
     elif type(cmd) in (LoadPresentation, LoadPresentationCmd):
         rg.runrscfunction(cmd.fileName)
+    print(f"queued command has been processed! new queue length: {len(rg.queuedcommands)}")
 
 def queueCommand(cmd, time=0, frameOffset=0, estimatedCmd=0):
     rg.queuedcommands.append([cmd, time, frameOffset, estimatedCmd])

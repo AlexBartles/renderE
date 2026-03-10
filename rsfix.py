@@ -12,6 +12,7 @@ def fix(rs):
     rs = rs.replace("(as)", "(aseq)")
     rs = rs.replace(" as.", " aseq.")
     rs = rs.replace("-as.", "-aseq.")
+    rs = rs.replace(" as,", " aseq,")
     rs = re.sub(ifpattern, _fix_if, rs)
     return rs
 

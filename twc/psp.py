@@ -13,31 +13,11 @@ def setIncludePath(path=[]):
     _includePath = path
     return
 
-def newaccess(path, mode):
-    if not os.path.exists(path):
-        newpath = nethandler.requestNetAssetExt(path)
-        if newpath:
-            return True
-        else:
-            return False
-    else:
-        return os.access(path, mode)
-
-def newstat(path):
-    if path.startswith(os.path.join(os.path.dirname(os.path.abspath(__file__)), "net")):
-        return os.stat(path)
-    if not os.access(path, os.R_OK):
-        newpath = nethandler.requestNetAssetExt(path)
-        if newpath:
-            return os.stat(newpath)
-        else:
-            return os.stat(path)
-    else:
-        return os.stat(path)
-
+import rendereglobals as rg
+newstat = rg.newstat
+newaccess = rg.newaccess
+from functools import reduce
 def evalPage(page, namespace={}, includePath=None):
-    namespace["newaccess"] = newaccess
-    namespace["newstat"] = newstat
     """Parses text looking for tags in the spirit of ASP tags and evaluates
     them.  The contexts of the tags are passed to the Python interpreter.
     The page, after evaluating the tags, is returned as the result of this 
@@ -52,6 +32,7 @@ def evalPage(page, namespace={}, includePath=None):
     share the namespace.  In other words one tag can create global values 
     that can be used by later tags.
     """
+    namespace["reduce"] = reduce
     page = page.replace("os.stat", "newstat")
     page = page.replace("os.newaccess", "newaccess")
     if includePath == None:
@@ -133,7 +114,7 @@ def evalPage(page, namespace={}, includePath=None):
     elif cmd == '!':
         #print(sub2[:100])
         try:
-            exec(rsfix.fix_if(sub2), globals=namespace)
+            exec(rsfix.fix_if(sub2).replace("os.stat", "newstat").replace("os.newaccess", "newaccess"), globals=namespace)
         except Exception as e:
             raise e
         return sub1 + evalPage(sub3, namespace, includePath)
@@ -155,5 +136,3 @@ def evalRenderScript(page, namespace={}, includePath=None):
     namespace['ds'] = DataStoreInterface
     namespace['dsm'] = twc.dsmarshal
     return evalPage(page, namespace, includePath)
-
-

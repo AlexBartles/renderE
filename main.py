@@ -1,5 +1,5 @@
 import rendereglobals as rg
-import playmaninit
+import loadtools
 import math
 from PIL import Image
 from io import BytesIO
@@ -14,28 +14,15 @@ import os
 import threading as th
 import time
 import random
-import loadtools
+
 import domesticpy.plugin.playman.playCmd.local as pmlc
 import domesticpy.plugin.playman.playCmd.pm as pm
 import domesticpy.plugin.playman.playCmd.ldl as pmldl
 import domestic.wxdata
 import json
-import string
 import traceback as tb
 from datetime import datetime
-import nethandler
-string.__dict__["letters"] = string.ascii_letters
-string.__dict__["find"] = (lambda s, f : s.find(f))
-string.__dict__["upper"] = (lambda s : str(s).upper())
-string.__dict__["lower"] = (lambda s : str(s).lower())
-oldtime = time.struct_time
-
-#i've said it before but THIS is my most cursed python code
-def yes_i_am_real_struct_time(seq=None, tm_year=0, tm_mon=0, tm_mday=0, tm_hour=0, tm_min=0, tm_sec=0, tm_wday=0, tm_yday=0, tm_isdst=0):
-    if seq:
-        return oldtime(seq)
-    return oldtime((tm_year, tm_mon, tm_mday, tm_hour, tm_min, tm_sec, tm_wday, tm_yday, tm_isdst))
-time.__dict__["struct_time"] = yes_i_am_real_struct_time
+import patches
 
 fov = 25
 screensize = (720, 480)
@@ -108,32 +95,8 @@ def jsontodata(jsond):
     dt.__dict__ = json.loads(jsond)
     return dt
 
-def apply(func, args, kwargs=None):
-    return func(*args) if kwargs is None else func(*args, **kwargs)
-def runrs(filename):
-    crs = loadtools.compilers(filename)
-    print(type(crs))
-    ns = {"apply": apply}
-    exec(crs, ns, ns)
-
-def unprint(stuff):
-    lines = stuff.split("\n")
-    finallines = []
-    for l in lines:
-        if l.strip().startswith("print"):
-            continue
-        finallines.append(l)
-    return "\n".join(finallines)
-
-def runrsc(filename):
-    dat = "global layerProps\n"
-    with open(filename, "r") as f:
-        dat += f.read()
-    ns = {"apply": apply}
-    exec(compile(unprint(dat), filename, "exec"), ns, ns)
-
-rg.runrsfunction = runrs
-rg.runrscfunction = runrsc
+runrs = patches.runrs
+runrsc = patches.runrsc
 
 def sockethandle():
     sock.listen()
@@ -253,10 +216,6 @@ def fsplash():
     cr.addItem(gr)
     
     p.addItem(cr)
-    
-    # gr = renderUtil.getBevelBox(200, 200)
-    # gr.setPosition(0, 0)
-    # p.addItem(gr)
 
     #name, layer, time, frameOffset, depth, repeat, x, y, w, h, sx, sy, tx, ty, activated
     rg.layers.append(["Foreground", l, 0, 0, 10, 0, 0, 0, 720, 480, 1, 1, 0, 0, False])
@@ -406,6 +365,10 @@ def producttest():
     es.addEffect(NullEffect(None), pduration - 10)
     es.addEffect(Slider(None, -72, 0), 10)
     p.addItem(es)
+    
+    gr = renderUtil.getBevelBox(100, 100, debug=True)
+    gr.setPosition(0, 0)
+    p.addItem(gr)
 
     renderTools.dataNotAvailable(page=p, displayDuration=pduration, text="renderE could be better with your help!", noDataBar=True)
     
@@ -429,10 +392,9 @@ def producttest():
     RenderControl.createNamedLayer("Foreground", 10)
     RenderControl.setLayer("Foreground", l, 0, 0)
 
-producttest()
-#RenderControl.queueCommand(ActivateLayerCmd("Foreground"), time.time()+10)
-
 #producttest()
+RenderControl.queueCommand(ActivateLayerCmd("Foreground"), time.time()+1)
+
 whiteimg = rl.gen_image_color(1, 1, rl.WHITE)
 white = rl.load_texture_from_image(whiteimg)
 once = True
@@ -445,8 +407,14 @@ def updateseq(seq : EffectSequencer):
         for i in seq.effects[1:]:
             al.append(al[-1]+i[1])
     
-    if seq.timer >= al[-1] and seq.repeat:
+    if seq.timer >= seq.total and seq.repeat:
         seq.timer = 0
+        for ef in seq.effects:
+            if hasattr(ef[0], "frame"):
+                ef[0].frame = 0
+            if hasattr(ef, "frozen"):
+                ef[0].frozen = False
+        seq.activeeffects = []
     
     ea = 0
     for i in range(len(seq.effects)):
@@ -458,14 +426,7 @@ def updateseq(seq : EffectSequencer):
     for i in range(ea-1):
         seq.activeeffects[i].frozen = True
     if seq.timer >= seq.total:
-        if seq.repeat:
-            seq.timer = 0
-            for ef in seq.effects:
-                ef[0].timer = 0
-                ef[0].frame = 0
-                ef[0].frozen = False
-            seq.activeeffects = [seq.effects[0][0]]
-        else:
+        if not seq.repeat:
             for ef in seq.effects:
                 ef[0].frozen = True
 
@@ -476,6 +437,8 @@ drawlevel = 0
 def calceffects(quad):
     qqx, qqy = quad._position
     effects = quad.effects
+    qqx = round(qqx)
+    qqy = round(qqy)
     qx, qy = qqx*1, qqy*1
     xw = quad._size[0]/720*(xxx*2)
     yw = quad._size[1]/480*(yyy*2)
@@ -483,11 +446,9 @@ def calceffects(quad):
     mat = rl.matrix_rotate_xyz((math.radians(90), 0, math.radians(0)))
     mat = rl.matrix_multiply(mat, rl.matrix_scale(xw, yw, 1))
     fader = 1
+    visible = not not quad.visible
     def applyeffect(effect : GraphicEffect):
-        nonlocal mat, xxw, yyw, fader, qx, qy
-        if hasattr(effect, "frame"):
-            if not effect.frozen:
-                effect.frame += 1
+        nonlocal mat, xxw, yyw, fader, qx, qy, visible
         if type(effect) == Rotate:
             if effect.xr:
                 mat = rl.matrix_multiply(mat, rl.matrix_rotate_x(math.radians(effect.angle*effect.frame)))
@@ -515,7 +476,10 @@ def calceffects(quad):
             if isinstance(quad, Text):
                 quad.s = effect.s
         elif type(effect) == SetVisibility:
-            quad.visible = effect.visible
+            visible = effect.visible
+        if hasattr(effect, "frame"):
+            if not effect.frozen:
+                effect.frame += 1
         
     def loopover(eflist):
         for effect in eflist:
@@ -544,7 +508,7 @@ def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False):
     qqx, qqy = quad._position
     qqx = round(qqx)
     qqy = round(qqy)
-    if isinstance(quad, Text):
+    if isinstance(quad, Text) or isinstance(quad, Clock):
         test = "qypgj"
         descending = False
         for c in test:
@@ -563,11 +527,9 @@ def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False):
     mat = rl.matrix_rotate_xyz((math.radians(90), 0, math.radians(0)))
     mat = rl.matrix_multiply(mat, rl.matrix_scale(xw, yw, 1))
     fader = 1
+    visible = not not quad.visible
     def applyeffect(effect : GraphicEffect):
-        nonlocal mat, xxw, yyw, fader, qx, qy
-        if hasattr(effect, "frame"):
-            if not effect.frozen and not se:
-                effect.frame += 1
+        nonlocal mat, xxw, yyw, fader, qx, qy, visible
         if type(effect) == Rotate:
             if effect.xr:
                 mat = rl.matrix_multiply(mat, rl.matrix_rotate_x(math.radians(effect.angle*effect.frame)))
@@ -603,7 +565,10 @@ def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False):
                 if isinstance(quad, Text):
                     quad.s = effect.s
         elif type(effect) == SetVisibility:
-            quad.visible = effect.visible
+            visible = effect.visible
+        if hasattr(effect, "frame"):
+            if not effect.frozen and not se:
+                effect.frame += 1
         
     def loopover(eflist):
         for effect in eflist:
@@ -625,35 +590,7 @@ def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False):
     col = rl.Color(round(quad._color[0]*255), round(quad._color[1]*255), round(quad._color[2]*255), round(quad._color[3]*fader*255))
     if isinstance(quad, Text):
         col = rl.Color(255, 255, 255, int(255*fader))
-    if quad.visible:
-        rl.draw_model_ex(plane, rl.Vector3(-xxw, -yyw, -zzz), rl.Vector3(0, 0, 0), 0, rl.Vector3(1, 1, 1), col)
-
-def draw_quad_nocal(quad : TIFF_Image, tex=white, transform=None, fader=1):
-    #rl.set_texture_filter(tex, rl.TextureFilter.TEXTURE_FILTER_POINT)
-    plane.materials[0].maps.texture = tex
-    qqx, qqy = quad._position
-    if isinstance(quad, Text):
-        test = "qypgj"
-        descending = False
-        for c in test:
-            if c in quad.s:
-                descending = True
-        if descending or True:
-            qqy += quad.descent
-        if quad.fnt.shadow:
-            pass
-            #qqx -= quad.fnt.sx
-            #qqy += quad.fnt.sy
-    qx, qy = qqx*1, qqy*1
-    xxw = (-qx-quad._size[0]/2)/720
-    yyw = (-qy-quad._size[1]/2)/480
-    
-    mat = transform
-    plane.transform = mat
-    col = rl.Color(round(quad._color[0]*255), round(quad._color[1]*255), round(quad._color[2]*255), round(quad._color[3]*fader*255))
-    if isinstance(quad, Text):
-        col = rl.Color(255, 255, 255, int(255*fader))
-    if quad.visible:
+    if visible:
         rl.draw_model_ex(plane, rl.Vector3(-xxw, -yyw, -zzz), rl.Vector3(0, 0, 0), 0, rl.Vector3(1, 1, 1), col)
 
 class DummyQuad():
@@ -685,6 +622,7 @@ def crop_text(surf: rg.pg.Surface):
 def draw_poly(quad : TIFF_Image, tex=white):
     global drawlevel
     effects = quad.effects
+    visible = not not quad.visible
     plane.materials[0].maps.texture = tex
     qqx, qqy = quad._position
     qx, qy = qqx*1, qqy*1
@@ -695,10 +633,7 @@ def draw_poly(quad : TIFF_Image, tex=white):
     fader = 1
     pts2 = quad.vertices
     def applyeffect(effect : GraphicEffect):
-        nonlocal mat, xxw, yyw, fader, pts2
-        if hasattr(effect, "frame"):
-            if not effect.frozen:
-                effect.frame += 1
+        nonlocal mat, xxw, yyw, fader, pts2, visible
         if type(effect) == Rotate:
             if effect.xr:
                 mat = rl.matrix_multiply(mat, rl.matrix_rotate_x(math.radians(effect.angle*effect.frame)))
@@ -722,8 +657,10 @@ def draw_poly(quad : TIFF_Image, tex=white):
             pY = effect.frame*effect.percentY
             pts2 = [(rl.Vector3(p[0].x*pX, p[0].y*pY, p[0].z), p[1], p[2], p[3], p[4]) for p in pts2]
         elif type(effect) == SetVisibility:
-            quad.visible = effect.visible
-        
+            visible = effect.visible
+        if hasattr(effect, "frame"):
+            if not effect.frozen:
+                effect.frame += 1
     
     def loopover(eflist):
         for effect in eflist:
@@ -734,7 +671,7 @@ def draw_poly(quad : TIFF_Image, tex=white):
                 applyeffect(effect)
     loopover(effects)
     
-    if not quad.visible:
+    if not visible:
         return
     
     xxw = (-qx)/720*(xxx*2)
@@ -768,13 +705,16 @@ def draw_poly(quad : TIFF_Image, tex=white):
 
 audio_chans = []
 audio_vols = []
-audio_mixes = []
+global audio_mixes
 
-def update_audio(item):
+def update_audio(item, activeeffects=None):
     if not item.chan and not isinstance(item, NullAudioClip):
         item.chan = item.file.play()
     effects = item.effects
-    vol = item.level
+    ae = False
+    if activeeffects:
+        ae = True
+        effects = activeeffects
     mixl = item.mix
     def applyeffect(effect : AudioEffect):
         nonlocal mixl
@@ -782,9 +722,11 @@ def update_audio(item):
             dist = (effect.frame/effect.frames)
             dist = min(dist, 1)
             mixl = effect.startMixLevel*(1-dist) + effect.endMixLevel*dist
-        if hasattr(effect, "frame"):
-            if not effect.frozen:
-                effect.frame += 1
+            print(f"AudioFader updated to {mixl}")
+        if not ae:
+            if hasattr(effect, "frame"):
+                if not effect.frozen:
+                    effect.frame += 1
         
     def loopover(eflist):
         for effect in eflist:
@@ -793,6 +735,7 @@ def update_audio(item):
                 loopover(effect.activeeffects)
             else:
                 applyeffect(effect)
+    
     loopover(effects)
     
     if item.chan:
@@ -822,10 +765,39 @@ def update_audioseq(seq : AudioSequencer):
         seq.done = True
         return
     
+    effects = seq.effects
+    
+    
     if type(seq.audio[ea]) == AudioSequencer:
         update_audioseq(seq.audio[ea])
     else:
-        update_audio(seq.audio[ea])
+        item = seq.audio[ea]
+        mixl = item.mix
+        def applyeffect(effect : AudioEffect):
+            nonlocal mixl
+            if type(effect) == AudioFader:
+                dist = (effect.frame/effect.frames)
+                dist = min(dist, 1)
+                mixl = effect.startMixLevel*(1-dist) + effect.endMixLevel*dist
+            if hasattr(effect, "frame"):
+                if not effect.frozen:
+                    effect.frame += 1
+            
+        def loopover(eflist):
+            for effect in eflist:
+                if type(effect) == AudioEffectSequencer:
+                    updateseq(effect)
+                    loopover(effect.activeeffects)
+                else:
+                    applyeffect(effect)
+        
+        loopover(effects)
+        if hasattr(item, "file"):
+            if not item.chan:
+                item.chan = item.file.play()
+            audio_chans.append(item.chan)
+            audio_vols.append(item.level)
+            audio_mixes.append(mixl)
 
 def draw_item(item, extra={"tex": None, "cam": None}):
     global once
@@ -875,13 +847,12 @@ def draw_item(item, extra={"tex": None, "cam": None}):
                 item.texture = rl.load_texture_from_image(item.im2)
             draw_quad(item, item.texture)
     elif isinstance(item, Icon):
-        if item.texture is None:
-            item.texture = rl.load_texture_from_image(item._kickstart)
+        if item.textures is None:
+            item.textures = [rl.load_texture_from_image(f) for f in item._ims]
         else:
             item.idx += 1
             item.idx %= item.framect
-            rl.update_texture(item.texture, item._rframes[item.idx])
-        draw_quad(item, item.texture)
+        draw_quad(item, item.textures[item.idx])
     elif type(item) is Box:
         #the og quad
         draw_quad(item)
@@ -923,6 +894,7 @@ def draw_item(item, extra={"tex": None, "cam": None}):
             rl.unload_texture(item.cachedtex)
             item.cachedtex = None
             item.lasts = item.s
+            item._textsize = item.fnt.font.size(item.s)
         if item.cachedtex is None:
             if item.fnt.shadow:
                 newsurf = rg.pg.Surface((item._textsize[0]+abs(item.fnt.sx), item._textsize[1]+abs(item.fnt.sy)), rg.pg.SRCALPHA)
@@ -931,14 +903,14 @@ def draw_item(item, extra={"tex": None, "cam": None}):
                 newsurf.blit(item.fnt.font.render(item.s, True, [c*255 for c in item._color]), (0, 0))
             else:
                 #newsurf = rg.pg.Surface(item._textsize, rg.pg.SRCALPHA)
-                newsurf = item.fnt.font.render(item.s, True, [c*255 for c in item._color])
+                newsurf = rg.pg.Surface(item._textsize, rg.pg.SRCALPHA)
+                newsurf.blit(item.fnt.font.render(item.s, True, [c*255 for c in item._color]), (0, 0))
             newsurf = rg.pg.transform.smoothscale_by(newsurf, (1, 0.96))
-            item._size = newsurf.get_size()
             buf = BytesIO()
             rg.pg.image.save(newsurf, buf, ".bmp")
-            cimg = rl.load_image_from_memory(".bmp", buf.getvalue(), len(buf.getvalue()))
-            item.cachedtex = rl.load_texture_from_image(cimg)
-        
+            item.cimg = rl.load_image_from_memory(".bmp", buf.getvalue(), len(buf.getvalue()))
+            item.cachedtex = rl.load_texture_from_image(item.cimg)
+        item._size = (item.cimg.width, item.cimg.height)
         draw_quad(item, item.cachedtex)
     elif isinstance(item, CompositeRenderable):
         drawlevel += 1
@@ -1015,10 +987,8 @@ def draw_item(item, extra={"tex": None, "cam": None}):
             rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA)
         
         if item.debug:
-            tex = rl.load_image_from_texture(item.rtex.texture)
+            tex = rl.load_image_from_texture(item.ftex.texture)
             rl.export_image(tex, "image2.png")
-        
-        
     elif type(item) is Polygon:
         draw_poly(item)
     elif isinstance(item, AudioSequencer):
@@ -1027,6 +997,7 @@ def draw_item(item, extra={"tex": None, "cam": None}):
         if not item.single_play:
             item.single_play = True
             item.file.play()
+        update_audio(item)
     elif isinstance(item, PageCommand):
         item.timer += 1
         if item.timer == item.activeFrame():
@@ -1034,6 +1005,8 @@ def draw_item(item, extra={"tex": None, "cam": None}):
     else:
         pass
         #print("drawing unrecognized type: ", type(item))
+
+import playmaninit
 
 while not rl.window_should_close():
     audio_chans = []
@@ -1059,20 +1032,42 @@ while not rl.window_should_close():
     rl.rl_disable_depth_test()
     rl.rl_disable_depth_mask()
     
+    audio_depths = []
+    audnames = []
+    
     for l in sortedLayers:
+        lastaud = 0
         if l[-1]:
             activedrawlayer = l
             draw_item(l[1])
+        for _ in range(len(audio_chans)-lastaud):
+            audio_depths.append(l[4])
+            audnames.append(l[0])
+        lastaud = len(audio_chans)
     
-    audio_finalvols = audio_vols.copy()
-    
-    # for i, mix in enumerate(audio_mixes):
-    #     for j in range(len(audio_finalvols)):
-    #         if i != j:
-    #             audio_finalvols[i] *= (1 - mix)
-    
-    for chan, vol in zip(audio_chans, audio_finalvols):
-        chan.set_volume(vol)
+    sorted_audio = sorted(zip(audio_chans, audio_mixes, audio_vols, audio_depths, audnames), key = lambda x: x[3])
+    print(sorted_audio)
+    if sorted_audio:
+        audio_chans, audio_mixes, audio_vols, audio_depths, audnames = zip(*sorted_audio)
+        
+        audio_finalvols = list(audio_vols).copy()
+        
+        for i, mix in enumerate(audio_mixes):
+            for j in range(len(audio_finalvols)):
+                print(f"applying a mix level of {mix}")
+                if j <= i:
+                    if j == i:
+                        audio_finalvols[j] *= mix
+                    else:
+                        audio_finalvols[j] *= (1 - mix)
+        
+        print(len(audio_finalvols))
+        
+        i = 0
+        for chan, vol in zip(audio_chans, audio_finalvols):
+            print(f"Setting volume to {vol} for {audnames[i]}")
+            chan.set_volume(vol)
+            i += 1
         #print("set volume", vol)
     
     rl.end_mode_3d()

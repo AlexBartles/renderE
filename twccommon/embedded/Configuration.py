@@ -6,7 +6,7 @@
 import os, twccommon.embedded, twccommon.Log, rendereglobals
 
 def execfile(filename, globa, loca):
-    with open(filename, "rb") as f:
+    with open(filename, "r", encoding="windows-1252") as f:
         exec(compile(f.read(), filename, 'exec'), globa, loca)
 
 class Config:

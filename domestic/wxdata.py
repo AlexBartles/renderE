@@ -31,7 +31,7 @@ def getUGCInterestList(ugc, type):
         mo = _ugcRegex.search(ugc)
 
     il = _getInterestList(type)
-    locs = filter((lambda e: e in il), locs)
+    locs = list(filter((lambda e: e in il), locs))
     return locs
     return
 

@@ -61,7 +61,7 @@ def load(argData):
         pres.version = 0
         pres.squeezeBack = 0
 
-    pres.durationSeconds = (pres.duration / 30)
+    pres.durationSeconds = (pres.duration // 30)
     pres.hasLdl = not pres.squeezeBack
     if pres.hasLdl:
         (pres.ldlBulletins, pres.ldlWarningMode, pres.activeWarnings) = _activeBulletins()
@@ -146,6 +146,7 @@ def _getLasCrawlText():
     return
 
 import math
+import random
 def _getBkgAudioFilename():
     files = glob.glob(os.path.join(os.environ["RENDEREROOT"], 'bgm', '*'))
     print(files)
@@ -154,6 +155,7 @@ def _getBkgAudioFilename():
     if numFiles == 0:
         return None
     else:
+        return random.choice(files)
         (y, m, d, H, M, S, dw, jd, dst) = time.gmtime()
         ndx = ((m + 5) / 10 + H + dw) % numFiles
         return files[math.floor(ndx)]

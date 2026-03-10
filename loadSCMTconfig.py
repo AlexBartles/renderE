@@ -4,6 +4,7 @@
 # Embedded file name: loadSCMTconfig.py
 # Compiled at: 2007-01-12 11:33:37
 import os, sys
+import patches
 import rendereglobals as rg
 import playmaninit
 #import playmaninit

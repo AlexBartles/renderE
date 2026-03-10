@@ -1,7 +1,6 @@
 import os
 import sys
 import json
-from itertools import batched
 
 if len(sys.argv) < 2:
     print("usage: python loadi1datastore.py /path/to/ds/files/")

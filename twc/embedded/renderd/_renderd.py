@@ -55,16 +55,19 @@ def createIcon(self, name, evict=0):
     print("loading mv ", name)
     self._frames = libmv.loadmv(data)
     
-    im = self._frames[0]
-    arr = BytesIO()
-    im.save(arr, format="PNG")
-    self._rframes = [rl.ffi.new('char []', fr.tobytes()) for fr in self._frames]
+    #self._rframes = [rl.ffi.new('char []', fr.tobytes()) for fr in self._frames]
     self.idx = 0
-    self.framect = len(self._rframes)
-    arr = arr.getvalue()
-    self._kickstart = rl.load_image_from_memory('.png', arr, len(arr))
-    self.texture = None
-    self._size = (self._kickstart.width, self._kickstart.height)
+    self.framect = len(self._frames)
+
+    self._ims = []
+    for f in self._frames:
+        arr = BytesIO()
+        f.save(arr, format="PNG")
+        arr = arr.getvalue()
+        self._ims.append(rl.load_image_from_memory('.png', arr, len(arr)))
+    
+    self.textures = None
+    self._size = (self._ims[0].width, self._ims[0].height)
 
 def createTTFont(self, name, pointSize, shadow, sr=0.08, sg=0.08, sb=0.08, sa=1.0, sx=1, sy=2, t=0, l=None, evict=0):
     ogname = name+""
@@ -106,5 +109,6 @@ def createAudioClip(self, name, evict=0, duration_limit=0, loop_limit=1):
     self.time_played = 0
     self.loop_limit = loop_limit
     self.level = 1
-    self.mix = 1
+    self.mix = 0
     self.single_play = 0
+    self.btype = 1

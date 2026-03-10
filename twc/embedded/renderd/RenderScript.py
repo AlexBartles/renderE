@@ -450,7 +450,11 @@ class Clock(GraphicRenderable):
         self.lasts = ''
         self.cachedtex = None
         self.cachedimg = None
+        self._textsize = (1, 1)
+        self.cimg = None
         self.fnt = font
+        self.ascent = self.fnt.font.get_ascent()
+        self.descent = self.fnt.font.get_descent()
         #_renderd.createClock(self, font, format, lcase_ampm, justification, timezone, timezoneDisplay)
         
 
@@ -462,13 +466,14 @@ class TimeCode(GraphicRenderable):
         
 
 from io import BytesIO
+import builtins
 class Text(GraphicRenderable):
 
     def __init__(self, font : TTFont, str):
         GraphicRenderable.__init__(self)
         self.fnt = font
-        self.s = str
-        self.lasts = self.s
+        self.s = builtins.str(str)
+        self.lasts = builtins.str(self.s)
         self.bounds = None
         self.cachedimg = None
         self.cachedtex = None
@@ -480,8 +485,8 @@ class Text(GraphicRenderable):
         #text = rg.pg.Surface((sz[0], sz[1]))
         
         
-        self.textbase : rg.pg.Surface = self.fnt.font.render(self.s, True, (255, 255, 255))
-        self.textbase = rg.pg.transform.smoothscale_by(self.textbase, (1, 0.91))
+        self.textbase : rg.pg.Surface = self.fnt.font.render(builtins.str(self.s), True, (255, 255, 255))
+        self.textbase = rg.pg.transform.smoothscale_by(self.textbase, (1, 0.95))
         self._lastcol = tuple(list(self._color))
         self._textsize = self.textbase.size
         self._size = self.textbase.size
@@ -560,16 +565,18 @@ class TIFF_Image(Image):
 
 class CompositedImage(Image):
 
-    def __init__(self):
-        Image.__init__(self)
-        #_renderd.createImage(self, os.path.join(os.environ["RENDEREROOT"], "compositedimage"), 0, 0, 0, 1, 1)
-        #_renderd.createCompositedImage(self)
+    def __init__(self, debug=False):
+        GraphicRenderable.__init__(self)
+        self.rtex = None
+        self.ftex = None
+        self._size = (720, 480)
+        self.items = []
+        self.debug = debug
         return
 
-    def addItem(self, gr):
-        #_renderd.CompositedImage_addItem(self, gr)
+    def addItem(self, child):
+        self.items.append(child)
         return
-
 
 class ClipboardImage(Image):
 
@@ -584,7 +591,7 @@ class VectorImage(GraphicRenderable):
 
     def __init__(self, name, lineThickness=1, evict=0):
         GraphicRenderable.__init__(self)
-        _renderd.createVectorImage(self, name, lineThickness, evict)
+        #_renderd.createVectorImage(self, name, lineThickness, evict)
         return
 
 
@@ -603,6 +610,31 @@ class CompositeRenderable(GraphicRenderable):
         self.items.append(child)
         return
 
+    def size(self):
+        bottom = None
+        top = None
+        left = None
+        right = None
+        for child in self.items:
+            pos = child.position()
+            size = child.size()
+            if not left:
+                left = pos[0]
+            else:
+                left = min(left, pos[0])
+            if not bottom:
+                bottom = pos[1]
+            else:
+                bottom = min(bottom, pos[1])
+            if not right:
+                right = pos[0]+size[0]
+            else:
+                right = max(right, pos[0]+size[0])
+            if not top:
+                top = pos[1]+size[1]
+            else:
+                top = max(top, pos[1]+size[1])
+        return (abs(left-right), abs(bottom-top))
 
 class ScrollingCompositeRenderable(CompositeRenderable):
 
@@ -692,7 +724,6 @@ class Video(GraphicRenderable):
 class Effect(ObjectWrapper):
 
     def setTarget(self, target):
-        _renderd.Effect_setTarget(self, target)
         return
 
 
@@ -796,21 +827,16 @@ class Clipper(GraphicEffect):
     CP_BOTTOM = 3
 
     def __init__(self, target=None, left=None, right=None, top=None, bottom=None):
-        _renderd.createClipper(self)
+        self.left = left
+        self.right = right
+        self.top = top
+        self.bottom = bottom
         if target != None:
             self.setTarget(target)
-        if left != None:
-            self.clip(self.CP_LEFT, left)
-        if right != None:
-            self.clip(self.CP_RIGHT, right)
-        if top != None:
-            self.clip(self.CP_TOP, top)
-        if bottom != None:
-            self.clip(self.CP_BOTTOM, bottom)
         return
 
     def clip(self, plane, pos, step=0.0):
-        _renderd.Clipper_clip(self, plane, pos, step)
+        #_renderd.Clipper_clip(self, plane, pos, step)
         return
 
 
@@ -936,6 +962,7 @@ class AudioRenderable(Renderable):
         return
 
     def setBlendType(self, type):
+        self.btype = type
         return
     
     def addEffectSequencer(self, seq, repeat, loopLimit):
@@ -961,7 +988,7 @@ class AudioClip(AudioRenderable):
         return
 
     def duration(self):
-        return self.file.get_length()*30
+        return int(self.file.get_length()*30)
         return
 
     def size(self):
@@ -1071,6 +1098,8 @@ class AudioFader(AudioEffect):
         self.startMixLevel = startMixLevel
         self.endMixLevel = endMixLevel
         self.frames = frames
+        self.frozen = False
+        self.frame = 0
         if target != None:
             self.setTarget(target)
         return

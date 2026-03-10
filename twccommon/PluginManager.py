@@ -32,7 +32,9 @@ class PluginManager:
         fl = [('py', 'r', 'source'), ('pyc', 'rb', 'compiled')]
         for fattr in fl:
             (ext, mode, type) = fattr
-            fname = '%s/%s.%s' % (self._root, ".".join(pluginName.split(".")[:-1]), ext)
+            fname = '%s/%s.%s' % (self._root, pluginName, ext)
+            print("CHECKING FNAME ", fname)
+            print(pluginName)
             if not os.path.exists(fname):
                 continue
             ft = os.path.getmtime(fname)

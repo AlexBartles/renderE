@@ -4,6 +4,7 @@
 # Embedded file name: __init__.py
 # Compiled at: 2007-01-12 11:33:26
 import os, os.path, twc, twc.dsmarshal, twc.psp, twccommon, twccommon.PluginManager, types, string, domestic.BulletinInfo, twcWx.dataUtil as wxDataUtil
+from domestic import dataUtil
 from domestic.Heuristic import *
 dsm = twc.dsmarshal
 BulletinInfo = domestic.BulletinInfo
@@ -29,7 +30,7 @@ def checkActiveWarnings():
     return
 
 def execfile(filename, globa, loca):
-    with open(filename, "rb") as f:
+    with open(filename, "r", encoding="windows-1252") as f:
         exec(compile(f.read(), filename, 'exec'), globa, loca)
 
 def checkRadarPrecip(RadarProductName, imageList=None):

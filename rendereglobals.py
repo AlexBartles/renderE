@@ -17,15 +17,17 @@ datastore = {}
 configs = {}
 runrsfunction = None
 runrscfunction = None
+newaccess = None
+newstat = None
 
 #optionally, specify your environment vars here
 #make sure to modify them to the actual paths
 #you're expected to have the i1 files already
 #also, this is untested so it may not work
 
-os.environ["RENDEREROOT"] = os.path.dirname(os.path.abspath(__file__))
+os.environ["RENDEREROOT"] = os.path.dirname(os.path.abspath(__file__)).replace("\\", "/")
 os.environ["TWCCLIDIR"] = ""
-os.environ["TWCPERSDIR"] = os.path.join(os.environ["RENDEREROOT"], "domesticpy")
+os.environ["TWCPERSDIR"] = os.path.join(os.environ["RENDEREROOT"], "domesticpy").replace("\\", "/")
 os.environ["TWCDIR"] = ""
 os.environ["RENDERERSRC"] = ""
 os.environ["RENDEREMEDIA"] = ""

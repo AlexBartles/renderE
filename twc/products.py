@@ -228,28 +228,13 @@ def _toString(node):
     return
 
 import functools, nethandler
-def newaccess(path, mode):
-    if not os.path.exists(path):
-        newpath = nethandler.requestNetAssetExt(path)
-        if newpath:
-            return True
-        else:
-            return False
-    else:
-        return os.access(path, mode)
+implid = 0
 
-def newstat(path):
-    if path.startswith(os.path.join(os.path.dirname(os.path.abspath(__file__)), "net")):
-        return os.stat(path)
-    if not os.access(path, os.R_OK):
-        newpath = nethandler.requestNetAssetExt(path)
-        if newpath:
-            return os.stat(newpath)
-        else:
-            return os.stat(path)
-    else:
-        return os.stat(path)
+def filterfixer9000(fun, it):
+    return list(filter(fun, it))
+
 def _processImpls(impls):
+    global implid
     if len(impls) == 0:
         return Product
     impl = impls[-1]
@@ -257,9 +242,10 @@ def _processImpls(impls):
     ns = twc.buildPyNamespace()
     ns["reduce"] = reduce
     ns["functools"] = functools
-    ns["newaccess"] = newaccess
-    ns["newstat"] = newstat
-    exec(loadtools.fixsort(py.replace("os.access", "newaccess").replace("os.stat", "newstat")), ns, ns)
+    ns["filterfixer9000"] = filterfixer9000
+    code = loadtools.fixsort(py).replace("os.access", "newaccess").replace("os.stat", "newstat").replace("filter", "filterfixer9000")
+    implid += 1
+    exec(code, ns, ns)
     prodClass = ns['Product']
     return prodClass
     return

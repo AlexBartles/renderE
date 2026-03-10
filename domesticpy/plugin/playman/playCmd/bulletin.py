@@ -95,7 +95,7 @@ def getPlaylistName():
     return playlistName
     return
 
-
+import domesticpy.plugin.playman.playCmd.pm as pm
 def load():
     global _crawlActive
     global _firstLoad
@@ -132,8 +132,8 @@ def load():
     pmDuration = durationFrames
     pmExpire = now + duration
     schedules = "[DynamicSchedule('%s')]" % (getPlaylistName(),)
-    #twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.load', repr((id, pmDuration, pmExpire, schedules, params)))
-    #twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.run', repr((id, 0, 0)))
+    pm.load(id, pmDuration, pmExpire, schedules, params)
+    pm.run(id, 0, 0)
     _firstLoad = 0
     return
 
@@ -155,8 +155,8 @@ def run(activate):
     params.immediateReplacement = 1
     params.bulletinCrawl = []
     schedules = "[DynamicSchedule('%s')]" % (getPlaylistName(),)
-    #twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.load', repr((id, pmDuration, pmExpire, schedules, params)))
-    #twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.load', repr((id, 0, 0)))
+    pm.load(id, pmDuration, pmExpire, schedules, params)
+    pm.run(id, 0, 0)
     _activate(activate)
     return
 
