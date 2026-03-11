@@ -114,7 +114,7 @@ def evalPage(page, namespace={}, includePath=None):
     elif cmd == '!':
         #print(sub2[:100])
         try:
-            exec(rsfix.fix_if(sub2).replace("os.stat", "newstat").replace("os.newaccess", "newaccess"), globals=namespace)
+            exec(rsfix.fix_if(sub2).replace("os.stat", "newstat").replace("os.newaccess", "newaccess"), namespace)
         except Exception as e:
             raise e
         return sub1 + evalPage(sub3, namespace, includePath)
