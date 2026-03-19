@@ -194,7 +194,7 @@ def runscmt():
     c = os.path.join(mypath, "setup", "tempcfg.py")
     rc = sp.call([sys.executable, "loadSCMTconfig.py", c])
     os.remove(c)
-    rc = sp.call([sys.executable, "loadSCMTconfig.py", os.path.join(os.environ["RENDEREROOT"], "domesticpy", "util", "defaultBulletinInfo.py")])
+    rc = sp.call([sys.executable, "loadSCMTconfig.py", os.path.join(mypath, "domesticpy", "util", "defaultBulletinInfo.py")])
     if rc != 0:
         raise Exception()
     else:
@@ -511,6 +511,20 @@ pagemap = {
                 {"type": "func", "func": processCFG},
                 {"type": "cond", "key": "cfgsuccess", "true": {"type": "alt", "setup": "setup4S", "main": "setup4S_alt"}, "false": {"type": "page", "destination": "setup4Bfail"}}
             ]}, "false": {"type": "alt", "setup": "setup4", "main": "setup4_alt"}}
+        ]
+    },
+    "setup4Bfail": {
+        "type": "textpage",
+        "title": "Configuration Setup",
+        "desc": "An error has occurred while loading the configuration script. Would you like to try again, go back, or skip?",
+        "options": [
+            "Try Again",
+            "Back"
+        ],
+        "actions": [
+            {"type": "multi", "actions": [{"type": "var", "key": "alreadysetup", "value": True}, {"type": "page", "destination": "main"}]},
+            {"type": "alt", "setup": "setup4", "main": "setup4_alt"},
+            {"type": "page", "destination": "main"}
         ]
     },
     "setup4S": {
