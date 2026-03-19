@@ -522,7 +522,7 @@ pagemap = {
             "Back"
         ],
         "actions": [
-            {"type": "multi", "actions": [{"type": "var", "key": "alreadysetup", "value": True}, {"type": "page", "destination": "main"}]},
+            {"type": "multi", "actions": [{"type": "var", "key": "alreadysetup", "val": True}, {"type": "page", "destination": "main"}]},
             {"type": "alt", "setup": "setup4", "main": "setup4_alt"},
             {"type": "page", "destination": "main"}
         ]
@@ -536,7 +536,7 @@ pagemap = {
             "Quit"
         ],
         "actions": [
-            {"type": "multi", "actions": [{"type": "var", "key": "alreadysetup", "value": True}, {"type": "page", "destination": "main"}]},
+            {"type": "multi", "actions": [{"type": "var", "key": "alreadysetup", "val": True}, {"type": "page", "destination": "main"}]},
             {"type": "quit"}
         ]
     },
