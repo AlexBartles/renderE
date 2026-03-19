@@ -15,7 +15,7 @@ root.configure(takefocus=False)
 
 mypath = os.path.dirname(os.path.abspath(__file__))
 
-bgm = pg.Sound(os.path.join(mypath, "setup", "setup.ogg"))
+bgm = pg.mixer.Sound(os.path.join(mypath, "setup", "setup.ogg"))
 
 pg.display.init()
 pg.font.init()
@@ -608,7 +608,7 @@ cool_title_effect = False
 
 shifty = 0
 
-buf = pg.Surface((720, 480), pg.SRCALPHA)
+buf = pg.surface.Surface((720, 480), pg.SRCALPHA)
 
 def draw_textpage(title, options, selected, desc):
     global shifty, sel
@@ -731,7 +731,7 @@ def doaction(action):
             page_vars[action["var"]] = filedialog.askopenfilename(initialdir=mypath)
         rwin.focus()
 
-cl = pg.Clock()
+cl = pg.time.Clock()
 transitioning = False
 transition_in = False
 transition_time = 0
@@ -816,6 +816,6 @@ while running:
             win.blit(buf, (0, 0))
     #pg.display.flip()
     rwin.flip()
-    if page["type"] == "autopage":
+    if page["type"] == "autopage" and not transitioning:
         for action in page["actions"]:
             doaction(action)
