@@ -50,7 +50,7 @@ class DynamicPlaylist(Playlist):
         Playlist.__init__(self, prodLoader)
         twccommon.Log.info("processing DynamicPlaylist '%s'" % plistName)
         self._lastProdFrameAdj = int(frameDuration) % 30
-        self._duration = int(frameDuration) / 30
+        self._duration = int(frameDuration) // 30
         if self._lastProdFrameAdj > 14:
             self._duration += 1
             self._lastProdFrameAdj = -(30 - self._lastProdFrameAdj)
@@ -109,6 +109,9 @@ class DynamicPlaylist(Playlist):
             else:
                 (curDuration, schedule, runlist) = self._underHeuristic.grow(curDuration, schedule, runlist, self._duration, self)
             loop += 1
+            print("Heuristic Thingy:")
+            print(curDuration)
+            print(self._duration)
             if loop > 100:
                 raise Exception('abandoning playlist - heuristic loop > 100')
 

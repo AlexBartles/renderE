@@ -8,6 +8,13 @@ string.__dict__["letters"] = string.ascii_letters
 string.__dict__["find"] = (lambda s, f : s.find(f))
 string.__dict__["upper"] = (lambda s : str(s).upper())
 string.__dict__["lower"] = (lambda s : str(s).lower())
+def rfix(s, o, n, count=-1):
+    return s.replace(o, n, count)
+
+def sfix(s, sep, maxsplit=-1):
+    return s.split(sep, maxsplit)
+string.__dict__["replace"] = rfix
+string.__dict__["split"] = sfix
 oldtime = time.struct_time
 
 def unprint(stuff):

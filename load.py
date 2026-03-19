@@ -1,6 +1,7 @@
 import os.path, getopt, sys
 import socket
 import json
+import nethandler as nh
 class Data:
     """An empty data structure.  Useful for data structures with dynamic
     member fields, i.e. adding new member variables at run time.
@@ -82,7 +83,7 @@ def main():
         d.durationFrames = durationFrames
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect(("localhost", 7245))
-    sock.sendall(("jsonload " + prodType + " "+json.dumps(d.__dict__)).encode())
+    nh._socksend(sock, ("jsonload " + prodType + " "+json.dumps(d.__dict__)).encode())
     sock.close()
     #wxdata.loadData(prodType, d)
     

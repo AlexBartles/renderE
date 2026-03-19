@@ -1,15 +1,28 @@
 import requests as r
 import os
+import json
 
 servers = [
     "https://archive.lewolfyt.cc/PerrisLive/",
     "https://archive.lewolfyt.cc/FlatRockLive/",
 #    "https://archive.lewolfyt.cc/WxScanLive/"
 ]
+
+try:
+    with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "servers.json")) as f:
+        servers = json.loads(f.read())[1:]
+except:
+    pass
+
 temp = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
     "net"
 )
+
+def _socksend(sock, data):
+    dlen = len(data).to_bytes(4)
+    sock.sendall(dlen+data)
+
 def requestNetAsset(path : str, extensions, check=False):
     fonts = ["ttf", "otf"]
     gfx = ["tif", "jpg", "tiff", "jpeg", "png"]

@@ -39,7 +39,7 @@ def uninit():
     return
 
 
-def get(keys, cachingEnabled=None):
+def get(keys, cachingEnabled=None, session=0):
     """Perform a get from the DataStore while honoring the local cache.
     Retrieves any keys whose values have been cached from the local
     cache.  Then any uncached values are retrieved from the DataStore.
@@ -59,16 +59,16 @@ def get(keys, cachingEnabled=None):
     is a dictionary containing the retrieved values keyed by their
     keys in the DataStore.
     """
-    return interface.get(keys, cachingEnabled)
+    return interface.get(keys, cachingEnabled, session)
     return
 
 
-def getAll(keys, cachingEnabled=None):
-    return interface.getAll(keys, cachingEnabled)
+def getAll(keys, cachingEnabled=None, session=0):
+    return interface.getAll(keys, cachingEnabled, session)
     return
 
 
-def getData(keys, prefix='', cachingEnabled=None):
+def getData(keys, prefix='', cachingEnabled=None, session=0):
     """Rertieves data from the DataStore and returns it in a structure
     with fields to match each key in keys.  In other words, a structure
     is returned that contains one member variable, with a matching name,
@@ -83,7 +83,7 @@ def getData(keys, prefix='', cachingEnabled=None):
     for key in keys:
         newKeys.append(prefix + key)
 
-    (rc, ds) = get(newKeys, cachingEnabled)
+    (rc, ds) = get(newKeys, cachingEnabled, session)
     r = Data()
     for key in keys:
         try:
@@ -95,7 +95,7 @@ def getData(keys, prefix='', cachingEnabled=None):
     return
 
 
-def set(entries):
+def set(entries, session=0):
     """Set specified values in the DataStore while honoring the local cache.
     Any values set that have been previously cached, should me marked 
     for removal from the local cache upon a commit.  The cached values 
@@ -110,11 +110,11 @@ def set(entries):
     Return:
     Returns a boolean value indicating if the operation was successfull.
     """
-    return interface.set(entries)
+    return interface.set(entries, session)
     return
 
 
-def remove(keys):
+def remove(keys, session=0):
     """Remove values from the DataStore while honoring the local cache.
     Any values removed that have been previously cached, should me marked 
     for removal from the local cache upon a commit.  The cached values 
@@ -128,11 +128,11 @@ def remove(keys):
     Return:
     Returns a boolean value indicating if the operation was successfull.
     """
-    return interface.remove(keys)
+    return interface.remove(keys, session)
     return
 
 
-def commit():
+def commit(session=0):
     """Commit outstanding changes on the DataStore and update local cache.
     Any values marked for removal from the local cache by either set()
     or remove() should now be remomved.  The intended effect of this is 
@@ -144,11 +144,11 @@ def commit():
     Return:
     Returns a boolean value indicating if the operation was successfull.
     """
-    return interface.commit()
+    return interface.commit(session)
     return
 
 
-def abort():
+def abort(session):
     """Abort outstanding changes on the DataStore and update local cache.
     Any values marked for removal from the local cache by either set()
     or remove() should be unmarked.  The intendede effect of this is that 
@@ -161,7 +161,7 @@ def abort():
     Return:
     Returns a boolean value indicating if the operation was successfull.
     """
-    return interface.abort()
+    return interface.abort(session)
     return
 
 

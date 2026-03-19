@@ -3,7 +3,7 @@
 # Decompiled from: Python 3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]
 # Embedded file name: dataUtil.py
 # Compiled at: 2005-12-01 07:18:53
-import twccommon, twcWx.SkyCondMapping as sky, twcWx.TextFcstMapping as txt, twcWx.IncidentTypeMapping as inc
+import twccommon, twcWx.SkyCondMapping as sky, twcWx.TextFcstMapping as txt, twcWx.IncidentTypeMapping as inc, twcWx.BackgroundMusicMapping as bkgMusic, twcWx.PromoMessageMapping as promoMsg
 incidentTypeMap = inc.IncidentTypeMapping(1)
 
 def getIncidentType(typeID, mappingFile, default=None):
@@ -59,3 +59,37 @@ def getTextMapping(code, mappingFile, default=None):
     return
 
 
+bkgMusicMap = bkgMusic.BackgroundMusicMapping(1)
+
+def getBackgroundMusicList(mappingFile):
+    result = bkgMusicMap.getList(mappingFile)
+    return result
+    return
+
+
+promoMsgMap = promoMsg.PromoMessageMapping(1)
+
+def getPromoMessageList(mappingFile):
+    result = promoMsgMap.getList(mappingFile)
+    return result
+    return
+
+
+def getPromoMessageAt(mappingFile, index):
+    list = promoMsgMap.getList(mappingFile)
+    try:
+        result = promoMsgMap[index]
+        return result
+    except:
+        return promoMsgMap[0]
+
+    return
+
+
+def validateAttr(obj, attrs):
+    for attr in attrs:
+        if obj.__dict__.has_key(attr) == 0:
+            return None
+
+    return obj
+    return

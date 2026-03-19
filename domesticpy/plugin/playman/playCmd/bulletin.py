@@ -244,7 +244,7 @@ def _selectBulletinRotation(bulletins, windowSize):
     if not bulletins:
         return []
     data = _split(bulletins.values(), (lambda e: e.category))
-    categories = data.keys()
+    categories = list(data.keys())
     categories.sort()
     categories.reverse()
     bull = data[categories[0]]

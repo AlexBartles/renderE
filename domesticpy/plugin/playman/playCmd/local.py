@@ -169,7 +169,7 @@ def _activeBulletins():
     else:
         bulletins = {}
     activeWarnings = 0
-    for (key, val) in bulletins.items():
+    for (key, val) in bulletins.copy().items():
         if val.category == BulletinInfo.CAT_WARNING:
             activeWarnings = 1
         if val.ldl == 0:

@@ -26,10 +26,6 @@ if not os.path.exists(statpath):
 if not (os.path.exists(datpath) and os.path.exists(statpath)):
     sys.exit(1)
 
-def chunk_data(data, size):
-    for i in range(0, len(data), size):
-        yield data[i:i + size]
-
 for file in [datpath, statpath]:
     with open(file) as f:
         data = f.read()

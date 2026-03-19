@@ -91,8 +91,12 @@ def getStaticItems():
     return values
     return
 
+import rendereglobals as rg
+
 def buildPyNamespace(default=None, **namespace):
     ns = {}
+    ns["newaccess"] = rg.newaccess
+    ns["newstat"] = rg.newstat
     if default != None:
         ns.update(default)
     ns.update(namespace)

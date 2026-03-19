@@ -487,6 +487,8 @@ class Text(GraphicRenderable):
         
         self.textbase : rg.pg.Surface = self.fnt.font.render(builtins.str(self.s), True, (255, 255, 255))
         self.textbase = rg.pg.transform.smoothscale_by(self.textbase, (1, 0.95))
+        
+        self.basesize = self.textbase.get_size()
         self._lastcol = tuple(list(self._color))
         self._textsize = self.textbase.size
         self._size = self.textbase.size
@@ -498,6 +500,9 @@ class Text(GraphicRenderable):
     def str(self):
         return self.s
         return
+
+    def size(self):
+        return self.basesize
 
     def setBoundingBoxSize(self, w, h):
         self.bounds = (w, h)
@@ -611,21 +616,11 @@ class CompositeRenderable(GraphicRenderable):
         return
 
     def size(self):
-        bottom = None
         top = None
-        left = None
         right = None
         for child in self.items:
             pos = child.position()
             size = child.size()
-            if not left:
-                left = pos[0]
-            else:
-                left = min(left, pos[0])
-            if not bottom:
-                bottom = pos[1]
-            else:
-                bottom = min(bottom, pos[1])
             if not right:
                 right = pos[0]+size[0]
             else:
@@ -634,7 +629,7 @@ class CompositeRenderable(GraphicRenderable):
                 top = pos[1]+size[1]
             else:
                 top = max(top, pos[1]+size[1])
-        return (abs(left-right), abs(bottom-top))
+        return (abs(right), abs(top))
 
 class ScrollingCompositeRenderable(CompositeRenderable):
 
@@ -643,6 +638,12 @@ class ScrollingCompositeRenderable(CompositeRenderable):
         self.step = step
         self.spacing = spacing
         self.repeat = repeat
+        self.scroll = 0
+        self.rtex = None
+        self.ftex = None
+        self.bbox = (720, 480)
+        self.debug = False
+        self.items = []
         return
 
     def setSpeed(self, step):
@@ -654,11 +655,16 @@ class ScrollingCompositeRenderable(CompositeRenderable):
         return
 
     def setBoundingBoxSize(self, w, h):
-        _renderd.ScrollingCompositeRenderable_setBoundingBoxSize(self, w, h)
+        self.bbox = (w, h)
+        self._size = (w, h)
         return
 
     def getBoundingBoxSize(self):
-        return _renderd.ScrollingCompositeRenderable_getBoundingBoxSize(self)
+        return self.bbox
+        return
+
+    def addItem(self, child):
+        self.items.append(child)
         return
 
 
@@ -717,7 +723,6 @@ class Video(GraphicRenderable):
 
     def __init__(self):
         GraphicRenderable.__init__(self)
-        _renderd.createVideo(self)
         return
 
 
@@ -1047,6 +1052,7 @@ class EffectSequencer(Renderable):
         self.total = 0
         self.repeat = repeat
         self.loopLimit = loopLimit
+        self.skipped = False
         target.addEffectSequencer(self, repeat, loopLimit)
         return
 

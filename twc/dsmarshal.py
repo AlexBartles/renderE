@@ -3,7 +3,9 @@
 # Decompiled from: Python 3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]
 # Embedded file name: dsmarshal.py
 # Compiled at: 2007-01-12 11:17:30
-import sys, twc, twc.DataStoreInterface, twccommon
+import sys, twc, twc.DataStoreInterface, twccommon, json, socket, pickle
+from io import BytesIO
+import nethandler as nh
 ds = twc.DataStoreInterface
 ds.init()
 _TYP_INT = 'int'
@@ -18,6 +20,7 @@ _defaultDict = {}
 # Posted by ShadowRanger
 # Retrieved 2025-12-18, License - CC BY-SA 4.0
 
+
 def apply(func, args, kwargs=None):
     return func(*args) if kwargs is None else func(*args, **kwargs)
 
@@ -27,14 +30,26 @@ def setDefault(key, data):
     _defaultDict[key] = data
     return
 
+def jsontodata(jsond):
+    dt = twccommon.Data()
+    dt.__dict__ = json.loads(jsond)
+    return dt
 
-def set(key, data, expiration, update=0):
+def datatojson(dt):
+    if isinstance(dt, twccommon.Data):
+        jsond = json.dumps(dt.__dict__)
+    else:
+        jsond = dt.__repr__()
+        
+    return jsond
+
+def set(key, data, expiration, update=0, session=0):
     if isinstance(data, str):
-        ds.set([(key, data, expiration)])
+        ds.set([(key, data, expiration)], session)
         return ''
     if update:
         try:
-            oldData = get(key)
+            oldData = get(key, session)
         except KeyError:
             update = 0
 
@@ -59,6 +74,21 @@ def set(key, data, expiration, update=0):
     return formatStr
     return
 
+def rset(key, data, expiration, update=0):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect(("localhost", 7245))
+    buf = BytesIO()
+    pickler = pickle.Pickler(buf)
+    pickler.dump(data)
+    nh._socksend(sock, ((f"rset {key} {expiration} {update} ".encode())+buf.getvalue()))
+    res = bytearray()
+    while True:
+        dat = sock.recv(1024)
+        if not dat:
+            break
+        res.extend(dat)
+    sock.close()
+    return res.decode()
 
 def defaultedGet(key, default=None, cachingEnabled=None):
     """Get the object referenced by key, else, return default obj if u cant 
@@ -71,7 +101,7 @@ find it"""
     return
 
 
-def get(key, cachingEnabled=None):
+def get(key, cachingEnabled=None, session=0):
     try:
         defaultResult = _defaultDict[key]
         if isinstance(defaultResult, twccommon.Data):
@@ -81,7 +111,7 @@ def get(key, cachingEnabled=None):
 
     try:
         formatKey = '%s._dsmarshal' % key
-        (rc, data) = ds.get([key, formatKey], cachingEnabled)
+        (rc, data) = ds.get([key, formatKey], cachingEnabled, session)
         print(f"accessing {formatKey}")
         try:
             tokens = data[formatKey].split(' ')
@@ -91,7 +121,7 @@ def get(key, cachingEnabled=None):
         fields = []
         maker = _parse(key, tokens, fields)
         if fields:
-            (rc, data) = ds.get(fields, cachingEnabled)
+            (rc, data) = ds.get(fields, cachingEnabled, session)
         result = _make(maker, data)
         if isinstance(result, twccommon.Data) and isinstance(defaultResult, twccommon.Data):
             result = twccommon.mergeStructs([result], defaultResult)
@@ -104,8 +134,20 @@ def get(key, cachingEnabled=None):
 
     return
 
-
-def multiGet(keys, cachingEnabled=None):
+def rget(key, cachingEnabled=None):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect(("localhost", 7245))
+    nh._socksend(sock, ("rget "+key).encode())
+    data = bytearray()
+    while True:
+        res = sock.recv(1024)
+        if not res:
+            break
+        data.extend(res)
+    sock.close()
+    return pickle.Unpickler(BytesIO(data)).load()
+    
+def multiGet(keys, cachingEnabled=None, session=0):
     keyDict = {}
     dsKeys = []
     for key in keys:
@@ -118,7 +160,7 @@ def multiGet(keys, cachingEnabled=None):
         d.maker = None
         keyDict[key] = d
 
-    (rc, data) = ds.get(dsKeys, cachingEnabled)
+    (rc, data) = ds.get(dsKeys, cachingEnabled, session)
     fields = []
     for key in keys:
         d = keyDict[key]
@@ -132,7 +174,7 @@ def multiGet(keys, cachingEnabled=None):
                 d.result = None
 
     if fields:
-        (rc, data) = ds.get(fields, cachingEnabled)
+        (rc, data) = ds.get(fields, cachingEnabled, session)
     result = []
     for key in keys:
         d = keyDict[key]
@@ -145,7 +187,7 @@ def multiGet(keys, cachingEnabled=None):
     return
 
 
-def configGet(key, cachingEnabled=None):
+def configGet(key, cachingEnabled=None, session=0):
     """Prepends a "Config.<configVersion>." to the incoming key,
        queries the datastore for the value of that key, and
        returns the value.
@@ -154,7 +196,7 @@ def configGet(key, cachingEnabled=None):
        and updated for each configuration release.  This allows
        us to decouple different config releases in the field."""
     cfgKey = 'Config.' + str(get('configVersion')) + '.' + key
-    return get(cfgKey, cachingEnabled)
+    return get(cfgKey, cachingEnabled, session)
     return
 
 
@@ -390,4 +432,8 @@ def _makeInst(field, data, moduleName, className, makers):
         return newinstance(cl, dict)
     return
 
-
+def rcommit():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect(("localhost", 7245))
+    sock.sendall(b"rcommit")
+    sock.close()

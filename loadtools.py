@@ -36,6 +36,7 @@ def fixsort(code: str) -> str:
         if close == -1:
             raise ValueError("prod file is broken")
         cmp = working[fn+6:close]
-        finalcode += f"key=functools.cmp_to_key({cmp})"
+        if cmp != "":
+            finalcode += f"key=functools.cmp_to_key({cmp})"
         working = working[close:]
-    return finalcode
+    return finalcode.replace("Exception, e", "Exception as e")

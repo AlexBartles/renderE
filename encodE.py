@@ -21,16 +21,28 @@ expiretime = time.time()+10*60+60*60
 
 db = sql.connect("LFRecord.db")
 
-cver = dsm.get("configVersion")
-obs = dsm.get(f"Config.{cver}.interestlist.obsStation")
-coopid = dsm.get(f"Config.{cver}.interestlist.coopId")
-counties = dsm.get(f"Config.{cver}.interestlist.county")
-primarycoop = dsm.get(f"primaryCoopId")
-textfcstcoop = dsm.get(f"Config.{cver}.Local_TextForecast").coopId
-daypartcoop = dsm.get(f"Config.{cver}.Local_DaypartForecast").coopId[0]
-sevendaycoop = dsm.get(f"Config.{cver}.Local_7DayForecast").coopId
-headlinecounty = dsm.get(f"Config.{cver}.Local_NWSHeadlines").zone
-getawaycoop = dsm.get(f"Config.{cver}.Local_GetawayForecast").coopId
+cver = dsm.rget("configVersion")
+obs = dsm.rget(f"Config.{cver}.interestlist.obsStation")
+coopid = set(dsm.rget(f"Config.{cver}.interestlist.coopId"))
+counties = dsm.rget(f"Config.{cver}.interestlist.county")
+aqis = dsm.rget(f"Config.{cver}.interestlist.aq")
+primarycoop = dsm.rget(f"primaryCoopId")
+textfcstcoop = dsm.rget(f"Config.{cver}.Local_TextForecast").coopId
+daypartcoop = dsm.rget(f"Config.{cver}.Local_DaypartForecast").coopId[0]
+sevendaycoop = dsm.rget(f"Config.{cver}.Local_7DayForecast").coopId
+headlinecounty = dsm.rget(f"Config.{cver}.Local_NWSHeadlines").zone
+getawaycoop = dsm.rget(f"Config.{cver}.Local_GetawayForecast").coopId
+
+lat = dsm.rget("primaryLat")
+lon = dsm.rget("primaryLon")
+
+coopid.add(textfcstcoop)
+coopid.add(daypartcoop)
+coopid.add(sevendaycoop)
+coopid.update(getawaycoop)
+
+coopid = list(coopid)
+
 print("Headline county ", headlinecounty)
 
 cur = db.cursor()
@@ -49,11 +61,31 @@ for cid in coopid:
         print(f"Found coopId {cid}!")
         cidmap[cid] = (res[7], res[8])
 
+if not doonly or only == "sensor":
+    print(f"starting sensor data!")
+    dat = r.get(f"https://wx.lewolfyt.cc?geo={lat},{lon}&include=current,historical").json()
+    data = twccommon.Data()
+    data.skyCondition = dat["current"]["info"]["narrationCode"]
+    data.temp = dat["current"]["conditions"]["temperature"]
+    data.humidity = dat["current"]["conditions"]["humidity"]
+    data.dewpoint = dat["current"]["conditions"]["dewPoint"]
+    data.altimeter = dat["current"]["conditions"]["pressure"]
+    data.visibility = dat["current"]["conditions"]["visibility"]
+    data.windDirection = windmap[dat["current"]["conditions"]["windCardinal"]]
+    data.windSpeed = dat["current"]["conditions"]["windSpeed"]
+    data.gusts = dat["current"]["conditions"]["windGusts"]
+    data.heatIndex = dat["current"]["conditions"]["heatIndex"]
+    data.windChill = dat["current"]["conditions"]["windChill"]
+    data.pressureTendency = dat["current"]["conditions"]["pressureTendency"]
+    #wxdata.setData(f"obs", stat, data, dat["current"]["info"]["expires"])
+    #dat["current"]["info"]["expires"]
+    dsm.rset(f"obs.SENSOR", data, expiretime)
+
 if not doonly or only == "obs":
     for stat in obs:
         print(f"starting obs for {stat}!")
         try:
-            dat = r.get(f"https://wx.lewolfyt.cc?icao={stat}").json()
+            dat = r.get(f"https://wx.lewolfyt.cc?icao={stat}&include=current,historical").json()
             data = twccommon.Data()
             data.skyCondition = dat["current"]["info"]["narrationCode"]
             data.temp = dat["current"]["conditions"]["temperature"]
@@ -69,11 +101,15 @@ if not doonly or only == "obs":
             data.pressureTendency = dat["current"]["conditions"]["pressureTendency"]
             #wxdata.setData(f"obs", stat, data, dat["current"]["info"]["expires"])
             #dat["current"]["info"]["expires"]
-            dsm.set(f"obs.{stat}", data, expiretime)
+            dsm.rset(f"obs.{stat}", data, expiretime)
+            rdata = twccommon.Data()
+            rdata.tempMax = dat["historical"][1]["tempMax"]
+            rdata.tempMin = dat["historical"][1]["tempMin"]
+            dsm.rset(f"recObs.{stat}", rdata, expiretime)
         except:
             print(traceback.print_exc())
             print(f"obs failure for {stat}")
-    dsm.ds.commit()
+    dsm.rcommit()
 
 curr_time = time.time()
 y, m, d, H, M, S, wd, day, dst = time.localtime(curr_time)
@@ -148,12 +184,12 @@ if not doonly or only == "text":
                     break
                 ix += 1
         for fcst, tm, ex in zip(fcsts, times, expiry):
-            dsm.set(f"textFcst.{textfcstcoop}.{round(tm)}", fcst, expiretime)
+            dsm.rset(f"textFcst.{textfcstcoop}.{round(tm)}", fcst, expiretime)
     except:
         traceback.print_exc()
         print("TextForecast generation failed!")
 
-    dsm.ds.commit()
+    dsm.rcommit()
 
 if not doonly or only == "hourly":
     print(f"starting local hourly for coopid {daypartcoop}!")
@@ -171,12 +207,12 @@ if not doonly or only == "hourly":
             data.windChill = round(hr["windChill"])
             #hr["expires"]
             print("hourly data for", hr["valid"])
-            dsm.set(f"hourlyFcst.{daypartcoop}.{hr['valid']}", data, expiretime)
+            dsm.rset(f"hourlyFcst.{daypartcoop}.{hr['valid']}", data, expiretime)
     except:
         print(traceback.print_exc())
         print(f"daypart failure for {daypartcoop}")
     
-    dsm.ds.commit()
+    dsm.rcommit()
 
 if not doonly or only == "fcst":
     cidlist = [sevendaycoop] + getawaycoop
@@ -200,11 +236,11 @@ if not doonly or only == "fcst":
                 data.highTemp = dailydat["calendarTempMax"]
                 data.lowTemp = dailydat["calendarTempMin"]
                 #dailydat["expires"]
-                dsm.set(f"dailyFcst.{ci}.{int(ktime)}", data, expiretime)
+                dsm.rset(f"dailyFcst.{ci}.{int(ktime)}", data, expiretime)
         except:
             print(traceback.print_exc())
             print(f"fcst failure for {ci}")
-    dsm.ds.commit()
+    dsm.rcommit()
 
 codes = {
     "CFW": "CFW005",
@@ -218,9 +254,289 @@ codes = {
     "HWA": "NPW013"
 }
 
-bcodes = {
-    
+codes = {
+    "Snow Advisory": "WSW020",
+    "Flood Advisory Update": "FLS001",
+    "Dense Fog Advisory": "NPW005",
+    "Fog Advisory Update": "NPW004",
+    "High Wind Watch Update": "NPW007",
+    "Fog Advisory": "NPW006",
+    "Dense Fog Advisory Update": "NPW001",
+    "Fog Advisory Update": "NPW002",
+    "Fog Warning Update": "NPW041",
+    "Dense Fog Warning Update": "NPW040",
+    "Fog Warning": "NPW043",
+    "Flood Warning Update": "FLS002",
+    "Wind Advisory Update": "NPW009",
+    "High Wind Warning Update": "NPW008",
+    "Emergency Management Bulletin": "HHH001",
+    "Flash Flood Warning Update": "FFS003",
+    "Flood Watch Update": "FFS002",
+    "Flash Flood Watch Update": "FFS001",
+    "Lake Effect Snow Warning": "WSW028",
+    "Flash Flood Warning Update": "FFS007",
+    "Flood Watch Update": "FFS005",
+    "Flash Flood Watch Update": "FFS004",
+    "Ice Storm Warning Update": "WSW023",
+    "Blizzard Warning": "WSW022",
+    "Heavy Snow Warning": "WSW021",
+    "Snow Squall Warning": "WSW021",
+    "Flash Flood Watch Update": "FFS008",
+    "Lake Effect Snow Warning Update": "WSW027",
+    "Ice Storm Warning": "WSW025",
+    "Ice Storm Warning Update": "WSW024",
+    "Flood Watch Update": "FFA007",
+    "Flood Advisory Update": "FLS003",
+    "Severe Weather Update": "SVS003",
+    "Flood Warning Update": "FLS005",
+    "Flood Advisory Update": "FLS004",
+    "Coastal Flood Warning Update": "CFW001",
+    "Coastal Flood Watch Update": "CFW002",
+    "Coastal Flood Warning": "CFW005",
+    "Coastal Flood Watch": "CFW006",
+    "Coastal Flood Statement": "CFW007",
+    "High Surf Advisory Update": "CFW008",
+    "High Surf Advisory": "CFW010",
+    "Severe Thunderstorm Watch": "SLS002",
+    "Severe Weather Watch": "SLS003",
+    "Severe Thunderstorm Warning": "SVR001",
+    "Tornado Watch": "SLS001",
+    "Heat Advisory Update": "NPW034",
+    "Excessive Heat Warning": "NPW035",
+    "Heat Advisory": "NPW036",
+    "Weather Advisory": "NPW037",
+    "Flash Flood Watch Update": "FFA001",
+    "Freeze Advisory Update": "WSW038",
+    "Flood Watch Update": "FFA002",
+    "Flash Flood Watch": "FFA005",
+    "Flash Flood Warning": "FFW001",
+    "Flood Watch": "FFA006",
+    "Blizzard Warning Update": "WSW012",
+    "Winter Weather Advisory Update": "WSW013",
+    "Snow Advisory Update": "WSW010",
+    "Heavy Snow Warning Update": "WSW011",
+    "Heavy Snow Warning Update": "WSW016",
+    "Blizzard Warning Update": "WSW017",
+    "Snow Advisory Update": "WSW014",
+    "Snow Advisory Update": "WSW015",
+    "Freeze Advisory": "NPW024",
+    "Winter Weather Advisory": "WSW018",
+    "Snow and Blowing Snow Advisory": "WSW019",
+    "Flood Update": "FLS009",
+    "Flood Advisory": "FLS008",
+    "Freeze Warning Update": "NPW018",
+    "Flood Advisory Update": "FLS006",
+    "Heat Advisory Update": "NPW032",
+    "Frost Advisory Update": "WSW042",
+    "Test Warning": "AAA001",
+    "Flood Advisory": "FLS007",
+    "Tornado Warning Update": "SPS008",
+    "Severe Thunderstorm Watch Update": "SPS009",
+    "Significant Weather Outlook": "SPS006",
+    "Tornado Watch Update": "SPS007",
+    "Hazardous Weather Outlook": "SPS001",
+    "Fog Warning Update": "NPW039",
+    "Wind Chill Advisory Update": "NPW029",
+    "Wind Chill Advisory Update": "NPW028",
+    "Frost Advisory": "NPW027",
+    "Frost Advisory Update": "NPW026",
+    "Frost Advisory Update": "NPW025",
+    "Frost Warning Update": "WSW033",
+    "Freeze Advisory Update": "NPW022",
+    "Frost Warning": "NPW021",
+    "Freeze Warning": "NPW020",
+    "Winter Storm Warning Update": "WSW001",
+    "Tropical Storm Local Statement": "HLS002",
+    "Winter Storm Warning Update": "WSW003",
+    "Winter Storm Watch Update": "WSW002",
+    "Winter Storm Warning": "WSW005",
+    "Winter Storm Watch Update": "WSW004",
+    "Winter Weather Message": "WSW007",
+    "Winter Weather Advisory Update": "WSW008",
+    "Snow Advisory Update": "WSW009",
+    "Winter Storm Watch": "WSW006",
+    "Flood Warning": "FLW002",
+    "Winter Weather Message": "WSW044",
+    "Frost Advisory Update": "WSW041",
+    "Freeze Advisory": "WSW040",
+    "Frost Advisory": "WSW043",
+    "Tsunami Bulletin": "TSU001",
+    "Hurricane Local Statement": "HLS003",
+    "Tropical Depression Local Statement": "HLS004",
+    "Typhoon Local Statement": "HLS005",
+    "High Wind Watch Update": "SPS015",
+    "High Wind Warning Update": "SPS014",
+    "Weather Statement": "SPS017",
+    "Significant Weather Alert": "SPS018",
+    "Special Weather Statement": "SPS016",
+    "Winter Storm Warning Update": "SPS011",
+    "Lake Effect Snow Advisory Update": "WSW029",
+    "Winter Storm Update": "SPS013",
+    "Severe Thunderstorm Warning Update": "SPS010",
+    "Freeze Warning Update": "NPW016",
+    "Frost Warning Update": "NPW017",
+    "High Wind Warning": "NPW014",
+    "Wind Advisory": "NPW015",
+    "Wind Advisory Update": "NPW012",
+    "High Wind Watch": "NPW013",
+    "High Wind Watch Update": "NPW010",
+    "High Wind Warning Update": "NPW011",
+    "Lake Levels": "LLL001",
+    "Winter Storm Watch Update": "SPS012",
+    "Severe Thunderstorm Warning Update": "SVS001",
+    "Frost Warning Update": "NPW019",
+    "Dense Fog Warning Update": "NPW038",
+    "Wind Chill Advisory": "NPW030",
+    "Flash Flood Statement": "FFS010",
+    "Freeze Advisory Update": "WSW039",
+    "Excessive Heat Warning Update": "NPW031",
+    "Freeze Warning Update": "WSW034",
+    "Frost Warning Update": "WSW035",
+    "Freeze Warning": "WSW036",
+    "Frost Warning": "WSW037",
+    "Lake Effect Snow Advisory Update": "WSW030",
+    "Lake Effect Snow Advisory": "WSW031",
+    "Freeze Warning Update": "WSW032",
+    "Hurricane Local Statement": "HLS001",
+    "Dense Fog Warning": "NPW042",
+    "River Flood Warning": "FLW001",
+    "Excessive Heat Warning Update": "NPW033",
+    "Red Cross Message": "RED001",
+    "Tornado Warning Update": "SVS002",
+    "Flood Watch Update": "FFS009",
+    "Tornado Warning": "TOR001",
+    "Lakeshore Flood Warning Update": "LSH001",
+    "Lakeshore Flood Watch Update": "LSH002",
+    "Lakeshore Flood Warning Update": "LSH003",
+    "Lakeshore Flood Watch Update": "LSH004",
+    "Lakeshore Flood Warning": "LSH005",
+    "Lakeshore Flood Watch": "LSH006",
+    "Lakeshore Flood Statement": "LSH007",
+    "Lake Effect Snow Watch Update": "WSW045",
+    "Lake Effect Snow Watch Update": "WSW046",
+    "Lake Effect Snow Watch": "WSW047",
+    "Blizzard Watch Update": "WSW048",
+    "Blizzard Watch Update": "WSW049",
+    "Blizzard Watch": "WSW050",
+    "Heavy Sleet Warning Update": "WSW051",
+    "Heavy Sleet Warning Update": "WSW052",
+    "Heavy Sleet Warning": "WSW053",
+    "Freezing Rain Advisory Update": "WSW054",
+    "Freezing Rain Advisory Update": "WSW055",
+    "Freezing Rain Advisory": "WSW056",
+    "Sleet Advisory Update": "WSW057",
+    "Sleet Advisory Update": "WSW058",
+    "Sleet Advisory": "WSW059",
+    "Blowing Snow Advisory Update": "WSW060",
+    "Blowing Snow Advisory Update": "WSW061",
+    "Blowing Snow Advisory": "WSW062",
+    "Wind Chill Warning Update": "WSW063",
+    "Wind Chill Warning Update": "WSW064",
+    "Wind Chill Warning": "WSW065",
+    "Wind Chill Watch Update": "WSW066",
+    "Wind Chill Watch Update": "WSW067",
+    "Wind Chill Watch": "WSW068",
+    "Wind Chill Advisory Update": "WSW069",
+    "Wind Chill Advisory Update": "WSW070",
+    "Wind Chill Advisory": "WSW071",
+    "Excessive Cold Warning Update": "NPW044",
+    "Excessive Cold Warning": "NPW046",
+    "Excessive Cold Watch Update": "NPW047",
+    "Excessive Cold Watch": "NPW049",
+    "Excessive Heat Watch Update": "NPW050",
+    "Excessive Heat Watch": "NPW052",
+    "Freeze Watch Update": "NPW053",
+    "Freeze Watch": "NPW055",
+    "Inland Hurricane Watch Update": "NPW056",
+    "Inland Hurricane Watch": "NPW058",
+    "Inland Tropical Storm Watch Update": "NPW059",
+    "Inland Tropical Storm Watch": "NPW061",
+    "Inland Hurricane Warning Update": "NPW062",
+    "Inland Hurricane Warning": "NPW064",
+    "Inland Tropical Storm Warning Update": "NPW065",
+    "Inland Tropical Storm Warning": "NPW067",
+    "Dust Storm Warning Update": "NPW068",
+    "Dust Storm Warning": "NPW070",
+    "Air Stagnation Advisory Update": "NPW071",
+    "Air Stagnation Advisory": "NPW073",
+    "Ashfall Advisory Update": "NPW074",
+    "Ashfall Advisory": "NPW076",
+    "Blowing Dust Advisory Update": "NPW077",
+    "Blowing Dust Advisory": "NPW079",
+    "Blowing Snow Advisory Update": "NPW080",
+    "Blowing Snow Advisory": "NPW082",
+    "Dense Smoke Advisory Update": "NPW083",
+    "Dense Smoke Advisory": "NPW085",
+    "Freezing Fog Advisory Update": "NPW086",
+    "Freezing Fog Advisory": "NPW088",
+    "Lake Wind Advisory Update": "NPW089",
+    "Lake Wind Advisory": "NPW091",
+    "Excessive Heat Outlook": "NPW092",
+    "Excessive Cold Outlook": "NPW093",
+    "Freeze Outlook": "NPW094",
+    "High Wind Outlook": "NPW095",
+    "Wind Chill Outlook": "NPW096",
+    "Avalanche Watch Update": "AVA001",
+    "Avalanche Watch": "AVA003",
+    "Avalanche Warning Update": "AVW001",
+    "Avalanche Warning": "AVW003",
+    "Civil Danger Warning Update": "CDW001",
+    "Civil Danger Warning": "CDW003",
+    "Civil Emergency Message": "CEM040",
+    "Immediate Evacuation Bulletin": "EVI001",
+    "Earthquake Warning Update": "EQW001",
+    "Earthquake Warning": "EQW003",
+    "Fire Warning Update": "FRW001",
+    "Fire Warning": "FRW003",
+    "Hazardous Materials Warning Update": "HMW001",
+    "Hazardous Materials Warning": "HMW003",
+    "Local Area Emergency": "LAE001",
+    "Shelter in Place Warning": "SPW001",
+    "Volcano Warning Update": "VOW001",
+    "Volcano Warning": "VOW003"
 }
+
+if not doonly or only == "bulletin":
+    print("starting bulletins")
+    for c in counties:
+        try:
+            alerts = r.get(f"https://api.weather.gov/alerts/active?zone={c}").json()
+            headline_groups = {}
+            pri = -1
+            for f in alerts["features"]:
+                try:
+                    props = f["properties"]
+                    bull = twccommon.Data()
+                    code = codes[props["event"]]
+                    bull.pil = code[:3]
+                    bull.pilExt = code[3:] #this is the only one. so i'm using it.
+                    bull.text = props["headline"]
+                    print(f"adding bulletin for {c}: {bull.text}")
+                    bull.issueTime = int(datetime.fromisoformat(props["sent"]).timestamp())
+                    bull.expiration = int(datetime.fromisoformat(props["expires"]).timestamp())
+                    bull.dispExpiration = bull.expiration
+                    group = dsm.rget(f"Config.1.pil.{code}")
+                    if pri != -1:
+                        if group.priority > pri:
+                            headline_groups[group.group] = bull
+                            pri = group.priority
+                    else:
+                        headline_groups[group.group] = bull
+                        pri = group.priority
+                except:
+                    traceback.print_exc()
+                    print(f"failed to add headline for {props['event']} in county {c}")
+            
+            print(f"{c} headlines done!")
+            for g in list(headline_groups.keys()):
+                dsm.rset("bulletin.%s.%d" % (c, int(g)), headline_groups[g], expiretime)
+        except:
+            traceback.print_exc()
+            print(f"error on {c}!")
+
+    dsm.rcommit()
+
+
 exit()
 print("starting nws headlines")
 
@@ -243,30 +559,6 @@ try:
             traceback.print_exc()
             print("anywho,")
     print("expires", hexpiretime)
-    dsm.set(f"hdln.{headlinecounty}", twccommon.Data(headlines=headlines, vocal=vocal), hexpiretime)
+    dsm.rset(f"hdln.{headlinecounty}", twccommon.Data(headlines=headlines, vocal=vocal), hexpiretime)
 except:
     print("headline failure!")
-
-exit()
-print("starting bulletins")
-for c in counties:
-    try:
-        alerts = r.get(f"https://api.weather.gov/alerts/active?zone={c}").json()
-        headlines = []
-        for f in alerts["features"]:
-            props = f["properties"]
-            bull = twccommon.Data()
-            bull.pil = props["eventCode"]["SAME"][0]
-            bull.pilExt = bcodes[bull.pil][0]
-            bull.text = props["headline"]
-            print(f"adding headline for {c}: {bull.text}")
-            bull.issueTime = int(datetime.fromisoformat(props["sent"]).timestamp())
-            bull.expiration = int(datetime.fromisoformat(props["expires"]).timestamp())
-            headlines.append(bull)
-        
-        print(f"success on {c}!")
-    except:
-        traceback.print_exc()
-        print(f"error on {c}!")
-
-dsm.ds.commit()

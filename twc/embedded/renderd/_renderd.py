@@ -28,7 +28,7 @@ def createImage(self, name, evict=0, x1=0, y1=0, x2=1, y2=1):
         print(f"No suitable image found for {ogname}!")
         exit(1)
     
-    im = Image.open(name)
+    im = Image.open(name).convert("RGBA")
     arr = BytesIO()
     im.save(arr, format="PNG")
     arr = arr.getvalue()
@@ -87,6 +87,10 @@ def createTTFont(self, name, pointSize, shadow, sr=0.08, sg=0.08, sb=0.08, sa=1.
     self.ascent = self.font.get_ascent()
     self.descent = self.font.get_descent()
     self.cachedtex = None
+    
+    ag = self.font.render("Ag", True, (255, 255, 255)).get_height()
+    ag2 = self.font.render("Ag\nAg", True, (255, 255, 255)).get_height()
+    self.reallineheight = ag2-ag
 
 def createAudio(self):
     return

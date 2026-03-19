@@ -1,0 +1,821 @@
+import pygame as pg
+import nethandler as nh
+import requests as r
+import twc.dsmarshal as dsm
+import tkinter as tk
+from tkinter import filedialog
+import os
+import sys
+import json
+import subprocess as sp
+
+root = tk.Tk()
+root.withdraw()
+root.configure(takefocus=False)
+
+mypath = os.path.dirname(os.path.abspath(__file__))
+
+bgm = pg.Sound(os.path.join(mypath, "setup", "setup.ogg"))
+
+pg.display.init()
+pg.font.init()
+
+rwin = pg.Window("RenderE Setup", (720, 480))
+win = rwin.get_surface()
+bg = pg.image.load(os.path.join(mypath, "setup", "bg.png"))
+
+bgm.play(-1)
+
+page_vars = {"alreadysetup": False}
+
+apage = "init"
+alreadysetup = False
+
+input_mode = "mouse"
+
+config_name_map = {
+    "AL": "Alabama",
+    "AK": "Alaska",
+    "AZ": "Arizona",
+    "AR": "Arkansas",
+    "BA": "Bahamas",
+    "CA": "California",
+    "CO": "Colorado",
+    "CT": "Connecticut",
+    "DE": "Delaware",
+    "DC": "District of Columbia",
+    "FL": "Florida",
+    "GA": "Georgia",
+    "HI": "Hawaii",
+    "ID": "Idaho",
+    "IL": "Illinois",
+    "IN": "Indiana",
+    "IA": "Iowa",
+    "KS": "Kansas",
+    "KY": "Kentucky",
+    "LA": "Louisiana",
+    "ME": "Maine",
+    "MD": "Maryland",
+    "MA": "Massachusetts",
+    "MI": "Michigan",
+    "MN": "Minnesota",
+    "MS": "Mississippi",
+    "MO": "Missouri",
+    "MT": "Montana",
+    "NE": "Nebraska",
+    "NV": "Nevada",
+    "NH": "New Hampshire",
+    "NJ": "New Jersey",
+    "NM": "New Mexico",
+    "NY": "New York",
+    "NC": "North Carolina",
+    "ND": "North Dakota",
+    "OH": "Ohio",
+    "OK": "Oklahoma",
+    "OR": "Oregon",
+    "PA": "Pennsylvania",
+    "PR": "Puerto Rico",
+    "RI": "Rhode Island",
+    "SC": "South Carolina",
+    "SD": "South Dakota",
+    "TN": "Tennessee",
+    "TX": "Texas",
+    "UN": "UN",
+    "UT": "Utah",
+    "VT": "Vermont",
+    "VA": "Virginia",
+    "VI": "Virgin Islands",
+    "WA": "Washington",
+    "WV": "West Virginia",
+    "WI": "Wisconsin",
+    "WY": "Wyoming"
+}
+
+def processDS():
+    dsdat = page_vars["ds1"]
+    dsstat = page_vars["ds2"]
+    dsdict = {}
+    
+    for data in [dsdat, dsstat]:
+
+        filepos = 0
+        while True:
+            fs = "\x1c"
+            nameix = data.find(fs, filepos)
+            if nameix == -1:
+                break
+            name = data[filepos:nameix]
+            filepos = nameix + 1
+            
+            valix = data.find(fs, filepos)
+            if valix == -1:
+                break
+            
+            val = data[filepos:valix]
+            filepos = valix + 1
+            
+            expireix = data.find("\n", filepos)
+            if expireix == -1:
+                break
+            
+            expire = data[filepos:expireix]
+            filepos = expireix + 1
+            
+            dsdict[name] = [val, expire]
+    with open("ds.json", "w") as f:
+        f.write(json.dumps(dsdict, indent=4))
+
+def downloadDS():
+    ds1l = f"https://archive.lewolfyt.cc/{page_vars['dssource']}/twc/data/datastore/ds.dat"
+    ds2l = f"https://archive.lewolfyt.cc/{page_vars['dssource']}/twc/data/datastore/ds.stat"
+    success = True
+    try:
+        ds1 = r.get(ds1l).content
+        page_vars["ds1"] = ds1.decode("windows-1252")
+    except:
+        success = False
+    if not success:
+        page_vars["dsosuccess"] = False
+        return
+
+    try:
+        ds2 = r.get(ds2l).content
+        page_vars["ds2"] = ds2.decode("windows-1252")
+    except:
+        success = False
+    page_vars["dsosuccess"] = success
+    processDS()
+
+def processDSF():
+    page_vars["dsfsuccess"] = True
+    try:
+        dsf = page_vars["dsfolder"]
+        with open(os.path.join(dsf, "ds.dat"), "r", encoding="windows-1252") as f:
+            page_vars["ds1"] = f.read()
+        with open(os.path.join(dsf, "ds.stat"), "r", encoding="windows-1252") as f:
+            page_vars["ds2"] = f.read()
+    except:
+        page_vars["dsfsuccess"] = False
+    processDS()
+
+def determinestate():
+    global apage, alreadysetup
+    if os.path.exists(os.path.join(mypath, "ds.json")):
+        if not os.path.exists(os.path.join(mypath, "setup", ".config_complete")):
+            apage = "setup4"
+        else:
+            apage = "main"
+            alreadysetup = True
+            page_vars["alreadysetup"] = True
+    else:
+        apage = "setup1"
+        
+    if apage == "init":
+        apage = "setup1"
+
+def createconfighiddenfile():
+    f = open(".config", "x")
+    f.close()
+
+pagemap = {}
+
+def downloadconfig(c):
+    print(c)
+    page_vars["cfgsuccess"] = False
+    try:
+        cf = r.get(f"https://archive.lewolfyt.cc/i1conf/{c}").content
+        with open(os.path.join(mypath, "setup", "tempcfg.py"), "wb") as f:
+            f.write(cf)
+        runscmt()
+        page_vars["cfgsuccess"] = True
+    except:
+        page_vars["cfgsuccess"] = False
+
+def runscmt():
+    c = os.path.join(mypath, "setup", "tempcfg.py")
+    rc = sp.call([sys.executable, "loadSCMTconfig.py", c])
+    os.remove(c)
+    rc = sp.call([sys.executable, "loadSCMTconfig.py", os.path.join(os.environ["RENDEREROOT"], "domesticpy", "util", "defaultBulletinInfo.py")])
+    if rc != 0:
+        raise Exception()
+    else:
+        try:
+            f = open(os.path.join(mypath, "setup", ".config_complete"), "x")
+            f.close()
+        except FileExistsError:
+            pass
+
+import shutil as sh
+def processCFG():
+    page_vars["cfgsuccess"] = True
+    try:
+        dsf = page_vars["cfgfile"]
+        sh.copy(dsf, os.path.join(mypath, "setup", "tempcfg.py"))
+        runscmt()
+    except:
+        page_vars["cfgsuccess"] = False
+
+def buildconfigmap():
+    try:
+        cj = r.get("https://archive.lewolfyt.cc/configs.json").json()
+        keys = sorted(list(cj.keys()), key=lambda x : config_name_map[x])
+        pagemap["setup4A"] = {
+            "type": "textpage",
+            "title": "Configuration Repository",
+            "desc": None,
+            "options": ["Back"]+[config_name_map[k] for k in keys],
+            "actions": [{"type": "alt", "setup": "setup4", "main": "setup4_alt"}]+[{"type": "page", "destination": f"setup4A/{k}"} for k in keys]
+        }
+        for k in keys:
+            pagemap[f"setup4A/{k}"] = {
+                "type": "textpage",
+                "title": f"Configuration Repository",
+                "desc": f"Viewing configs for {config_name_map[k]}",
+                "options": ["Back"]+[n[0] for n in sorted(cj[k], key=lambda e : e[0])],
+                "actions": [{"type": "page", "destination": "setup4A"}]+[{"type": "multi", "actions": [{"type": "var", "key": "setpath", "val": f"{k}/{n[1]}"}, {"type": "page", "destination": "setup4Aset"}]} for n in sorted(cj[k], key=lambda e : e[0])]
+            }
+    except Exception as e:
+        pagemap["setup4A"] = {
+            "type": "textpage",
+            "title": "Configuration Repository",
+            "desc": "An error occurred while loading the configuration repository! Would you like to try again or go back?",
+            "options": [
+                "Try Again",
+                "Back"
+            ],
+            "actions": [
+                {"type": "page", "destination": "setup4Aload"},
+                {"type": "page", "destination": "setup4A"}
+            ]
+        }
+
+def serverchange(sv):
+    servers = [["PerrisLive"], ["PerrisFixes", "PerrisLive"], ["FlatRockLive"], ["WxScanLive"], ["PerrisBGs", "PerrisLive"]]
+    brands = ["Perris", "Perris", "FlatRock", "WxScan", "Perris"]
+    serversel = [f"https://archive.lewolfyt.cc/{i}/" for i in servers[sv]]
+    with open(os.path.join(mypath, "servers.json"), "w") as f:
+        f.write(json.dumps([brands[sv]]+serversel, indent=4))
+
+serveropts = [pg.image.load(os.path.join(mypath, "setup", f"server{i+1}.png")) for i in range(4)]
+serveracts = []
+i = 0
+for _ in range(4):
+    j = i*1
+    serveracts.append({"type": "multi", "actions": [{"type": "func", "func": serverchange, "args": [int(i*1)]}, {"type": "page", "destination": "main"}]})
+    i += 1
+
+def clearrs():
+    try:
+        sh.rmtree(os.path.join(mypath, "temp"))
+        os.mkdir(os.path.join(mypath, "temp"))
+    except:
+        pass
+
+def clearna():
+    try:
+        sh.rmtree(os.path.join(mypath, "net"))
+        os.mkdir(os.path.join(mypath, "net"))
+    except:
+        pass
+
+pagemap = {
+    "init": {
+        "type": "autopage",
+        "title": "Loading...",
+        "desc": None,
+        "actions": [
+            {"type": "func", "func": determinestate}
+        ]
+    },
+    "setup1": {
+        "type": "textpage",
+        "title": "Welcome to RenderE Setup!",
+        "desc": "These pages will guide you through setup. Press space or return to continue, and use the up and down arrows to change options.",
+        "options": [
+            "Next"
+        ],
+        "actions": [
+            {"type": "page", "destination": "setup2"}
+        ]
+    },
+    "setup2": {
+        "type": "textpage",
+        "title": "Datastore Setup",
+        "desc": "Which way would you like to set up the datastore?",
+        "options": [
+            "Download from the internet",
+            "Load from a datastore folder"
+        ],
+        "actions": [
+            {"type": "page", "destination": "setup3A"},
+            {"type": "page", "destination": "setup3B"}
+        ]
+    },
+    "setup2_alt": {
+        "type": "textpage",
+        "title": "Datastore Setup",
+        "desc": "Which way would you like to set up the new datastore?",
+        "options": [
+            "Download from the internet",
+            "Load from a datastore folder",
+            "Back"
+        ],
+        "actions": [
+            {"type": "page", "destination": "setup3A_alt"},
+            {"type": "page", "destination": "setup3B"},
+            {"type": "page", "destination": "main"}
+        ]
+    },
+    "setup3A": {
+        "type": "textpage",
+        "title": "Datastore Setup",
+        "desc": "Choose which initial i1 datastore to use. Please note that Perris is the only full package currently supported by RenderE, so other datastores may cause issues!",
+        "options": [
+            "Perris",
+            "Flat Rock",
+            "Weatherscan",
+            "Back"
+        ],
+        "actions": [
+            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "PerrisLive"}, {"type": "page", "destination": "setup3Aload"}]},
+            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "FlatRockLive"}, {"type": "page", "destination": "setup3Aload"}]},
+            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "WxScanLive"}, {"type": "page", "destination": "setup3Aload"}]},
+            {"type": "page", "destination": "setup2"}
+        ]
+    },
+    "setup3A_alt": {
+        "type": "textpage",
+        "title": "Datastore Setup",
+        "desc": "Choose which initial i1 datastore to use. Please note that Perris is the only full package currently supported by RenderE, so other datastores may cause issues!",
+        "options": [
+            "Perris",
+            "Flat Rock",
+            "Weatherscan",
+            "Back"
+        ],
+        "actions": [
+            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "PerrisLive"}, {"type": "page", "destination": "setup3Aload"}]},
+            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "FlatRockLive"}, {"type": "page", "destination": "setup3Aload"}]},
+            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "WxScanLive"}, {"type": "page", "destination": "setup3Aload"}]},
+            {"type": "page", "destination": "setup2_alt"}
+        ]
+    },
+    "setup3Aload": {
+        "type": "autopage",
+        "title": "Datastore Setup",
+        "desc": "Downloading... Setup may stop responding for a moment.",
+        "actions": [
+            {"type": "func", "func": downloadDS},
+            {"type": "cond", "key": "dsosuccess", "true": {"type": "page", "destination": "setup4"}, "false": {"type": "alt", "setup": "setup3Afail", "main": "setup3Bfail_alt"}}
+        ]
+    },
+    "setup3Afail": {
+        "type": "textpage",
+        "title": "Datastore Setup",
+        "desc": "Online datastore downloading has failed! Would you like to try again, use a folder, or quit setup?",
+        "options": [
+            "Try again",
+            "Load from a datastore folder",
+            "Quit"
+        ],
+        "actions": [
+            {"type": "page", "destination": "setup3A"},
+            {"type": "page", "destination": "setup3B"},
+            {"type": "quit"}
+        ]
+    },
+    "setup3Afail_alt": { #if we are already setup
+        "type": "textpage",
+        "title": "Datastore Setup",
+        "desc": "Online datastore downloading has failed! Would you like to try again, use a folder, or go back to the main menu?",
+        "options": [
+            "Try again",
+            "Load from a datastore folder",
+            "Back"
+        ],
+        "actions": [
+            {"type": "page", "destination": "setup3A_alt"},
+            {"type": "page", "destination": "setup3B"},
+            {"type": "page", "destination": "main"}
+        ]
+    },
+    "setup3B": {
+        "type": "autopage",
+        "title": "Datastore Setup",
+        "desc": "Choose your folder containing ds.dat and ds.stat from the popup.",
+        "actions": [
+            {"type": "picker", "ptype": "folder", "var": "dsfolder"},
+            {"type": "cond", "key": "dsfolder", "true": {"type": "multi", "actions": [
+                {"type": "func", "func": processDSF},
+                {"type": "cond", "key": "dsfsuccess", "true": {"type": "page", "destination": "setup4"}, "false": {"type": "alt", "setup": "setup3Bfail", "main": "setup3Bfail_alt"}}
+            ]}, "false": {"type": "page", "destination": "setup2"}}
+        ]
+    },
+    "setup3Bfail": {
+        "type": "textpage",
+        "title": "Datastore Setup",
+        "desc": "An error occurred while processing the datastore folder! Would you like to try again, download the datastore from online, or quit setup?",
+        "options": [
+            "Try again",
+            "Download from the internet",
+            "Quit"
+        ],
+        "actions": [
+            {"type": "page", "destination": "setup3B"},
+            {"type": "page", "destination": "setup3A"},
+            {"type": "quit"}
+        ]
+    },
+    "setup3Bfail_alt": {
+        "type": "textpage",
+        "title": "Datastore Setup",
+        "desc": "An error occurred while processing the datastore folder! Would you like to try again, download the datastore from online, or go back to the main menu?",
+        "options": [
+            "Try again",
+            "Download from the internet",
+            "Back"
+        ],
+        "actions": [
+            {"type": "page", "destination": "setup3B"},
+            {"type": "page", "destination": "setup3A_alt"},
+            {"type": "page", "destination": "main"}
+        ]
+    },
+    "setup4": {
+        "type": "textpage",
+        "title": "Configuration Setup",
+        "desc": "In this section of setup, you can determine the location configuration. Would you like to browse our configuration repository, or load a configuration from a file?",
+        "options": [
+            "Browse Repository",
+            "Load from file",
+            "Quit"
+        ],
+        "actions": [
+            {"type": "page", "destination": "setup4Aload"},
+            {"type": "page", "destination": "setup4Bwarn"},
+            {"type": "quit"}
+        ]
+    },
+    "setup4_alt": {
+        "type": "textpage",
+        "title": "Configuration Setup",
+        "desc": "Would you like to browse our configuration repository, or load a configuration from a file?",
+        "options": [
+            "Browse Repository",
+            "Load from file",
+            "Back"
+        ],
+        "actions": [
+            {"type": "page", "destination": "setup4Aload"},
+            {"type": "page", "destination": "setup4Bwarn"},
+            {"type": "page", "destination": "main"}
+        ]
+    },
+    "setup4Aload": {
+        "type": "autopage",
+        "title": "Configuration Repository",
+        "desc": "Loading...",
+        "actions": [
+            {"type": "func", "func": buildconfigmap},
+            {"type": "page", "destination": "setup4A"}
+        ]
+    },
+    "setup4Aset": {
+        "type": "autopage",
+        "title": "Configuration Repository",
+        "desc": "Running configuration scripts...",
+        "actions": [
+            {"type": "func", "func": (lambda : downloadconfig(page_vars["setpath"]))},
+            {"type": "cond", "key": "cfgsuccess", "true": {"type": "page", "destination": "setup4S"}, "false": {"type": "page", "destination": "setup4Afail"}}
+        ]
+    },
+    "setup4Bwarn": {
+        "type": "textpage",
+        "title": "Warning",
+        "desc": "Custom configuration scripts can be used to execute malicious code! Are you sure that you would like to run a custom configuration script?",
+        "options": [
+            "Continue",
+            "Back"
+        ],
+        "actions": [
+            {"type": "page", "destination": "setup4B"},
+            {"type": "alt", "setup": "setup4", "main": "setup4_alt"}
+        ]
+    },
+    "setup4B": {
+        "type": "autopage",
+        "title": "Configuration Setup",
+        "desc": "Choose your configuration file from the popup.",
+        "actions": [
+            {"type": "picker", "ptype": "file", "var": "cfgfile"},
+            {"type": "cond", "key": "cfgfile", "true": {"type": "multi", "actions": [
+                {"type": "func", "func": processCFG},
+                {"type": "cond", "key": "cfgsuccess", "true": {"type": "alt", "setup": "setup4S", "main": "setup4S_alt"}, "false": {"type": "page", "destination": "setup4Bfail"}}
+            ]}, "false": {"type": "alt", "setup": "setup4", "main": "setup4_alt"}}
+        ]
+    },
+    "setup4S": {
+        "type": "textpage",
+        "title": "Configuration Setup",
+        "desc": "Your configuration has loaded successfully. Initial setup has been completed! You can now use the other included setup tools.",
+        "options": [
+            "Main menu",
+            "Quit"
+        ],
+        "actions": [
+            {"type": "multi", "actions": [{"type": "var", "key": "alreadysetup", "value": True}, {"type": "page", "destination": "main"}]},
+            {"type": "quit"}
+        ]
+    },
+    "setup4S_alt": {
+        "type": "textpage",
+        "title": "Configuration Setup",
+        "desc": "Your configuration has loaded successfully!",
+        "options": [
+            "Main menu"
+        ],
+        "actions": [
+            {"type": "page", "destination": "main"}
+        ]
+    },
+    "main": {
+        "type": "textpage",
+        "title": "Setup Tools",
+        "desc": None,
+        "options": [
+            "Reset Datastore",
+            "Load Configuration",
+            "Change data server",
+            #"Playlist editor",
+            "Clear temporary files",
+            "Quit"
+        ],
+        "actions": [
+            {"type": "page", "destination": "setup2_alt"},
+            {"type": "page", "destination": "setup4_alt"},
+            {"type": "page", "destination": "dataservers"},
+            #{"type": "page", "destination": "pedit"},
+            {"type": "page", "destination": "cleartemp"},
+            {"type": "quit"}
+        ]
+    },
+    "dataservers": {
+        "type": "imagepage",
+        "title": "Choose Data Server",
+        "desc": "This will affect the graphics package used, products, and more.",
+        "options": serveropts,
+        "actions": serveracts
+    },
+    "cleartemp": {
+        "type": "textpage",
+        "title": "Clear Temporary Files",
+        "desc": "Choose which files you would like to clear.",
+        "options": [
+            "Temporary Renderscripts",
+            "Network Assets",
+            "Back"
+        ],
+        "actions": [
+            {"type": "page", "destination": "cleartempRS"},
+            {"type": "page", "destination": "cleartempNA"},
+            {"type": "page", "destination": "main"}
+        ]
+    },
+    "cleartempRS": {
+        "type": "autopage",
+        "title": "Clear Temporary Files",
+        "desc": "Clearing old renderscripts...",
+        "actions": [
+            {"type": "func", "func": clearrs},
+            {"type": "page", "destination": "main"}
+        ]
+    },
+    "cleartempNA": {
+        "type": "autopage",
+        "title": "Clear Temporary Files",
+        "desc": "Clearing old network assets...",
+        "actions": [
+            {"type": "func", "func": clearna},
+            {"type": "page", "destination": "main"}
+        ]
+    }
+}
+
+tfn = pg.font.Font(os.path.join(mypath, "Interstate-Bold.ttf"), 40)
+fn = pg.font.Font(os.path.join(mypath, "Interstate-Regular.ttf"), 30)
+
+cool_title_effect = False
+
+shifty = 0
+
+buf = pg.Surface((720, 480), pg.SRCALPHA)
+
+def draw_textpage(title, options, selected, desc):
+    global shifty, sel
+    
+    shifty = max(min(shifty, (len(options)-6)*40), 0)
+    
+    if input_mode == "keyboard":
+        if sel > 5:
+            shifty = shifty*0.9+0.1*(sel-5)*40
+        else:
+            shifty = shifty*0.9
+    
+    bl = tfn.render(title, True, (0, 0, 0))
+    yl = tfn.render(title, True, (255, 255, 0))
+    buf.blit(bl, (12+2*cool_title_effect, 12-shifty))
+    buf.blit(yl, (10+2*cool_title_effect, 10-shifty))
+    
+    if cool_title_effect:
+        pg.draw.line(buf, (0, 0, 0), (10, 12-shifty), (10, 53-shifty), 3)
+        pg.draw.line(buf, (0, 0, 0), (12, 52-shifty), (12+bl.get_width(), 52-shifty), 3)
+        pg.draw.line(buf, (255, 255, 0), (8, 10-shifty), (8, 51-shifty), 3)
+        pg.draw.line(buf, (255, 255, 0), (10, 50-shifty), (10+bl.get_width(), 50-shifty), 3)
+    yy = 0
+    if desc:
+        d1 = fn.render(desc, True, (0, 0, 0), wraplength=700)
+        d2 = fn.render(desc, True, (255, 255, 255), wraplength=700)
+        yy = d1.height+40
+        buf.blit(d1, (12, 72-shifty))
+        buf.blit(d2, (10, 70-shifty))
+    
+    
+    mx, my = pg.mouse.get_pos()
+    if input_mode == "mouse":
+        for i, opt in enumerate(options):
+            yyy = i*40+70+yy-shifty
+            if yyy-5 < my < yyy+35:
+                sel = i
+    for i, opt in enumerate(options):
+        optx = "> "*(i==selected)+opt
+        buf.blit(fn.render(optx, True, (0, 0, 0)), (12, i*40+72+yy-shifty))
+        buf.blit(fn.render(optx, True, (255, 255, 255) if not (i == selected) else (255, 255, 0)), (10, i*40+70+yy-shifty))
+
+def draw_impage(title, options, selected, desc):
+    global shifty, sel
+    
+    shifty = max(min(shifty, (len(options)-2)*125), 0)
+    
+    if input_mode == "keyboard":
+        if sel > 1:
+            shifty = shifty*0.9+0.1*(sel-1)*125
+        else:
+            shifty = shifty*0.9
+    
+    bl = tfn.render(title, True, (0, 0, 0))
+    yl = tfn.render(title, True, (255, 255, 0))
+    buf.blit(bl, (12+2*cool_title_effect, 12-shifty))
+    buf.blit(yl, (10+2*cool_title_effect, 10-shifty))
+    
+    if cool_title_effect:
+        pg.draw.line(buf, (0, 0, 0), (10, 12-shifty), (10, 53-shifty), 3)
+        pg.draw.line(buf, (0, 0, 0), (12, 52-shifty), (12+bl.get_width(), 52-shifty), 3)
+        pg.draw.line(buf, (255, 255, 0), (8, 10-shifty), (8, 51-shifty), 3)
+        pg.draw.line(buf, (255, 255, 0), (10, 50-shifty), (10+bl.get_width(), 50-shifty), 3)
+    yy = 0
+    
+    if desc:
+        d1 = fn.render(desc, True, (0, 0, 0), wraplength=700)
+        d2 = fn.render(desc, True, (255, 255, 255), wraplength=700)
+        yy = d1.height+40
+        buf.blit(d1, (12, 72-shifty))
+        buf.blit(d2, (10, 70-shifty))
+    
+    mx, my = pg.mouse.get_pos()
+    if input_mode == "mouse":
+        for i, opt in enumerate(options):
+            yyy = i*125+70+yy-shifty
+            if yyy < my < yyy+125:
+                sel = i
+    
+    for i, opt in enumerate(options):
+        s = opt.copy()
+        if i != selected:
+            s.fill((255, 255, 255, 127), special_flags=pg.BLEND_RGBA_MULT)
+        buf.blit(s, (10, i*125+70+yy-shifty))
+
+
+sel = 0
+running = True
+
+def doaction(action):
+    global apage, page_vars, running
+    if action["type"] == "page":
+        apage = action["destination"]
+    elif action["type"] == "multi":
+        for a in action["actions"]:
+            doaction(a)
+    elif action["type"] == "func":
+        arg = []
+        if "args" in action:
+            arg = action["args"]
+        action["func"](*arg)
+    elif action["type"] == "var":
+        page_vars[action["key"]] = action["val"]
+    elif action["type"] == "cond":
+        if page_vars[action["key"]]:
+            doaction(action["true"])
+        else:
+            doaction(action["false"])
+    elif action["type"] == "alt":
+        if page_vars["alreadysetup"]:
+            apage = action["main"]
+        else:
+            apage = action["setup"]
+    elif action["type"] == "quit":
+        running = False
+    elif action["type"] == "picker":
+        if action["ptype"] == "folder":
+            page_vars[action["var"]] = filedialog.askdirectory(initialdir=mypath, mustexist=True)
+        elif action["ptype"] == "file":
+            page_vars[action["var"]] = filedialog.askopenfilename(initialdir=mypath)
+        rwin.focus()
+
+cl = pg.Clock()
+transitioning = False
+transition_in = False
+transition_time = 0
+invert_transition = False
+
+snapshot = None
+
+while running:
+    cl.tick(60)
+    page = pagemap[apage]
+    for event in pg.event.get():
+        if event.type == pg.QUIT:
+            running = False
+        elif event.type == pg.KEYDOWN:
+            input_mode = "keyboard"
+            if transitioning:
+                continue
+            if event.key in [pg.K_UP, pg.K_DOWN]:
+                if page["type"] in ["textpage", "imagepage"]:
+                    sel = (sel + (1 if event.key == pg.K_DOWN else -1)) % len(page["options"])
+                    while page["options"][sel] == "":
+                        sel = (sel + (1 if event.key == pg.K_DOWN else -1)) % len(page["options"])
+            elif event.key in [pg.K_SPACE, pg.K_RETURN]:
+                if page["type"] in ["textpage", "imagepage"]:
+                    doaction(page["actions"][sel])
+                    if page["actions"][sel]["type"] != "quit":
+                        invert_transition = (page["options"][sel] == "Back")
+                        sel = 0
+                        shifty = 0
+                        transitioning = True
+                        transition_in = False
+                        transition_time = 10
+                        snapshot = buf.copy()
+        elif event.type == pg.MOUSEBUTTONDOWN:
+            input_mode = "mouse"
+            if transitioning:
+                continue
+            if event.button == pg.BUTTON_LEFT:
+                if page["type"] in ["textpage", "imagepage"]:
+                    doaction(page["actions"][sel])
+                    if page["actions"][sel]["type"] != "quit":
+                        invert_transition = (page["options"][sel] == "Back")
+                        sel = 0
+                        shifty = 0
+                        transitioning = True
+                        transition_in = False
+                        transition_time = 10
+                        snapshot = buf.copy()
+        elif event.type == pg.MOUSEWHEEL:
+            input_mode = "mouse"
+            if transitioning:
+                continue
+            shifty = max(shifty+(event.y*1.5)*(int(event.flipped)*2-1), 0)
+    if not running:
+        break
+    page = pagemap[apage]
+    win.fill((0, 0, 0))
+    win.blit(bg, (0, 0))
+    buf.fill((0, 0, 0, 0))
+    if transitioning:
+        transition_time -= 1
+        if transition_time < 0:
+            if not transition_in:
+                transition_in = True
+                transition_time = 9
+            else:
+                transitioning = False
+                transition_time = 0
+                transition_in = False
+    if transitioning and not transition_in:
+        win.blit(snapshot, ((-720+transition_time*72)*((not invert_transition)*2-1), 0))
+    else:
+        if page["type"] == "textpage":
+            draw_textpage(page["title"], page["options"], sel, page["desc"])
+        elif page["type"] == "imagepage":
+            draw_impage(page["title"], page["options"], sel, page["desc"])
+        elif page["type"] == "autopage":
+            draw_textpage(page["title"], [], sel, page["desc"])
+        if transitioning:
+            win.blit(buf, (transition_time*72*((not invert_transition)*2-1), 0))
+        else:
+            win.blit(buf, (0, 0))
+    #pg.display.flip()
+    rwin.flip()
+    if page["type"] == "autopage":
+        for action in page["actions"]:
+            doaction(action)

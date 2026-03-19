@@ -6,6 +6,8 @@ screenshot.png
 ds.json
 __pycache__
 __pycache__/*
+**/__pycache__
+**/__pycache__/*
 net/*
 temp/*
 bgm/*

@@ -32,7 +32,7 @@ def _ldlBulletins():
         bulletins = BulletinInfo.loadActiveBulletins(counties)
     else:
         bulletins = {}
-    for (key, val) in bulletins.items():
+    for (key, val) in bulletins.copy().items():
         if val.ldl == 0:
             del bulletins[key]
 

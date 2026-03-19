@@ -483,4 +483,3 @@ def getFcstSkyCondGrouping(skyCond):
 def _makeSCG(wr, sr, ws, ss, i, w, c, pc, cl, t, f, sv):
     return twccommon.Data(widespreadRain=wr, scatteredRain=sr, widespreadSnow=ws, scatteredSnow=ss, ice=i, windy=w, cloudy=c, partlyCloudy=pc, clear=cl, thunder=t, fog=f, severe=sv)
     return
-

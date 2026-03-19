@@ -16,67 +16,72 @@ def confchange(text):
 class InterfaceImpl:
 
     def __init__(self):
-        self.data = rg.datastore
-        self.sessiondata = {}
-        self.sessiondelete = set()
+        pass
         
 
-    def get(self, keys, cachingEnabled=None):
-        (rc, values, notfound) = self.internalGet(keys, cachingEnabled)
+    def get(self, keys, cachingEnabled=None, session=0):
+        (rc, values, notfound) = self.internalGet(keys, cachingEnabled, session)
         return (rc, values)
         return
 
-    def getAll(self, keys, cachingEnabled=None):
-        (rc, values, notfound) = self.internalGet(keys, cachingEnabled)
+    def getAll(self, keys, cachingEnabled=None, session=0):
+        (rc, values, notfound) = self.internalGet(keys, cachingEnabled, session)
         values.update(notfound)
         return (rc, values)
 
-    def internalGet(self, keys, cachingEnabled=None):
+    def internalGet(self, keys, cachingEnabled=None, session=0):
         """Internal get implementation for get/getAll to use"""
         notfound = {}
         rc = 1
         result = {}
         
         for key in keys:
-            if key in self.data:
-                if (float(self.data[confchange(key)][1]) < time.time()) and (float(self.data[confchange(key)][1]) != 0):
+            if key in rg.datastore:
+                if (float(rg.datastore[confchange(key)][1]) < time.time()) and (float(rg.datastore[confchange(key)][1]) != 0):
                     notfound[confchange(key)] = None
-                    self.remove(key)
+                    self.remove(key, session)
                     #self.commit()
                     continue
-                res = self.data[confchange(key)]
+                res = rg.datastore[confchange(key)]
+                result[confchange(key)] = res[0]
+            elif key in rg.sessiondata[session]:
+                if (float(rg.sessiondata[session][confchange(key)][1]) < time.time()) and (float(rg.sessiondata[session][confchange(key)][1]) != 0):
+                    notfound[confchange(key)] = None
+                    del rg.sessiondata[session][confchange(key)]
+                    continue
+                res = rg.sessiondata[session][confchange(key)]
                 result[confchange(key)] = res[0]
             else:
                 notfound[confchange(key)] = None
 
         return (rc, result, notfound)
 
-    def set(self, entries):
+    def set(self, entries, session=0):
         rc = 1
         
         for (key, data, expir) in entries:
-            self.sessiondelete.discard(confchange(key))
-            self.sessiondata[confchange(key)] = (data, expir)
+            rg.sessiondelete[session].discard(confchange(key))
+            rg.sessiondata[session][confchange(key)] = (data, expir)
 
         return rc
 
-    def remove(self, keys):
+    def remove(self, keys, session=0):
         rc = 1
         for key in keys:
-            if key in self.sessiondata:
-                del self.sessiondata[confchange(key)]
-                self.sessiondelete.add(confchange(key))
+            if key in rg.sessiondata:
+                del rg.sessiondata[session][confchange(key)]
+                rg.sessiondelete[session].add(confchange(key))
 
         return rc
         return
 
-    def commit(self):
+    def commit(self, session=0):
         rc = 1
         
-        for key in self.sessiondata:
-            self.data[key] = self.sessiondata[key]
+        for key in rg.sessiondata[session]:
+            rg.datastore[key] = rg.sessiondata[session][key]
         
-        datas = json.dumps(self.data, indent=4)
+        datas = json.dumps(rg.datastore, indent=4)
         
         try:
             with open(os.path.join(os.environ["RENDEREROOT"], "ds.json"), "w") as f:
@@ -87,8 +92,10 @@ class InterfaceImpl:
         return rc
         return
 
-    def abort(self):
+    def abort(self, session=0):
         rc = 1
+        rg.sessiondata[session] = {}
+        rg.sessiondelete[session] = set()
 
         return rc
         return

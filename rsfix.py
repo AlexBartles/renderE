@@ -13,9 +13,10 @@ def fix(rs):
     rs = rs.replace(" as.", " aseq.")
     rs = rs.replace("-as.", "-aseq.")
     rs = rs.replace(" as,", " aseq,")
+    rs = rs.replace("Exception, e", "Exception as e")
     rs = re.sub(ifpattern, _fix_if, rs)
     return rs
 
 def fix_if(rs):
-    fixed = re.sub(ifpattern, _fix_if, rs)
+    fixed = re.sub(ifpattern, _fix_if, rs).replace("Exception, e", "Exception as e")
     return fixed
