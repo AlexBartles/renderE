@@ -13,6 +13,7 @@ root.configure(takefocus=False)
 
 mypath = os.path.dirname(os.path.abspath(__file__))
 
+pg.mixer.init()
 bgm = pg.mixer.Sound(os.path.join(mypath, "setup", "setup.ogg"))
 
 pg.display.init()
