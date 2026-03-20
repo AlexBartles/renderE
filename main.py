@@ -880,8 +880,11 @@ def unload_tree(item):
     if hasattr(item, "unload"):
         item.unload()
         last_sec.append(30)
-    elif hasattr(item, "items"):
+    if hasattr(item, "items"):
         for i in item.items:
+            unload_tree(i)
+    if hasattr(item, "elements"):
+        for i in item.elements:
             unload_tree(i)
 
 windbg = ""

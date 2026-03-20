@@ -562,8 +562,12 @@ class Icon(GraphicRenderable):
         return
     
     def unload(self):
+        if self.textures:
+            for tx in self.textures:
+                rg.rl.unload_texture(tx)
+                tx = None
         for im in self._ims:
-            rg.rl.unload_texture(im)
+            rg.rl.unload_image(im)
             im = None
 
 

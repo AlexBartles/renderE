@@ -8,6 +8,7 @@ from .RenderScript import *
 import rendereglobals as rg
 
 def unloadLayer(l): #i'd deprecate this but it may still have some sort of value
+    return
     if isinstance(l, Layer):
         for page in l.pages:
             unloadLayer(page)
