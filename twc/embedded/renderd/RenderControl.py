@@ -7,7 +7,7 @@ from . import _renderd
 from .RenderScript import *
 import rendereglobals as rg
 
-def unloadLayer(l):
+def unloadLayer(l): #i'd deprecate this but it may still have some sort of value
     if isinstance(l, Layer):
         for page in l.pages:
             unloadLayer(page)
@@ -17,18 +17,24 @@ def unloadLayer(l):
     elif isinstance(l, CompositeRenderable):
         for item in l.items:
             unloadLayer(item)
-        rg.rl.unload_render_texture(l.rtex)
-        rg.rl.unload_render_texture(l.ftex)
+        if l.rtex:
+            rg.rl.unload_render_texture(l.rtex)
+        if l.ftex:
+            rg.rl.unload_render_texture(l.ftex)
     elif isinstance(l, AudioSequencer):
         for item in l.audio:
             unloadLayer(item)
     elif isinstance(l, Text):
-        rg.rl.unload_texture(l.cachedtex)
+        if l.cachedtex:
+            rg.rl.unload_texture(l.cachedtex)
     elif isinstance(l, Image):
         if l.im2:
             rg.rl.unload_image(l.im2)
+            l.im2 = None
         if l.texture:
             rg.rl.unload_texture(l.texture)
+            l.texture = None
+
 def actuallyRunAQueuedCommand(cmd):
     print(f"processing command: {type(cmd).__name__}")
     if type(cmd) in (SetLayer, SetLayerCmd):

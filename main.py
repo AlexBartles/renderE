@@ -15,6 +15,7 @@ import threading as th
 import time
 import random
 
+
 import domesticpy.plugin.playman.playCmd.local as pmlc
 import domesticpy.plugin.playman.playCmd.pm as pm
 import domesticpy.plugin.playman.playCmd.ldl as pmldl
@@ -25,6 +26,8 @@ from datetime import datetime
 import patches
 import twc.dsmarshal as dsm
 import pickle
+
+DEBUG = False
 
 fov = 25
 screensize = (720, 480)
@@ -181,6 +184,8 @@ def sockethandle():
             elif args[0] == "createtest":
                 RenderControl.destroyNamedLayer("Foreground", 0)
                 producttest()
+            else:
+                print(args)
         conn.close()
 
 tth = th.Thread(target=sockethandle, daemon=True)
@@ -772,8 +777,10 @@ audio_chans = []
 audio_vols = []
 global audio_mixes
 
+last_sec = []
+
 def update_audio(item, activeeffects=None):
-    if not item.chan and not isinstance(item, NullAudioClip):
+    if not item.chan and not isinstance(item, NullAudioClip) and item.file:
         item.chan = item.file.play()
     effects = item.effects
     ae = False
@@ -859,7 +866,7 @@ def update_audioseq(seq : AudioSequencer):
         
         loopover(effects)
         if hasattr(item, "file"):
-            if not item.chan:
+            if not item.chan and item.file:
                 item.chan = item.file.play()
             audio_chans.append(item.chan)
             audio_vols.append(item.level)
@@ -867,11 +874,24 @@ def update_audioseq(seq : AudioSequencer):
 
 mode_3d_tracker = 0
 
+last_sec = []
+def unload_tree(item):
+    print(f"Unloading item of type {type(item).__name__}")
+    if hasattr(item, "unload"):
+        item.unload()
+        last_sec.append(30)
+    elif hasattr(item, "items"):
+        for i in item.items:
+            unload_tree(i)
+
+windbg = ""
+
 vtex = None
 def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0)}):
     global mode_3d_tracker
     global once
     global drawlevel
+    global windbg
     if type(item) == Layer:
         item.timer += 1
         al = []
@@ -897,6 +917,8 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0)}):
             item.pages[item.pa][0].ended = True
             for cmd in item.pages[item.pa][0]._onEndCommands:
                 RenderControl.actuallyRunAQueuedCommand(cmd)
+            item.pages[item.pa][0].__del__()
+            windbg += "unloaded a page\n"
             #and here
             item.pa = (ea-1)
             item.pages[item.pa][0].started = True
@@ -964,6 +986,8 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0)}):
     elif isinstance(item, Clock):
         item.s = datetime.now().strftime(item.format)
         if (item.lasts != item.s) and item.cachedtex is not None:
+            if item.cimg:
+                rl.unload_image(item.cimg)
             rl.unload_texture(item.cachedtex)
             item.cachedtex = None
             item.lasts = item.s
@@ -1134,6 +1158,10 @@ RenderControl.createNamedLayer("Video", 25, 0, 0)
 RenderControl.setLayer("Video", vl)
 #RenderControl.activateLayer("Video")
 
+if DEBUG:
+    import psutil
+    proc = psutil.Process(os.getpid())
+
 while not rl.window_should_close():
     audio_chans = []
     audio_mixes = []
@@ -1196,5 +1224,25 @@ while not rl.window_should_close():
     
     rl.end_mode_3d()
     mode_3d_tracker -= 1
-    #rl.draw_fps(10, 10)
+    if DEBUG:
+        lines = windbg.split("\n")
+        if len(lines) > 12:
+            lines = lines[-12:]
+        rl.draw_fps(10, 10)
+        rl.draw_text(f"Unloading: {len(rg.unloadqueue)}", 10, 40, 20, rl.WHITE)
+        rl.draw_text(f"Queued Commands: {len(rg.queuedcommands)}", 10, 70, 20, rl.WHITE)
+        rl.draw_text(f"Unloaded (Last Second): {len(last_sec)}", 10, 100, 20, rl.WHITE)
+        rl.draw_text(f"{proc.memory_info().rss/(1024*1024):.2f}MB Memory Usage", 10, 130, 20, rl.WHITE)
+        rl.draw_text("\n".join(lines), 10, 160, 20, rl.WHITE)
+    for i in range(len(last_sec)):
+        last_sec[i] -= 1
+    
+    while True:
+        try:
+            last_sec.remove(0)
+        except:
+            break
     rl.end_drawing()
+    for i in rg.unloadqueue:
+        unload_tree(i)
+    rg.unloadqueue = []

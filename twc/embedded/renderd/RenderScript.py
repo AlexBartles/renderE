@@ -91,6 +91,9 @@ class Page(ObjectWrapper):
     def duration(self):
         return self._duration
 
+    def __del__(self):
+        for i in self._elements:
+            rg.unloadqueue.append(i)
 
 class Font(ObjectWrapper):
 
@@ -493,6 +496,17 @@ class Text(GraphicRenderable):
         self._textsize = self.textbase.size
         self._size = self.textbase.size
 
+    def unload(self):
+        if self.cimg:
+            rg.rl.unload_image(self.cimg)
+            self.cimg = None
+        if self.cachedimg:
+            rg.rl.unload_image(self.cachedimg)
+            self.cachedimg = None
+        if self.cachedtex:
+            rg.rl.unload_texture(self.cachedtex)
+            self.cachedtex = None
+
     def font(self):
         return self.fnt
         return
@@ -546,6 +560,11 @@ class Icon(GraphicRenderable):
         self.evict = evict
         _renderd.createIcon(self, name, evict)
         return
+    
+    def unload(self):
+        for im in self._ims:
+            rg.rl.unload_texture(im)
+            im = None
 
 
 class Image(GraphicRenderable):
@@ -558,6 +577,13 @@ class JPEG_Image(Image):
         Image.__init__(self)
         _renderd.createImage(self, name, evict, x1, y1, x2, y2)
         return
+    def unload(self):
+        if self.texture:
+            print("Unloading Texture...")
+            rg.rl.unload_texture(self.texture)
+        if self.im2:
+            print("Unloading Image...")
+            rg.rl.unload_image(self.im2)
 
 
 class TIFF_Image(Image):
@@ -566,7 +592,16 @@ class TIFF_Image(Image):
         Image.__init__(self)
         _renderd.createImage(self, name, evict, x1, y1, x2, y2)
         return
-
+    def unload(self):
+        if self.texture:
+            print("Unloading Texture...")
+            rg.rl.unload_texture(self.texture)
+            self.texture = None
+        if self.im2:
+            print("Unloading Image...")
+            if rg.rl.is_image_valid(self.im2):
+                rg.rl.unload_image(self.im2)
+                self.im2 = None
 
 class CompositedImage(Image):
 
@@ -579,15 +614,24 @@ class CompositedImage(Image):
         self.debug = debug
         return
 
+    def unload(self):
+        if self.rtex:
+            rg.rl.unload_render_texture(self.rtex)
+            self.rtex = None
+        if self.ftex:
+            rg.rl.unload_render_texture(self.ftex)
+            self.ftex = None
+
     def addItem(self, child):
         self.items.append(child)
         return
+    
 
 class ClipboardImage(Image):
 
     def __init__(self):
         GraphicRenderable.__init__(self)
-        _renderd.createClipboardImage(self)
+        #_renderd.createClipboardImage(self)
         return
 
 
@@ -610,6 +654,14 @@ class CompositeRenderable(GraphicRenderable):
         self.items = []
         self.debug = debug
         return
+
+    def unload(self):
+        if self.rtex:
+            rg.rl.unload_render_texture(self.rtex)
+            self.rtex = None
+        if self.ftex:
+            rg.rl.unload_render_texture(self.ftex)
+            self.ftex = None
 
     def addItem(self, child):
         self.items.append(child)
@@ -645,6 +697,14 @@ class ScrollingCompositeRenderable(CompositeRenderable):
         self.debug = False
         self.items = []
         return
+
+    def unload(self):
+        if self.rtex:
+            rg.rl.unload_render_texture(self.rtex)
+            self.rtex = None
+        if self.ftex:
+            rg.rl.unload_render_texture(self.ftex)
+            self.ftex = None
 
     def setSpeed(self, step):
         self.step = step
@@ -973,6 +1033,12 @@ class AudioRenderable(Renderable):
     def addEffectSequencer(self, seq, repeat, loopLimit):
         self.effects.append(seq)
 
+    def unload(self):
+        if self.chan:
+            self.chan.stop()
+        if hasattr(self, "file"):
+            if self.file:
+                self.file.stop()
 
 class Audio(AudioRenderable):
 
@@ -1096,7 +1162,11 @@ class AudioSequencer(AudioRenderable):
     def size(self):
         return _renderd.AudioSequencer_getSize(self)
         return
-
+    
+    def unload(self):
+        for a in self.audio:
+            a.unload()
+        self.audio = []
 
 class AudioFader(AudioEffect):
 

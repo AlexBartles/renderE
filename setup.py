@@ -234,6 +234,7 @@ def buildconfigmap():
                 "actions": [{"type": "page", "destination": "setup4A"}]+[{"type": "multi", "actions": [{"type": "var", "key": "setpath", "val": f"{k}/{n[1]}"}, {"type": "page", "destination": "setup4Aset"}]} for n in sorted(cj[k], key=lambda e : e[0])]
             }
     except Exception as e:
+        print(e)
         pagemap["setup4A"] = {
             "type": "textpage",
             "title": "Configuration Repository",
@@ -244,7 +245,7 @@ def buildconfigmap():
             ],
             "actions": [
                 {"type": "page", "destination": "setup4Aload"},
-                {"type": "page", "destination": "setup4A"}
+                {"type": "page", "destination": "setup4"}
             ]
         }
 
@@ -797,7 +798,7 @@ while running:
             input_mode = "mouse"
             if transitioning:
                 continue
-            shifty = max(shifty+(event.y*1.5)*(int(event.flipped)*2-1), 0)
+            shifty = max(shifty+(event.y*2)*(int(event.flipped)*2-1), 0)
     if not running:
         break
     page = pagemap[apage]

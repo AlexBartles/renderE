@@ -13,6 +13,7 @@ zzz = 10
 
 layers = []
 queuedcommands = []
+unloadqueue = []
 datastore = {}
 configs = {}
 sessiondata = [{}, {}]
