@@ -8,6 +8,7 @@ import os.path, sys
 import socket
 #from domestic import wxdata
 import json
+import nethandler as nh
 
 def apply(func, args, kwargs=None):
     return func(*args) if kwargs is None else func(*args, **kwargs)
@@ -17,7 +18,8 @@ def main():
     #apply(wxdata.toggleNationalLDL, t)
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect(("localhost", 7245))
-    sock.sendall(("togglenat " +json.dumps(t)).encode())
+    nh._socksend(sock, ("togglenat " +json.dumps(t)).encode())
+    sock.close()
     return 0
     return
 
