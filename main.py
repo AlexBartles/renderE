@@ -1167,10 +1167,6 @@ RenderControl.createNamedLayer("Video", 25, 0, 0)
 RenderControl.setLayer("Video", vl)
 #RenderControl.activateLayer("Video")
 
-if DEBUG:
-    import psutil
-    proc = psutil.Process(os.getpid())
-
 while not rl.window_should_close():
     audio_chans = []
     audio_mixes = []
@@ -1234,15 +1230,15 @@ while not rl.window_should_close():
     rl.end_mode_3d()
     mode_3d_tracker -= 1
     if DEBUG:
-        lines = windbg.split("\n")
-        if len(lines) > 12:
-            lines = lines[-12:]
+        layer_list = "\n".join(["Layer Order:"] + [f"{l[0]} (depth {l[4]})" for l in sortedLayers])
+        # lines = windbg.split("\n")
+        # if len(lines) > 12:
+        #     lines = lines[-12:]
         rl.draw_fps(10, 10)
         rl.draw_text(f"Unloading: {len(rg.unloadqueue)}", 10, 40, 20, rl.WHITE)
         rl.draw_text(f"Queued Commands: {len(rg.queuedcommands)}", 10, 70, 20, rl.WHITE)
         rl.draw_text(f"Unloaded (Last Second): {len(last_sec)}", 10, 100, 20, rl.WHITE)
-        rl.draw_text(f"{proc.memory_info().rss/(1024*1024):.2f}MB Memory Usage", 10, 130, 20, rl.WHITE)
-        rl.draw_text("\n".join(lines), 10, 160, 20, rl.WHITE)
+        rl.draw_text(layer_list, 10, 130, 20, rl.WHITE)
     for i in range(len(last_sec)):
         last_sec[i] -= 1
     
@@ -1255,3 +1251,6 @@ while not rl.window_should_close():
     for i in rg.unloadqueue:
         unload_tree(i)
     rg.unloadqueue = []
+    
+    if rl.is_key_pressed(rl.KeyboardKey.KEY_D):
+        DEBUG = not DEBUG
