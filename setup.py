@@ -502,6 +502,21 @@ pagemap = {
             {"type": "alt", "setup": "setup4", "main": "setup4_alt"}
         ]
     },
+    "setup4Afail": {
+        "type": "textpage",
+        "title": "Configuration Repository",
+        "desc": "An error has occurred while loading the configuration script. Would you like to try again, go back, or skip?",
+        "options": [
+            "Try Again",
+            "Back",
+            "Skip"
+        ],
+        "actions": [
+            {"type": "page", "destination": "setup4A"},
+            {"type": "page", "destination": {"type": "alt", "setup": "setup4", "main": "setup4_alt"}},
+            {"type": "multi", "actions": [{"type": "var", "key": "alreadysetup", "val": True}, {"type": "page", "destination": "main"}]}
+        ]
+    },
     "setup4B": {
         "type": "autopage",
         "title": "Configuration Setup",
@@ -520,12 +535,13 @@ pagemap = {
         "desc": "An error has occurred while loading the configuration script. Would you like to try again, go back, or skip?",
         "options": [
             "Try Again",
-            "Back"
+            "Back",
+            "Skip"
         ],
         "actions": [
-            {"type": "multi", "actions": [{"type": "var", "key": "alreadysetup", "val": True}, {"type": "page", "destination": "main"}]},
-            {"type": "alt", "setup": "setup4", "main": "setup4_alt"},
-            {"type": "page", "destination": "main"}
+            {"type": "page", "destination": "setup4B"},
+            {"type": "page", "destination": {"type": "alt", "setup": "setup4", "main": "setup4_alt"}},
+            {"type": "multi", "actions": [{"type": "var", "key": "alreadysetup", "val": True}, {"type": "page", "destination": "main"}]}
         ]
     },
     "setup4S": {
