@@ -471,8 +471,10 @@ def updateseq(seq : EffectSequencer):
         for ef in seq.effects:
             if hasattr(ef[0], "frame"):
                 ef[0].frame = 0
-            if hasattr(ef, "frozen"):
+            if hasattr(ef[0], "frozen"):
                 ef[0].frozen = False
+            if hasattr(ef[0], "fired"):
+                ef[0].fired = False
         seq.activeeffects = []
     
     ea = 0
@@ -890,7 +892,7 @@ def unload_tree(item):
 windbg = ""
 
 vtex = None
-def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0)}):
+def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0}):
     global mode_3d_tracker
     global once
     global drawlevel
@@ -902,6 +904,9 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0)}):
         if len(item.pages) > 0:
             for i in item.pages[1:]:
                 al.append(al[-1]+i[1])
+        if extra["lloop"]:
+            if item.timer > al[-1]:
+                item.timer = 0
         
         ea = 0
         for i in range(len(item.pages)):
@@ -920,8 +925,9 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0)}):
             item.pages[item.pa][0].ended = True
             for cmd in item.pages[item.pa][0]._onEndCommands:
                 RenderControl.actuallyRunAQueuedCommand(cmd)
-            item.pages[item.pa][0].__del__()
-            windbg += "unloaded a page\n"
+            if not extra["lloop"]:
+                item.pages[item.pa][0].__del__()
+                windbg += "unloaded a page\n"
             #and here
             item.pa = (ea-1)
             item.pages[item.pa][0].started = True
