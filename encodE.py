@@ -17,7 +17,11 @@ print("encodE by LeWolfYT")
 print("LFRecord.db is from MARIENCODER!")
 print("Make sure to support it too!")
 
-expiretime = time.time()+10*60+60*60
+expiretime = time.time()+30*60
+
+stationmap = { #maps closed stations onto not-closed stations
+    "KPFN": "KECP"
+}
 
 db = sql.connect("LFRecord.db")
 
@@ -85,7 +89,7 @@ if not doonly or only == "obs":
     for stat in obs:
         print(f"starting obs for {stat}!")
         try:
-            dat = r.get(f"https://wx.lewolfyt.cc?icao={stat}&include=current,historical").json()
+            dat = r.get(f"https://wx.lewolfyt.cc?icao={stat if stat not in stationmap else stationmap[stat]}&include=current,historical").json()
             data = twccommon.Data()
             data.skyCondition = dat["current"]["info"]["narrationCode"]
             data.temp = dat["current"]["conditions"]["temperature"]
