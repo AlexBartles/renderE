@@ -32,7 +32,7 @@ def run():
     while running:
         # Here is where the run the actual lot8s commands, FINALLY!!!!!!!!!
         if DEBUG == True:
-            print("Running lot8s with flavour: {}".format(reallot8stype))
+            print("Running lot8s with flavor: {}".format(reallot8stype))
         subprocess.run(["python3", "load.py", "local", reallot8stype])
         time.sleep(3)
         subprocess.run(["python3", "run.py", "local"])
@@ -101,7 +101,7 @@ def stopencodEcommand():
     else:
         tk.messagebox.showerror("EncodE isnt running!", "Not encodEing, start it first!")
 
-# All lot8s flavours
+# All lot8s flavors
 lot8s_options = ["D - 60 seconds", "E - 60 seconds", "K - 90 seconds", "O - 90 seconds", "N - 120 seconds", "L - 120 seconds", "M - 120 seconds", "S - squeezeback"]
 
 # Set blank option string
@@ -112,7 +112,7 @@ value_inside.set("Select an Option")
 tk.Label(root, text="Lot8s Scheduler", background="#ADD8E6", font=("Helvetica", 16, "bold")).pack(pady=20)
 
 # Ask what type of lot8s to run
-lot8stype = tk.Label(root, text="What flavour of lot8s do you want to run?", font=("Helvetica", 12), background="#ADD8E6")
+lot8stype = tk.Label(root, text="What flavor of lot8s do you want to run?", font=("Helvetica", 12), background="#ADD8E6")
 lot8stype.pack(pady=20)
 
 # Further questioning continues
@@ -122,7 +122,7 @@ question_menu["menu"].config(bg="#ADD8E6")
 question_menu.pack(pady=20)
 
 # Create start button
-startbutton = tk.Button(root, text="Start lot8s with flavour selected above", font=("Helvetica", 12), background="#ADD8E6", command=startbuttoncommand)
+startbutton = tk.Button(root, text="Start lot8s with flavor selected above", font=("Helvetica", 12), background="#ADD8E6", command=startbuttoncommand)
 startbutton.pack(pady=20)
 
 # Create stop button
