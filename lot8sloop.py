@@ -105,7 +105,7 @@ lot8s_options = ["D - 60 seconds", "E - 60 seconds", "K - 90 seconds", "O - 90 s
 value_inside = tk.StringVar(root)
 value_inside.set("Select an Option")
 
-# you are cordially invited to have a huge slice of my style
+# you are cordially invited to have a giant slice of my style
 style = ttk.Style(root)
 
 style.configure("my.TLabel", font=("Helvetica", 20, "bold"))
