@@ -558,19 +558,28 @@ class Icon(GraphicRenderable):
         GraphicRenderable.__init__(self)
         self.name = name
         self.evict = evict
+        self.unloaded = False
         _renderd.createIcon(self, name, evict)
         return
     
     def unload(self):
+        if self.unloaded:
+            return
         if self.textures:
-            for tx in self.textures:
+            for i, tx in enumerate(self.textures):
                 if tx:
+                    print(f"unloading texture {i}")
                     rg.rl.unload_texture(tx)
                 tx = None
-        for im in self._ims:
-            if im:
-                rg.rl.unload_image(im)
-            im = None
+        if self._ims:
+            print(self._ims)
+            print(self.name)
+            for i, im in enumerate(self._ims):
+                if im:
+                    print(f"unloading image {i}")
+                    rg.rl.unload_image(im)
+                self._ims[i] = None
+        self.unloaded = True
 
 
 class Image(GraphicRenderable):
@@ -1014,6 +1023,8 @@ class SetVisibility(Effect):
     def __init__(self, target=None, visible=1):
         self.visible = visible
         self.fired = False
+        self.frame = 0
+        self.frozen = False
         if target != None:
             self.setTarget(target)
         return

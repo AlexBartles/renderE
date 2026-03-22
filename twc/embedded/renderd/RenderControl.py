@@ -71,7 +71,7 @@ def actuallyRunAQueuedCommand(cmd):
             if layer[0] == cmd.lname:
                 ix = i+0
                 break
-        if ix != -1:
+        if ix > -1:
             unloadLayer(rg.layers[ix][1])
         rg.layers.append([
             cmd.lname,

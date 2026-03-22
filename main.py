@@ -60,7 +60,8 @@ def loadtif(filename):
 names = ["RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "ReReRenderD", "RemixD"]
 
 e = os.popen("fortune disclaimer")
-rl.init_window(screensize[0], screensize[1], f"{random.choice(names)} - {e.read()}")
+fortune = e.read()
+rl.init_window(screensize[0], screensize[1], f"{random.choice(names)} - {fortune}")
 e.close()
 
 camera = rl.Camera3D(
@@ -537,7 +538,9 @@ def calceffects(quad):
             if isinstance(quad, Text):
                 quad.s = effect.s
         elif type(effect) == SetVisibility:
-            visible = effect.visible
+            if effect.frozen or effect.frame > 0:
+                visible = effect.visible
+            effect.frame += 1
         if hasattr(effect, "frame"):
             if not effect.frozen:
                 effect.frame += 1
@@ -626,7 +629,9 @@ def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False, off=(0, 0)):
                 if isinstance(quad, Text):
                     quad.s = effect.s
         elif type(effect) == SetVisibility:
-            visible = effect.visible
+            if effect.frozen or effect.frame > 0:
+                visible = effect.visible
+            effect.frame += 1
         if hasattr(effect, "frame"):
             if not effect.frozen and not se:
                 effect.frame += 1
@@ -729,7 +734,9 @@ def draw_poly(quad : TIFF_Image, tex=white):
             pY = effect.frame*effect.percentY
             pts2 = [(rl.Vector3(p[0].x*pX, p[0].y*pY, p[0].z), p[1], p[2], p[3], p[4]) for p in pts2]
         elif type(effect) == SetVisibility:
-            visible = effect.visible
+            if effect.frozen or effect.frame > 0:
+                visible = effect.visible
+            effect.frame += 1
         if hasattr(effect, "frame"):
             if not effect.frozen:
                 effect.frame += 1
@@ -1166,6 +1173,8 @@ vl.addPage(p)
 RenderControl.createNamedLayer("Video", 25, 0, 0)
 RenderControl.setLayer("Video", vl)
 #RenderControl.activateLayer("Video")
+
+trans = False
 
 while not rl.window_should_close():
     audio_chans = []
