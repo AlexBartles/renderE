@@ -538,7 +538,8 @@ def calceffects(quad):
             if isinstance(quad, Text):
                 quad.s = effect.s
         elif type(effect) == SetVisibility:
-            if effect.frozen or effect.frame > 0:
+            #if effect.frozen or effect.frame > 0:
+            if True:
                 visible = effect.visible
             effect.frame += 1
         if hasattr(effect, "frame"):
@@ -629,7 +630,8 @@ def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False, off=(0, 0)):
                 if isinstance(quad, Text):
                     quad.s = effect.s
         elif type(effect) == SetVisibility:
-            if effect.frozen or effect.frame > 0:
+            #if effect.frozen or effect.frame > 0:
+            if True:
                 visible = effect.visible
             effect.frame += 1
         if hasattr(effect, "frame"):
@@ -734,7 +736,8 @@ def draw_poly(quad : TIFF_Image, tex=white):
             pY = effect.frame*effect.percentY
             pts2 = [(rl.Vector3(p[0].x*pX, p[0].y*pY, p[0].z), p[1], p[2], p[3], p[4]) for p in pts2]
         elif type(effect) == SetVisibility:
-            if effect.frozen or effect.frame > 0:
+            #if effect.frozen or effect.frame > 0:
+            if True:
                 visible = effect.visible
             effect.frame += 1
         if hasattr(effect, "frame"):
