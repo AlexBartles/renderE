@@ -2,6 +2,9 @@
 
 renderE is intended as a replacement for a VM emulating the IntelliStar 1, a system previously used by The Weather Channel to render Local on the 8s.
 
+
+## This is just my fork! All credits go to [LeWolfYT](https://github.com/LeWolfYT/renderE/)
+
 ## renderE is far from finished! Expect bugs, issues, and crashes!
 
 ## Usage
