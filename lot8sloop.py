@@ -99,7 +99,7 @@ def stopencodEcommand():
         messagebox.showerror("encodE isnt running!", "Not encodEing, start it first!")
 
 # All lot8s flavors
-lot8s_options = ["D - 60 seconds", "E - 60 seconds", "K - 90 seconds", "O - 90 seconds", "N - 120 seconds", "L - 120 seconds", "M - 120 seconds", "S - Squeezeback"]
+lot8s_options = ["Select an Option", "D - 60 seconds", "E - 60 seconds", "K - 90 seconds", "O - 90 seconds", "N - 120 seconds", "L - 120 seconds", "M - 120 seconds", "S - Squeezeback"]
 
 # Set blank option string
 value_inside = tk.StringVar(root)
