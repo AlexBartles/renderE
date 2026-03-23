@@ -116,7 +116,7 @@ style = ttk.Style(root)
 style.configure("my.TLabel", font=("Helvetica", 20, "bold"))
 
 # Create a title (this is already annoying)
-ttk.Label(root, text="Lot8s Looper", style="my.TLabel").pack(pady=(15, 0), padxx=10)
+ttk.Label(root, text="Lot8s Looper", style="my.TLabel").pack(pady=(15, 0), padx=10)
 ttk.Label(root, text="by AlexBartles").pack(pady=(0, 10))
 
 # Ask to choose a flavor
