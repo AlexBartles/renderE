@@ -53,6 +53,9 @@ def encodE():
 
 # Command for start button
 def startbuttoncommand():
+    if DEBUG == True:
+        print("Flavor: {}".format(value_inside.get()[0]))
+        print("Preroll time: {}".format(preroll.get()))
     global reallot8stype
     global running
     reallot8stype = value_inside.get()[0]
@@ -62,6 +65,8 @@ def startbuttoncommand():
     if value_inside.get()[0] not in ["D", "E", "K", "O", "N", "L", "M", "S"]:
         print("Lot8s selector broken. Real value is: {}".format(value_inside.get()[0]))
         messagebox.showerror("Unknown presentation type", "Welp, it seems something has broken with the presentation type selector!")
+    if preroll.get() <= int("-1"):
+        messagebox.showerror("Preroll time is less than 0!", "Please set the preroll time to 0 or something higher!")
     else:
         if running == False:
             running = True
@@ -99,7 +104,7 @@ def stopencodEcommand():
         messagebox.showerror("encodE isnt running!", "Not encodEing, start it first!")
 
 # All lot8s flavors
-lot8s_options = ["D - 60 seconds", "E - 60 seconds", "K - 90 seconds", "O - 90 seconds", "N - 120 seconds", "L - 120 seconds", "M - 120 seconds", "S - Squeezeback"]
+lot8s_options = ["Select an Option", "D - 60 seconds", "E - 60 seconds", "K - 90 seconds", "O - 90 seconds", "N - 120 seconds", "L - 120 seconds", "M - 120 seconds", "S - Squeezeback"]
 
 # Set blank option string
 value_inside = tk.StringVar(root)
