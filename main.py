@@ -35,7 +35,7 @@ zzz = 1
 rl = rg.rl
 
 #rl.set_config_flags(rl.ConfigFlags.FLAG_WINDOW_UNDECORATED | rl.ConfigFlags.FLAG_WINDOW_TRANSPARENT)
-rl.set_config_flags(rl.ConfigFlags.FLAG_WINDOW_UNDECORATED)
+#rl.set_config_flags(rl.ConfigFlags.FLAG_WINDOW_UNDECORATED)
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 sock.bind(("localhost", 7245))
@@ -59,10 +59,35 @@ def loadtif(filename):
 
 names = ["RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "ReReRenderD", "RemixD"]
 
-e = os.popen("fortune disclaimer")
-fortune = e.read()
+splashes = [
+    "Functioning not guaranteed",
+    "From Wikipedia, the free encyclopedia",
+    "I'm Southbridge Cable Network, and I approve this message",
+    "Brought to you by SpecifiCable Communications",
+    "Trusted. Reliable. Accurate.",
+    "It could be better with your help!",
+    "The original IntelliStrons I",
+    "No more ancient hardware now.",
+    "I don't want your SVG remakes.",
+    "100% Original Recipe!",
+    "Thunderstorm card not guaranteed.",
+    "The programmer has a nap. Holdout! Programmer!",
+    "The letter R has the correct vertical size",
+    "specificable.lewolfyt.cc",
+    "Weather. News. Freedom. SpecifiCable.",
+    "I hope your computer is decent!",
+    "We call it the CPU fryer 9000.",
+    "bash: fortune: command not found",
+    "We're gonna take it into overtime",
+    "3D was definitely drunk while working on the i1",
+    "Remember that greed is one of the seven deadly sins.",
+    "Let's put this show together.",
+    "The IntelliStar for the common man, woman, or otherwise stated.",
+    "We do TWC preservation, the right way.™"
+]
+
+fortune = random.choice(splashes)
 rl.init_window(screensize[0], screensize[1], f"{random.choice(names)} - {fortune}")
-e.close()
 
 camera = rl.Camera3D(
     rl.Vector3(0, 0, 0),
@@ -538,10 +563,7 @@ def calceffects(quad):
             if isinstance(quad, Text):
                 quad.s = effect.s
         elif type(effect) == SetVisibility:
-            #if effect.frozen or effect.frame > 0:
-            if True:
-                visible = effect.visible
-            effect.frame += 1
+            visible = effect.visible
         if hasattr(effect, "frame"):
             if not effect.frozen:
                 effect.frame += 1
@@ -631,9 +653,7 @@ def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False, off=(0, 0)):
                     quad.s = effect.s
         elif type(effect) == SetVisibility:
             #if effect.frozen or effect.frame > 0:
-            if True:
-                visible = effect.visible
-            effect.frame += 1
+            visible = effect.visible
         if hasattr(effect, "frame"):
             if not effect.frozen and not se:
                 effect.frame += 1
@@ -736,10 +756,7 @@ def draw_poly(quad : TIFF_Image, tex=white):
             pY = effect.frame*effect.percentY
             pts2 = [(rl.Vector3(p[0].x*pX, p[0].y*pY, p[0].z), p[1], p[2], p[3], p[4]) for p in pts2]
         elif type(effect) == SetVisibility:
-            #if effect.frozen or effect.frame > 0:
-            if True:
-                visible = effect.visible
-            effect.frame += 1
+            visible = effect.visible
         if hasattr(effect, "frame"):
             if not effect.frozen:
                 effect.frame += 1
