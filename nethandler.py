@@ -12,6 +12,8 @@ try:
     with open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "servers.json")) as f:
         servers = json.loads(f.read())[1:]
 except:
+    import traceback
+    traceback.print_exc()
     pass
 
 temp = os.path.join(

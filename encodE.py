@@ -510,6 +510,9 @@ if not doonly or only == "bulletin":
             for f in alerts["features"]:
                 try:
                     props = f["properties"]
+                    if props["event"] not in codes:
+                        print(f"skipping {props['event']} since it's not in the list")
+                        continue
                     bull = twccommon.Data()
                     code = codes[props["event"]]
                     bull.pil = code[:3]

@@ -58,8 +58,8 @@ def set(key, data, expiration, update=0, session=0):
         t1 = type(data)
         t2 = type(oldData)
         #todo: what
-        # if t1 != types.InstanceType or t2 != types.InstanceType:
-        #     raise RuntimeError('cannot update non-instance type')
+        if (not hasattr(t1, "__dict__")) or (not hasattr(t2, "__dict__")):
+            raise RuntimeError('cannot update non-instance type')
         userData = twc.Data()
         userData.__dict__.update(data.__dict__)
         temp = twc.Data()

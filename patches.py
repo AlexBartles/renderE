@@ -48,33 +48,49 @@ def newaccess(path, mode):
     else:
         return os.access(path, mode)
 
+import traceback as tb
 def newstat(path):
-    if path.startswith(os.path.join(os.path.dirname(os.path.abspath(__file__)), "net").replace("\\", "/")):
-        return os.stat(path)
-    if not os.access(path, os.R_OK):
-        newpath = nethandler.requestNetAssetExt(path)
-        if newpath:
-            return os.stat(newpath)
+    try:
+        ptest = os.path.join(os.path.dirname(os.path.abspath(__file__)), "net").replace("\\", "/")
+        if ptest:
+            return os.stat(path)
+        if not os.access(path, os.R_OK):
+            newpath = nethandler.requestNetAssetExt(path)
+            if newpath:
+                return os.stat(newpath)
+            else:
+                return os.stat(path)
         else:
             return os.stat(path)
+    except:
+        tb.print_exc()
+        print(path)
+
+def newexists(path):
+    if path.startswith("/twc/data/map.cuts"):
+        return os.path.exists(path.replace("/twc/data/map.cuts", os.path.join(os.environ["TWCPERSDIR"], "data", "map.cuts")))
+    if not os.path.exists(path):
+        newpath = nethandler.requestNetAssetExt(path)
+        return bool(newpath)
     else:
-        return os.stat(path)
+        return True
 
 rg.newaccess = newaccess
 rg.newstat = newstat
+rg.newexists = newexists
 
 def runrs(filename):
     crs = loadtools.compilers(filename)
     print(type(crs))
-    ns = {"apply": apply, "newaccess": newaccess, "newstat": newstat}
-    exec(crs.replace("os.stat", "newstat").replace("os.access", "newaccess"), ns, ns)
+    ns = {"apply": apply, "newaccess": newaccess, "newexists": newexists, "newstat": newstat}
+    exec(crs.replace("os.stat", "newstat").replace("os.access", "newaccess").replace("os.path.exists", "newexists"), ns, ns)
 
 def runrsc(filename):
     dat = "global layerProps\n"
     with open(filename, "r") as f:
         dat += f.read()
-    ns = {"apply": apply, "newaccess": newaccess, "newstat": newstat, "reduce": reduce}
-    exec(compile(unprint(dat).replace("os.stat", "newstat").replace("os.access", "newaccess"), filename, "exec"), ns, ns)
+    ns = {"apply": apply, "newaccess": newaccess, "newexists": newexists, "newstat": newstat, "reduce": reduce}
+    exec(compile(unprint(dat).replace("os.stat", "newstat").replace("os.access", "newaccess").replace("os.path.exists", "newexists"), filename, "exec"), ns, ns)
 
 rg.runrsfunction = runrs
 rg.runrscfunction = runrsc

@@ -22,6 +22,7 @@ runrsfunction = None
 runrscfunction = None
 newaccess = None
 newstat = None
+newexists = None
 
 #optionally, specify your environment vars here
 #make sure to modify them to the actual paths

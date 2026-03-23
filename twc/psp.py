@@ -35,6 +35,7 @@ def evalPage(page, namespace={}, includePath=None):
     namespace["reduce"] = reduce
     page = page.replace("os.stat", "newstat")
     page = page.replace("os.newaccess", "newaccess")
+    page = page.replace("os.path.exists", "newexists")
     if includePath == None:
         includePath = _includePath
     p1 = page.find('<%')
@@ -114,7 +115,7 @@ def evalPage(page, namespace={}, includePath=None):
     elif cmd == '!':
         #print(sub2[:100])
         try:
-            exec(rsfix.fix_if(sub2).replace("os.stat", "newstat").replace("os.newaccess", "newaccess"), namespace)
+            exec(rsfix.fix_if(sub2).replace("os.stat", "newstat").replace("os.newaccess", "newaccess").replace("os.path.exists", "newexists"), namespace)
         except Exception as e:
             raise e
         return sub1 + evalPage(sub3, namespace, includePath)

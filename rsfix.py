@@ -1,3 +1,4 @@
+import os
 import re
 
 def _fix_if(m):
@@ -14,6 +15,7 @@ def fix(rs):
     rs = rs.replace("-as.", "-aseq.")
     rs = rs.replace(" as,", " aseq,")
     rs = rs.replace("Exception, e", "Exception as e")
+    rs = rs.replace("/twc/data/map.cuts", os.path.join(os.environ["RENDEREROOT"], "map.cuts"))
     rs = re.sub(ifpattern, _fix_if, rs)
     return rs
 

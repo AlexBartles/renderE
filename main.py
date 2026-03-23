@@ -35,7 +35,7 @@ zzz = 1
 rl = rg.rl
 
 #rl.set_config_flags(rl.ConfigFlags.FLAG_WINDOW_UNDECORATED | rl.ConfigFlags.FLAG_WINDOW_TRANSPARENT)
-#rl.set_config_flags(rl.ConfigFlags.FLAG_WINDOW_UNDECORATED)
+rl.set_config_flags(rl.ConfigFlags.FLAG_WINDOW_UNDECORATED)
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 sock.bind(("localhost", 7245))
@@ -83,7 +83,9 @@ splashes = [
     "Remember that greed is one of the seven deadly sins.",
     "Let's put this show together.",
     "The IntelliStar for the common man, woman, or otherwise stated.",
-    "We do TWC preservation, the right way.™"
+    "We do TWC preservation, the right way.™",
+    "Weather coverage you can count on.",
+    "Prepare your computer! It's gonna get ugly."
 ]
 
 fortune = random.choice(splashes)
