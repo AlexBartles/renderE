@@ -97,6 +97,7 @@ def buildPyNamespace(default=None, **namespace):
     ns = {}
     ns["newaccess"] = rg.newaccess
     ns["newstat"] = rg.newstat
+    ns["newexists"] = rg.newexists
     if default != None:
         ns.update(default)
     ns.update(namespace)

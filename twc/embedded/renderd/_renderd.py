@@ -64,7 +64,8 @@ def createIcon(self, name, evict=0):
         arr = BytesIO()
         f.save(arr, format="PNG")
         arr = arr.getvalue()
-        self._ims.append(rl.load_image_from_memory('.png', arr, len(arr)))
+        img = rl.load_image_from_memory('.png', arr, len(arr))
+        self._ims.append(img)
     
     self.textures = None
     self._size = (self._ims[0].width, self._ims[0].height)
