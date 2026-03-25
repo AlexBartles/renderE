@@ -649,14 +649,38 @@ class ClipboardImage(Image):
         #_renderd.createClipboardImage(self)
         return
 
-
+import json
 class VectorImage(GraphicRenderable):
     """A image made up of points, lines, and curves."""
 
     def __init__(self, name, lineThickness=1, evict=0):
         GraphicRenderable.__init__(self)
+        self.polys = []
+        self.lineThickness = lineThickness
+        self.im = None
+        self.tx = None
+        if os.path.exists(name + ".vg"):
+            with open(name + ".vg", "r") as f:
+                fl = json.loads(f.read())
+            self._size = (fl[0], fl[1])
+            self.polys = fl[2]
+            self.im = rg.rl.gen_image_color(fl[0], fl[1], rg.rl.BLANK)
+            for pol in self.polys:
+                for i in range(len(pol)):
+                    if i == (len(pol)-1):
+                        break
+                    first = pol[i]
+                    second = pol[i+1]
+                    rg.rl.image_draw_line_ex(self.im, first, second, self.lineThickness, rg.rl.WHITE)
+    
+    def unload(self):
+        if self.tx:
+            rg.rl.unload_texture(self.tx)
+            self.tx = None
+        if self.im:
+            rg.rl.unload_image(self.im)
+            self.im = None
         #_renderd.createVectorImage(self, name, lineThickness, evict)
-        return
 
 
 class CompositeRenderable(GraphicRenderable):

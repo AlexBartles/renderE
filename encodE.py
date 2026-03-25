@@ -37,6 +37,8 @@ sevendaycoop = dsm.rget(f"Config.{cver}.Local_7DayForecast").coopId
 headlinecounty = dsm.rget(f"Config.{cver}.Local_NWSHeadlines").zone
 getawaycoop = dsm.rget(f"Config.{cver}.Local_GetawayForecast").coopId
 
+metrofcstcoop = [v[0] for v in dsm.rget(f"Config.{cver}.Local_MetroForecastMap").fcstValue[0][1]]
+
 lat = dsm.rget("primaryLat")
 lon = dsm.rget("primaryLon")
 
@@ -219,7 +221,7 @@ if not doonly or only == "hourly":
     dsm.rcommit()
 
 if not doonly or only == "fcst":
-    cidlist = [sevendaycoop] + getawaycoop
+    cidlist = list(set([sevendaycoop] + getawaycoop + metrofcstcoop))
     for ci in cidlist:
         try:
             print(f"starting forecast data for {ci}!")
@@ -231,12 +233,15 @@ if not doonly or only == "fcst":
                 jj = (i*2+1) if dat["extended"]["daily"][0]["partiallyObserved"] else (i*2)
                 dailydat = dat["extended"]["daily"][j]
                 daypartdat = dat["extended"]["daypart"][jj]
+                daypartdat2 = dat["extended"]["daypart"][jj+1]
                 
                 y,m,d,H,M,S,wday,jday,dst = time.localtime(dailydat["valid"])
                 ktime = time.mktime((y,m,d,0,0,0,wday,jday,-1))
                 
                 data = twccommon.Data()
                 data.daySkyCondition = daypartdat["narrationCode"]
+                data.skyCondition = daypartdat["narrationCode"]
+                data.eveningSkyCondition = daypartdat2["narrationCode"]
                 data.highTemp = dailydat["calendarTempMax"]
                 data.lowTemp = dailydat["calendarTempMin"]
                 #dailydat["expires"]

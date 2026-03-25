@@ -52,7 +52,7 @@ import traceback as tb
 def newstat(path):
     try:
         ptest = os.path.join(os.path.dirname(os.path.abspath(__file__)), "net").replace("\\", "/")
-        if ptest:
+        if path.startswith(ptest):
             return os.stat(path)
         if not os.access(path, os.R_OK):
             newpath = nethandler.requestNetAssetExt(path)

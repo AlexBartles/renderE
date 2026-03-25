@@ -971,11 +971,6 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
     elif type(item) == Page:
         for el in item._elements:
             draw_item(el, extra)
-    elif isinstance(item, Image):
-        if type(item) is not CompositedImage: #i'll figure out what a CompositedImage is later.
-            if not item.texture:
-                item.texture = rl.load_texture_from_image(item.im2)
-            draw_quad(item, item.texture, off=extra["off"])
     elif isinstance(item, Icon):
         if item.textures is None:
             item.textures = [rl.load_texture_from_image(f) for f in item._ims]
@@ -1047,7 +1042,7 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
             item.cachedtex = rl.load_texture_from_image(item.cimg)
         item._size = (item.cimg.width, item.cimg.height)
         draw_quad(item, item.cachedtex)
-    elif type(item) in (CompositeRenderable, ScrollingCompositeRenderable, RichText):
+    elif type(item) in (CompositeRenderable, ScrollingCompositeRenderable, RichText, CompositedImage):
         drawlevel += 1
         #print(drawlevel)
         if type(item) == ScrollingCompositeRenderable:
@@ -1162,6 +1157,11 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
         if item.debug:
             tex = rl.load_image_from_texture(item.rtex.texture)
             rl.export_image(tex, "image2.png")
+    elif isinstance(item, Image):
+        if type(item) is not CompositedImage:
+            if not item.texture:
+                item.texture = rl.load_texture_from_image(item.im2)
+            draw_quad(item, item.texture, off=extra["off"])
     elif type(item) is Polygon:
         draw_poly(item)
     elif isinstance(item, AudioSequencer):
@@ -1175,6 +1175,12 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
         item.timer += 1
         if item.timer == item.activeFrame():
             RenderControl.actuallyRunAQueuedCommand(item)
+    elif isinstance(item, VectorImage):
+        if item.polys:
+            if not item.tx:
+                item.tx = rg.rl.load_texture_from_image(item.im)
+            if item.im:
+                draw_quad(item, item.tx)
     else:
         pass
         #print("drawing unrecognized type: ", type(item))

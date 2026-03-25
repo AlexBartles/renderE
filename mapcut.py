@@ -1,8 +1,22 @@
 import nethandler as nh
-from PIL import Image
+from PIL import Image, ImageDraw
 Image.MAX_IMAGE_PIXELS = None #these images are too HUGE
 import twc.dsmarshal as dsm
 import os
+import json
+import pygame as pg
+
+def vginfo(vgfile):
+    extents = [1, 1]
+    def setExtents(w, h):
+        nonlocal extents
+        extents = [w, h]
+    polylines = []
+    def addPolyline(pl, name):
+        polylines.append(pl)
+    with open(vgfile, "r") as f:
+        exec(f.read(), {"setExtents": setExtents, "addPolyline": addPolyline})
+    return extents, polylines
 
 def process(mtype):
     print("MAPCUT")
@@ -55,6 +69,47 @@ def process(mtype):
     final = intermediate.resize(md.mapFinalSize, Image.Resampling.LANCZOS)
     os.makedirs(os.path.join(os.environ["TWCPERSDIR"], "data", "map.cuts"), exist_ok=True)
     final.save(os.path.join(os.environ["TWCPERSDIR"], "data", "map.cuts", f"{mtype}.map.tif"))
+    
+    #dcx, dcy1 = getattr(md, "datacutCoordinate", (0, 0))
+    dcx = 0
+    dcy1 = 0
+    dcw, dch = getattr(md, "_datacutSize", (cw, ch))
+    dcx += cx
+    dcy1 = cy - dcy1
+    
+    fdcw, fdch = getattr(md, "_dataFinalSize", md.mapFinalSize)
+    
+    finalmapimg = None
+    intermediate = None
+    final = None
+    
+    for v in md.vectors:
+        vx = v.split(".")[-2]
+        ex, pl = vginfo(nh.requestNetAssetExt(f"/rsrc/maps/{v}"))
+        dcy = ex[1] - dcy1
+        
+        left = dcx
+        right = dcx+dcw
+        top = dcy
+        bottom = dcy+dch
+        print("vstats", v, left, right, top, bottom, "full", ex)
+        
+        finalpl = []
+        for pol in pl:
+            poly_is_inside = False
+            for pt in pol:
+                ptx, pty = pt
+                if (left <= ptx <= right) and (top <= pty <= bottom):
+                    poly_is_inside = True
+                    print("IT'S IN")
+                    break
+            
+            if poly_is_inside:
+                finalpl.append([((p[0]-dcx)*fdcw/dcw, (ex[1]-p[1]-(ex[1]-bottom))*fdch/dch) for p in pol])
+        
+        vectorCut = os.path.join(os.environ["TWCPERSDIR"], "data", "map.cuts", f'{mtype}.{vx}.vg')
+        with open(vectorCut, "w") as f:
+            f.write(json.dumps([fdcw, fdch, finalpl], indent=4))
 
 if __name__ == "__main__":
-    process('Config.1.Local_RadarSatelliteComposite')
+    process('Config.1.Local_MetroDopplerRadar')
