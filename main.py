@@ -85,7 +85,11 @@ splashes = [
     "The IntelliStar for the common man, woman, or otherwise stated.",
     "We do TWC preservation, the right way.™",
     "Weather coverage you can count on.",
-    "Prepare your computer! It's gonna get ugly."
+    "Prepare your computer! It's gonna get ugly.",
+    "Now you can be the MSO everyone needs.",
+    "There is no such thing as the RenderD window.",
+    "Run that funky forecast, white boy!",
+    "Azmo, brick, biatch, and now.. this. Hello!"
 ]
 
 fortune = random.choice(splashes)
