@@ -3,6 +3,18 @@ import pygame as pg
 import os
 import json
 import sys
+from pathlib import PurePath
+
+def newjoin(*args):
+    pp = PurePath(*args).as_posix()
+    jp = os.path.join(*args)
+    if jp.endswith("/") or jp.endswith("\\") and not (pp.endswith("/")):
+        pp = pp + "/"
+    # if pp != jp:
+    #     print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
+    #     print(pp, jp)
+    #     exit()
+    return pp
 
 pg.font.init()
 pg.mixer.init()
@@ -31,14 +43,14 @@ newexists = None
 
 os.environ["RENDEREROOT"] = os.path.dirname(os.path.abspath(__file__)).replace("\\", "/")
 os.environ["TWCCLIDIR"] = ""
-os.environ["TWCPERSDIR"] = os.path.join(os.environ["RENDEREROOT"], "domesticpy").replace("\\", "/")
+os.environ["TWCPERSDIR"] = newjoin(os.environ["RENDEREROOT"], "domesticpy")
 os.environ["TWCDIR"] = ""
 os.environ["RENDERERSRC"] = ""
 os.environ["RENDEREMEDIA"] = ""
 os.environ["RENDEREDOMESTIC"] = ""
 
-if os.path.exists(os.path.join(os.environ["RENDEREROOT"], "ds.json")):
-    with open(os.path.join(os.environ["RENDEREROOT"], "ds.json"), "r") as f:
+if os.path.exists(newjoin(os.environ["RENDEREROOT"], "ds.json")):
+    with open(newjoin(os.environ["RENDEREROOT"], "ds.json"), "r") as f:
         datastore = json.loads(f.read())
 
 #os.environ["RENDEREROOT"] = "/path/to/renderE"

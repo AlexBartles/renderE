@@ -21,8 +21,8 @@ class SkyCondMappingHandler(xmlUtil.LookupSubHandler):
             self._dataDict[key] = data
         return
 
-
-filePath = os.path.join(os.environ["RENDEREMEDIA"], '/mappings/skyCondLocales/')
+import rendereglobals as rg
+filePath = rg.newjoin(os.environ["RENDEREMEDIA"], '/mappings/skyCondLocales/')
 
 class SkyCondMapping(mapping.Map):
 

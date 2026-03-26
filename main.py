@@ -300,7 +300,7 @@ def ebucolorbars():
     l = Layer()
     p = Page()
     l.addPage(p)
-    im = JPEG_Image(os.path.join(os.environ["RENDEREROOT"], "ebu"))
+    im = JPEG_Image(rg.newjoin(os.environ["RENDEREROOT"], "ebu"))
     im.setSize(720, 480)
     im.setPosition(0, 0)
     p.addItem(im)

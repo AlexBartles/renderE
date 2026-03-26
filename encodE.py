@@ -38,6 +38,7 @@ headlinecounty = dsm.rget(f"Config.{cver}.Local_NWSHeadlines").zone
 getawaycoop = dsm.rget(f"Config.{cver}.Local_GetawayForecast").coopId
 
 metrofcstcoop = [v[0] for v in dsm.rget(f"Config.{cver}.Local_MetroForecastMap").fcstValue[0][1]]
+regfcstcoop = [v[0] for v in dsm.rget(f"Config.{cver}.Local_RegionalForecastMap").fcstValue[0][1]]
 
 lat = dsm.rget("primaryLat")
 lon = dsm.rget("primaryLon")
@@ -46,6 +47,11 @@ coopid.add(textfcstcoop)
 coopid.add(daypartcoop)
 coopid.add(sevendaycoop)
 coopid.update(getawaycoop)
+
+hourlycoop = set()
+hourlycoop.add(daypartcoop)
+hourlycoop.update(metrofcstcoop)
+hourlycoop.update(regfcstcoop)
 
 coopid = list(coopid)
 
@@ -198,30 +204,31 @@ if not doonly or only == "text":
     dsm.rcommit()
 
 if not doonly or only == "hourly":
-    print(f"starting local hourly for coopid {daypartcoop}!")
-    try:
-        print(cidmap[daypartcoop])
-        dat = r.get(f"https://wx.lewolfyt.cc?geo={','.join(cidmap[daypartcoop])}").json()
+    print(f"starting local hourly!")
+    for coop in list(hourlycoop):
+        try:
+            print(cidmap[coop])
+            dat = r.get(f"https://wx.lewolfyt.cc?geo={','.join(cidmap[coop])}").json()
+            
+            for hr in dat["hourly"]:
+                data = twccommon.Data()
+                data.skyCondition = hr["narrationCode"]
+                data.temp = round(hr["temperature"])
+                data.windDir = windmap[hr["windCardinal"]]
+                data.windSpeed = hr["windSpeed"]
+                data.heatIndex = round(hr["heatIndex"])
+                data.windChill = round(hr["windChill"])
+                #hr["expires"]
+                print("hourly data for", hr["valid"])
+                dsm.rset(f"hourlyFcst.{coop}.{hr['valid']}", data, expiretime)
+        except:
+            print(traceback.print_exc())
+            print(f"daypart failure for {coop}")
         
-        for hr in dat["hourly"]:
-            data = twccommon.Data()
-            data.skyCondition = hr["narrationCode"]
-            data.temp = round(hr["temperature"])
-            data.windDir = windmap[hr["windCardinal"]]
-            data.windSpeed = hr["windSpeed"]
-            data.heatIndex = round(hr["heatIndex"])
-            data.windChill = round(hr["windChill"])
-            #hr["expires"]
-            print("hourly data for", hr["valid"])
-            dsm.rset(f"hourlyFcst.{daypartcoop}.{hr['valid']}", data, expiretime)
-    except:
-        print(traceback.print_exc())
-        print(f"daypart failure for {daypartcoop}")
-    
     dsm.rcommit()
 
 if not doonly or only == "fcst":
-    cidlist = list(set([sevendaycoop] + getawaycoop + metrofcstcoop))
+    cidlist = list(set([sevendaycoop] + getawaycoop + metrofcstcoop + regfcstcoop))
     for ci in cidlist:
         try:
             print(f"starting forecast data for {ci}!")

@@ -84,7 +84,7 @@ class InterfaceImpl:
         datas = json.dumps(rg.datastore, indent=4)
         
         try:
-            with open(os.path.join(os.environ["RENDEREROOT"], "ds.json"), "w") as f:
+            with open(rg.newjoin(os.environ["RENDEREROOT"], "ds.json"), "w") as f:
                 f.write(datas)
         except:
             rc = 0

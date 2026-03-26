@@ -4,7 +4,8 @@ Image.MAX_IMAGE_PIXELS = None #these images are too HUGE
 import twc.dsmarshal as dsm
 import os
 import json
-import pygame as pg
+#import pygame as pg
+import rendereglobals as rg
 
 def vginfo(vgfile):
     extents = [1, 1]
@@ -26,7 +27,7 @@ def process(mtype):
     print(mapname)
     mappath = nh.requestNetAssetExt(f"/rsrc/maps/{mapname}")
     if mapname.endswith(".bfg"):
-        dt = os.path.join(os.environ["RENDEREROOT"], "temp", f"{mapname}.jpeg")
+        dt = rg.newjoin(os.environ["RENDEREROOT"], "temp", f"{mapname}.jpeg")
         if os.path.exists(dt):
             finalmapimg = Image.open(dt)
         else:
@@ -55,7 +56,7 @@ def process(mtype):
                 xx = 0
                 yy += mp[row*cols].height
             del maps #memory management!
-            finalmapimg.save(os.path.join(os.environ["RENDEREROOT"], "temp", f"{mapname}.jpeg"))
+            finalmapimg.save(rg.newjoin(os.environ["RENDEREROOT"], "temp", f"{mapname}.jpeg"))
     else:
         finalmapimg = Image.open(mappath).convert("RGB")
     
@@ -67,8 +68,8 @@ def process(mtype):
     intermediate = finalmapimg.crop(crop)
     print(crop, cw, ch)
     final = intermediate.resize(md.mapFinalSize, Image.Resampling.LANCZOS)
-    os.makedirs(os.path.join(os.environ["TWCPERSDIR"], "data", "map.cuts"), exist_ok=True)
-    final.save(os.path.join(os.environ["TWCPERSDIR"], "data", "map.cuts", f"{mtype}.map.tif"))
+    os.makedirs(rg.newjoin(os.environ["TWCPERSDIR"], "data", "map.cuts"), exist_ok=True)
+    final.save(rg.newjoin(os.environ["TWCPERSDIR"], "data", "map.cuts", f"{mtype}.map.tif"))
     
     #dcx, dcy1 = getattr(md, "datacutCoordinate", (0, 0))
     dcx = 0
@@ -107,7 +108,7 @@ def process(mtype):
             if poly_is_inside:
                 finalpl.append([((p[0]-dcx)*fdcw/dcw, (ex[1]-p[1]-(ex[1]-bottom))*fdch/dch) for p in pol])
         
-        vectorCut = os.path.join(os.environ["TWCPERSDIR"], "data", "map.cuts", f'{mtype}.{vx}.vg')
+        vectorCut = rg.newjoin(os.environ["TWCPERSDIR"], "data", "map.cuts", f'{mtype}.{vx}.vg')
         with open(vectorCut, "w") as f:
             f.write(json.dumps([fdcw, fdch, finalpl], indent=4))
 
