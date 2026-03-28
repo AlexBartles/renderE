@@ -44,7 +44,7 @@ def requestNetAsset(path : str, extensions, check=False):
     emap = {"font": fonts, "gfx": gfx, "audio": aud, "all": all}
     for ex in emap[extensions]:
         out = e(newjoin(temp, path.strip("/")))+"."+ex
-        if e(os.path.exists(out)):
+        if os.path.exists(out):
             return out
     if check:
         return
