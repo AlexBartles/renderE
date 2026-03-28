@@ -33,6 +33,9 @@ def _socksend(sock, data):
     dlen = len(data).to_bytes(4)
     sock.sendall(dlen+data)
 
+def e(a):
+    return a.replace("https:\\a","https://a").replace("https:/a", "https://a")
+
 def requestNetAsset(path : str, extensions, check=False):
     fonts = ["ttf", "otf"]
     gfx = ["tif", "jpg", "tiff", "jpeg", "png"]
@@ -40,15 +43,15 @@ def requestNetAsset(path : str, extensions, check=False):
     all = fonts + gfx + aud
     emap = {"font": fonts, "gfx": gfx, "audio": aud, "all": all}
     for ex in emap[extensions]:
-        out = newjoin(temp, path.strip("/"))+"."+ex
-        if os.path.exists(out):
+        out = e(newjoin(temp, path.strip("/")))+"."+ex
+        if e(os.path.exists(out)):
             return out
     if check:
         return
     for ex in emap[extensions]:
-        out = newjoin(temp, path.strip("/"))+"."+ex
+        out = e(os.path.join(temp, path.strip("/")))+"."+ex
         for server in servers:
-            spath = newjoin(server, path.strip("/"))+"."+ex
+            spath = e(os.path.join(server, path.strip("/")))+"."+ex
             print(spath)
             if r.head(spath).ok:
                 os.makedirs(os.path.dirname(out), exist_ok=True)
@@ -59,13 +62,13 @@ def requestNetAsset(path : str, extensions, check=False):
     return None
 
 def requestNetAssetExt(path : str, ext=None, check=False):
-    out = newjoin(temp, path.strip("/"))+("."+ext if ext else "")
+    out = e(newjoin(temp, path.strip("/")))+("."+ext if ext else "")
     if os.path.exists(out):
         return out
     if check:
         return
     for server in servers:
-        spath = newjoin(server, path.strip("/"))+("."+ext if ext else "")
+        spath = e(newjoin(server, path.strip("/")))+("."+ext if ext else "")
         print(spath)
         if r.head(spath).ok:
             os.makedirs(os.path.dirname(out), exist_ok=True)
