@@ -3,9 +3,9 @@
 # Decompiled from: Python 3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]
 # Embedded file name: psp.py
 # Compiled at: 2007-01-12 11:17:30
-import os.path, string, types, twc.dsmarshal, twc.rsutil as rsutil, rsfix
+import os.path, rsfix
 import nethandler
-from twc import DataStoreInterface
+
 _includePath = ['.']
 
 def setIncludePath(path=[]):
@@ -98,7 +98,7 @@ def evalPage(page, namespace={}, includePath=None):
                         break
 
             if fname == None:
-                raise RuntimeError('file %s in PSP include tag not found' % sub2)
+                raise RuntimeError(f'file {sub2} in PSP include tag not found (searching for {val} in paths {includePath})')
             f = open(fname, 'r')
             sub2 = f.read()
             f.close()
@@ -134,6 +134,9 @@ def evalRenderScript(page, namespace={}, includePath=None):
     that will be common to render script evaluation.  As an example,
     a get function will be added that retrieves data from the DataStore.
     """
+    from twc import DataStoreInterface
+    import twc.dsmarshal
+    import twc.rsutil as rsutil
     namespace['rsutil'] = rsutil
     namespace['ds'] = DataStoreInterface
     namespace['dsm'] = twc.dsmarshal
