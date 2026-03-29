@@ -62,7 +62,7 @@ def evalPage(page, namespace={}, includePath=None):
             val = str(val)
             val.replace("/usr/twc/domestic", os.environ["RENDEREDOMESTIC"])
             fname = None
-            if val[0] == '/':
+            if val[0] == '/' or val[1] == ":":
                 if os.path.exists(val):
                     fname = val
                 elif nethandler.requestNetAssetExt(val):
@@ -98,7 +98,7 @@ def evalPage(page, namespace={}, includePath=None):
                         break
 
             if fname == None:
-                raise RuntimeError(f'file {sub2} in PSP include tag not found (searching for {val} in paths {includePath})')
+                raise RuntimeError(f'file {sub2} in PSP include tag not found (searching for {values} in paths {includePath})')
             f = open(fname, 'r')
             sub2 = f.read()
             f.close()
