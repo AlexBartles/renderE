@@ -15,7 +15,7 @@ def newjoin(*args):
     jp = os.path.join(*args)
     if jp.endswith("/") or jp.endswith("\\") and not (pp.endswith("/")):
         pp = pp + "/"
-    return pp
+    return pp.replace("\\", "/")
 
 try:
     with open(newjoin(os.path.dirname(os.path.abspath(__file__)), "servers.json")) as f:
@@ -60,6 +60,7 @@ def requestNetAsset(path : str, extensions, check=False):
                 f.write(r.get(spath, allow_redirects=True).content)
                 f.close()
                 return out
+    print(f"NET ERROR: couldn't find anything for {path}")
     return None
 
 def requestNetAssetExt(path : str, ext=None, check=False):
@@ -77,4 +78,5 @@ def requestNetAssetExt(path : str, ext=None, check=False):
             f.write(r.get(spath, allow_redirects=True).content)
             f.close()
             return out
+    print(f"NET ERROR: couldn't find anything for {path}"+("."+ext if ext else ""))
     return None

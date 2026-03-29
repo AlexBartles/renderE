@@ -14,7 +14,7 @@ def newjoin(*args):
     #     print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
     #     print(pp, jp)
     #     exit()
-    return pp
+    return pp.replace("\\", "/")
 
 pg.font.init()
 pg.mixer.init()
