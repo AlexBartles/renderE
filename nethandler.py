@@ -53,6 +53,8 @@ def requestNetAsset(path : str, extensions, check=False):
         out = os.path.join(temp, path.strip("/"))+"."+ex
         for server in servers:
             spath = e(urllib.parse.urljoin(server, path.strip("/")))+"."+ex
+            if os.path.exists(spath):
+                return spath
             print(spath)
             if r.head(spath).ok:
                 os.makedirs(os.path.dirname(out), exist_ok=True)
@@ -71,6 +73,8 @@ def requestNetAssetExt(path : str, ext=None, check=False):
         return
     for server in servers:
         spath = e(urllib.parse.urljoin(server, path.strip("/")))+("."+ext if ext else "")
+        if os.path.exists(spath):
+            return spath
         print(spath)
         if r.head(spath).ok:
             os.makedirs(os.path.dirname(out), exist_ok=True)
