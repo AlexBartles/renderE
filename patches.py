@@ -5,6 +5,8 @@ import os
 import rendereglobals as rg
 import loadtools
 from pathlib import PurePath
+import builtins
+import types
 
 string.__dict__["letters"] = string.ascii_letters
 string.__dict__["find"] = (lambda s, f : s.find(f))
@@ -17,6 +19,13 @@ def sfix(s, sep, maxsplit=-1):
     return s.split(sep, maxsplit)
 string.__dict__["replace"] = rfix
 string.__dict__["split"] = sfix
+def fixifsub(val):
+    if val is None:
+        return -1
+    if isinstance(val, types.FunctionType):
+        return val
+    return val
+builtins.__dict__["ehuehuehue_i_added_a_function"] = fixifsub #this is the new winner of "most ridiculous python thing i have ever done"
 oldtime = time.struct_time
 
 def unprint(stuff):
@@ -89,15 +98,21 @@ def runrs(filename):
 
 def runrsc(filename):
     dat = "global layerProps\n"
-    with open(filename, "r") as f:
+    with open(filename.replace("\\", "/"), "r") as f:
         dat += f.read()
     ns = {"apply": apply, "newaccess": newaccess, "newexists": newexists, "newstat": newstat, "reduce": reduce, "newjoin": rg.newjoin}
-    exec(compile(unprint(dat).replace("os.stat", "newstat").replace("os.access", "newaccess").replace("os.path.exists", "newexists").replace("os.path.join", "newjoin"), filename, "exec"), ns, ns)
+    fixed = unprint(dat).replace("os.stat", "newstat").replace("os.access", "newaccess").replace("os.path.exists", "newexists").replace("os.path.join", "newjoin")
+    
+    try:
+        exec(compile(fixed, filename, "exec"), ns, ns)
+    except Exception as e:
+        with open("crash_rsc.txt", "w") as f:
+            f.write(fixed)
+        raise e
 
 rg.runrsfunction = runrs
 rg.runrscfunction = runrsc
 
-#i've said it before but THIS is my most cursed python code
 def yes_i_am_real_struct_time(seq=None, tm_year=0, tm_mon=0, tm_mday=0, tm_hour=0, tm_min=0, tm_sec=0, tm_wday=0, tm_yday=0, tm_isdst=0):
     if seq:
         return oldtime(seq)
