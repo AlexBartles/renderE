@@ -570,6 +570,8 @@ def calceffects(quad):
                 quad.s = effect.s
         elif type(effect) == SetVisibility:
             visible = effect.visible
+            if effect.fader is not None:
+                fader = effect.fader
         if hasattr(effect, "frame"):
             if not effect.frozen:
                 effect.frame += 1
@@ -590,7 +592,7 @@ def calceffects(quad):
     if drawlevel == 0:
         xxw -= (activedrawlayer[6]/720*(xxx*2))
         yyw -= (activedrawlayer[7]/480*(yyy*2))
-    return xxw, yyw, mat, fader
+    return xxw, yyw, mat, fader, qx, qy
 
 def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False, off=(0, 0)):
     effects = quad.effects
@@ -660,6 +662,8 @@ def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False, off=(0, 0)):
         elif type(effect) == SetVisibility:
             #if effect.frozen or effect.frame > 0:
             visible = effect.visible
+            if effect.fader is not None:
+                fader = effect.fader
         if hasattr(effect, "frame"):
             if not effect.frozen and not se:
                 effect.frame += 1
@@ -763,6 +767,8 @@ def draw_poly(quad : TIFF_Image, tex=white):
             pts2 = [(rl.Vector3(p[0].x*pX, p[0].y*pY, p[0].z), p[1], p[2], p[3], p[4]) for p in pts2]
         elif type(effect) == SetVisibility:
             visible = effect.visible
+            if effect.fader is not None:
+                fader = effect.fader
         if hasattr(effect, "frame"):
             if not effect.frozen:
                 effect.frame += 1
@@ -1065,7 +1071,7 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
         rl.clear_background(rl.Color(0, 0, 0, 0))
         rl.rl_set_clip_planes(0.01, 10000)
         
-        xx2, yy2, transfo, fader = calceffects(item)
+        xx2, yy2, transfo, fader, xx2p, yy2p = calceffects(item)
         
         #print(xx2, yy2)
         #xx2, yy2 = 0, 0
@@ -1087,7 +1093,10 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
                 fov,
                 rl.CameraProjection.CAMERA_PERSPECTIVE
             )
-        rl.begin_mode_3d(camera2)
+        if isinstance(item, RichText):
+            rl.begin_mode_3d(camera)
+        else:
+            rl.begin_mode_3d(camera2)
         mode_3d_tracker += 1
         rl.rl_disable_depth_test()
         rl.rl_disable_depth_mask()
@@ -1104,7 +1113,10 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
                 draw_item(ch, extra={"tex": item.rtex, "cam": camera2, "off": camoff})
                 rl.begin_texture_mode(item.rtex)
                 rl.rl_set_clip_planes(0.01, 10000)
-                rl.begin_mode_3d(camera2)
+                if isinstance(item, RichText):
+                    rl.begin_mode_3d(camera)
+                else:
+                    rl.begin_mode_3d(camera2)
                 mode_3d_tracker += 1
                 rl.rl_disable_depth_test()
                 rl.rl_disable_depth_mask()
@@ -1135,7 +1147,10 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
             rl.rl_disable_depth_mask()
             rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA)
             #draw_quad_nocal(DummyQuad(0, 0, 720, 480), item.ftex.texture, transfo, fader)
-            if type(item) == ScrollingCompositeRenderable:
+            if type(item) == RichText:
+                xxr, yyr = item._position
+                draw_quad(DummyQuad(xxr, yyr, 720, 480, effects=item.effects), item.ftex.texture, se=True)
+            elif type(item) == ScrollingCompositeRenderable:
                 draw_quad(DummyQuad(*item._position, *item.bbox, effects=item.effects), item.ftex.texture, se=True)
             else:
                 draw_quad(DummyQuad(0, 0, 720, 480, effects=item.effects), item.ftex.texture, se=True)
@@ -1149,7 +1164,10 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
             rl.rl_disable_depth_mask()
             drawlevel += 1
             #draw_quad_nocal(DummyQuad(0, 0, 720, 480), item.ftex.texture, transfo, fader)
-            if type(item) == ScrollingCompositeRenderable:
+            if type(item) == RichText:
+                xxr, yyr = item._position
+                draw_quad(DummyQuad(xxr, yyr, 720, 480, effects=item.effects), item.ftex.texture, se=True)
+            elif type(item) == ScrollingCompositeRenderable:
                 draw_quad(DummyQuad(*item._position, *item.bbox, effects=item.effects), item.ftex.texture, se=True)
             else:
                 draw_quad(DummyQuad(0, 0, 720, 480, effects=item.effects), item.ftex.texture, se=True)
