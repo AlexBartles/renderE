@@ -1027,7 +1027,9 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
         draw_quad(item, item.cachedtex, off=extra["off"])
         #rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA)
     elif isinstance(item, Clock):
-        item.s = datetime.now().strftime(item.format)
+        def fix_strftime(tm, format):
+            return tm.strftime(format.replace("%l", str(int(tm.strftime("%I")))))
+        item.s = fix_strftime(datetime.now(), item.format)
         if (item.lasts != item.s) and item.cachedtex is not None:
             if item.cimg:
                 rl.unload_image(item.cimg)
