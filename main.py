@@ -58,6 +58,7 @@ def loadtif(filename):
     return (rl.load_texture_from_image(im2), im2.width, im2.height)
 
 names = ["RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "ReReRenderD", "RemixD"]
+windbg = ""
 
 splashes = [
     "Functioning not guaranteed",
@@ -855,7 +856,8 @@ def update_audio(item, activeeffects=None):
         audio_vols.append(item.level)
         audio_mixes.append(mixl)
 
-def update_audioseq(seq : AudioSequencer):
+def update_audioseq(seq : AudioSequencer, ex={"mix": None}):
+    global windbg
     if len(seq.audio) == 0:
         return
     if seq.done:
@@ -872,6 +874,7 @@ def update_audioseq(seq : AudioSequencer):
             break
         ea += 1
     if seq.playingidx != ea:
+        windbg += "A sound has ended\n"
         if type(seq.audio[seq.playingidx]) not in (NullAudioClip, AudioSequencer):
             seq.audio[seq.playingidx].file.stop()
         seq.playingidx = ea
@@ -883,7 +886,28 @@ def update_audioseq(seq : AudioSequencer):
     
     
     if type(seq.audio[ea]) == AudioSequencer:
-        update_audioseq(seq.audio[ea])
+        mixl = seq.mix
+        def applyeffect(effect : AudioEffect):
+            nonlocal mixl
+            if type(effect) == AudioFader:
+                dist = (effect.frame/effect.frames)
+                dist = min(dist, 1)
+                mixl = effect.startMixLevel*(1-dist) + effect.endMixLevel*dist
+            if hasattr(effect, "frame"):
+                if not effect.frozen:
+                    effect.frame += 1
+            
+        def loopover(eflist):
+            for effect in eflist:
+                if type(effect) == AudioEffectSequencer:
+                    updateseq(effect)
+                    loopover(effect.activeeffects)
+                else:
+                    applyeffect(effect)
+        
+        loopover(effects)
+        
+        update_audioseq(seq.audio[ea], {"mix": mixl})
     else:
         item = seq.audio[ea]
         mixl = item.mix
@@ -911,7 +935,7 @@ def update_audioseq(seq : AudioSequencer):
                 item.chan = item.file.play()
             audio_chans.append(item.chan)
             audio_vols.append(item.level)
-            audio_mixes.append(mixl)
+            audio_mixes.append(ex["mix"] if ex["mix"] is not None else mixl)
 
 mode_3d_tracker = 0
 
@@ -927,8 +951,6 @@ def unload_tree(item):
     if hasattr(item, "elements"):
         for i in item.elements:
             unload_tree(i)
-
-windbg = ""
 
 vtex = None
 def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0}):
@@ -966,7 +988,7 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
                 RenderControl.actuallyRunAQueuedCommand(cmd)
             if not extra["lloop"]:
                 item.pages[item.pa][0].__del__()
-                windbg += "unloaded a page\n"
+                #windbg += "unloaded a page\n"
             #and here
             item.pa = (ea-1)
             item.pages[item.pa][0].started = True
@@ -1291,15 +1313,15 @@ while not rl.window_should_close():
     rl.end_mode_3d()
     mode_3d_tracker -= 1
     if DEBUG:
-        layer_list = "\n".join(["Layer Order:"] + [f"{l[0]} (depth {l[4]})" for l in sortedLayers])
-        # lines = windbg.split("\n")
-        # if len(lines) > 12:
-        #     lines = lines[-12:]
+        #layer_list = "\n".join(["Layer Order:"] + [f"{l[0]} (depth {l[4]})" for l in sortedLayers])
+        lines = windbg.split("\n")
+        if len(lines) > 12:
+            lines = lines[-12:]
         rl.draw_fps(10, 10)
         rl.draw_text(f"Unloading: {len(rg.unloadqueue)}", 10, 40, 20, rl.WHITE)
         rl.draw_text(f"Queued Commands: {len(rg.queuedcommands)}", 10, 70, 20, rl.WHITE)
         rl.draw_text(f"Unloaded (Last Second): {len(last_sec)}", 10, 100, 20, rl.WHITE)
-        rl.draw_text(layer_list, 10, 130, 20, rl.WHITE)
+        rl.draw_text("\n".join(lines), 10, 130, 20, rl.WHITE)
     for i in range(len(last_sec)):
         last_sec[i] -= 1
     

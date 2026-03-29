@@ -153,6 +153,9 @@ else:
     times.append(time.mktime((y,m,d+1,12,0,0,0,0,-1)))
     times.append(time.mktime((y,m,d+2,0,0,0,0,0,-1)))
 #i'm just gonna... lie!
+def fixac(ac):
+    codes = ac.split(":")
+    return ":".join([c for c in codes if not c.startswith("DA")])
 if not doonly or only == "text":
     print(times)
     print("starting textfcst!")
@@ -167,7 +170,7 @@ if not doonly or only == "text":
             if "day" in textfcst[ix]:
                 fcsts.append(twccommon.Data(
                     daypartName=textfcst[ix]["day"]["daypart_name"],
-                    audioCode=textfcst[ix]["day"]["vocal_key"],
+                    audioCode=fixac(textfcst[ix]["day"]["vocal_key"]),
                     phrase=textfcst[ix]["day"]["narrative"]
                 ))
                 expiry.append(textfcst[ix]["expire_time_gmt"])
@@ -176,7 +179,7 @@ if not doonly or only == "text":
                     break
                 fcsts.append(twccommon.Data(
                     daypartName=textfcst[ix]["night"]["daypart_name"],
-                    audioCode=textfcst[ix]["night"]["vocal_key"],
+                    audioCode=fixac(textfcst[ix]["night"]["vocal_key"]),
                     phrase=textfcst[ix]["night"]["narrative"]
                 ))
                 expiry.append(textfcst[ix]["expire_time_gmt"])
@@ -187,7 +190,7 @@ if not doonly or only == "text":
             else:
                 fcsts.append(twccommon.Data(
                     daypartName=textfcst[ix]["night"]["daypart_name"],
-                    audioCode=textfcst[ix]["night"]["vocal_key"],
+                    audioCode=fixac(textfcst[ix]["night"]["vocal_key"]),
                     phrase=textfcst[ix]["night"]["narrative"]
                 ))
                 expiry.append(textfcst[ix]["expire_time_gmt"])
