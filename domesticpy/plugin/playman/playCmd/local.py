@@ -5,6 +5,7 @@
 # Compiled at: 2007-01-12 11:33:37
 import domestic, domestic.wxdata, domestic.BulletinInfo as BulletinInfo, os, copy, time, glob, twc.EventLog as EventLog, twccommon, twccommon.Log as Log, twccommon.PluginManager, twc.dsmarshal as dsm, twc.MiscCorbaInterface
 import domesticpy.plugin.playman.playCmd.pm as pcpm
+import rendereglobals as rg
 CHANNEL_NAME = 'SystemEventChannel'
 TAG_DELAY = 50
 
@@ -18,7 +19,7 @@ def init(config):
     _config.defaultPlaylistGroup = 'DefaultUS'
     _params = twccommon.Data()
     _params.root = _config.root
-    _params.tempDir = os.path.join(os.environ["RENDEREROOT"], "temp", "local")
+    _params.tempDir = rg.newjoin(os.environ["RENDEREROOT"], "temp", "local")
     os.makedirs(_params.tempDir, exist_ok=True)
     return
 
@@ -148,7 +149,7 @@ def _getLasCrawlText():
 import math
 import random
 def _getBkgAudioFilename():
-    files = glob.glob(os.path.join(os.environ["RENDEREROOT"], 'bgm', '*'))
+    files = glob.glob(rg.newjoin(os.environ["RENDEREROOT"], 'bgm', '*'))
     print(files)
     files.sort()
     numFiles = len(files)
