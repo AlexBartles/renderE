@@ -73,6 +73,9 @@ for cid in coopid:
         print(f"Found coopId {cid}!")
         cidmap[cid] = (res[7], res[8])
 
+def visround(v):
+    return 999 if v is None else round(v)
+
 if not doonly or only == "sensor":
     print(f"starting sensor data!")
     dat = r.get(f"https://wx.lewolfyt.cc?geo={lat},{lon}&include=current,historical").json()
@@ -82,7 +85,7 @@ if not doonly or only == "sensor":
     data.humidity = dat["current"]["conditions"]["humidity"]
     data.dewpoint = dat["current"]["conditions"]["dewPoint"]
     data.altimeter = dat["current"]["conditions"]["pressure"]
-    data.visibility = dat["current"]["conditions"]["visibility"]
+    data.visibility = visround(dat["current"]["conditions"]["visibility"])
     data.windDirection = windmap[dat["current"]["conditions"]["windCardinal"]]
     data.windSpeed = dat["current"]["conditions"]["windSpeed"]
     data.gusts = dat["current"]["conditions"]["windGusts"]
@@ -104,7 +107,7 @@ if not doonly or only == "obs":
             data.humidity = dat["current"]["conditions"]["humidity"]
             data.dewpoint = dat["current"]["conditions"]["dewPoint"]
             data.altimeter = dat["current"]["conditions"]["pressure"]
-            data.visibility = dat["current"]["conditions"]["visibility"]
+            data.visibility = visround(dat["current"]["conditions"]["visibility"])
             data.windDirection = windmap[dat["current"]["conditions"]["windCardinal"]]
             data.windSpeed = dat["current"]["conditions"]["windSpeed"]
             data.gusts = dat["current"]["conditions"]["windGusts"]
