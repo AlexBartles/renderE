@@ -1045,8 +1045,13 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
             #rl.image_alpha_premultiply(cimg)
             item.cachedtex = rl.load_texture_from_image(item.cimg)
         item._size = (item.cimg.width, item.cimg.height)
+        if type(item) == Marquee:
+            item.pos += item.step
+            item.pos %= item._size[0]
+            draw_quad(item, item.cachedtex, off=(extra["off"][0]+720-item.pos, extra["off"][0])) #i'll hardcode this until weatherscan forces me to not
+        else:
+            draw_quad(item, item.cachedtex, off=extra["off"])
         #rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA_PREMULTIPLY)
-        draw_quad(item, item.cachedtex, off=extra["off"])
         #rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA)
     elif isinstance(item, Clock):
         def fix_strftime(tm, format):
@@ -1250,6 +1255,8 @@ RenderControl.setLayer("Video", vl)
 
 trans = False
 
+starid = dsm.defaultedGet("starId", "StarID Unavailable")
+
 while not rl.window_should_close():
     audio_chans = []
     audio_mixes = []
@@ -1318,10 +1325,9 @@ while not rl.window_should_close():
         if len(lines) > 12:
             lines = lines[-12:]
         rl.draw_fps(10, 10)
-        rl.draw_text(f"Unloading: {len(rg.unloadqueue)}", 10, 40, 20, rl.WHITE)
-        rl.draw_text(f"Queued Commands: {len(rg.queuedcommands)}", 10, 70, 20, rl.WHITE)
-        rl.draw_text(f"Unloaded (Last Second): {len(last_sec)}", 10, 100, 20, rl.WHITE)
-        rl.draw_text("\n".join(lines), 10, 130, 20, rl.WHITE)
+        rl.draw_text(f"StarID: {starid}", 10, 40, 20, rl.WHITE)
+        rl.draw_text(f"Audio Playing: {len(audio_chans)}", 10, 70, 20, rl.WHITE)
+        rl.draw_text("\n".join(lines), 10, 100, 20, rl.WHITE)
     for i in range(len(last_sec)):
         last_sec[i] -= 1
     

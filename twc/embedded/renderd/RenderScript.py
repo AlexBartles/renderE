@@ -530,10 +530,14 @@ class Marquee(Text):
         #_renderd.createMarquee(self, font, str, step, repeat)
         self.fnt = font
         self.s = str
+        self.step = step
+        self.repeat = repeat
+        self.pos = 0
         return
 
     def setSpeed(self, step):
-        return _renderd.Marquee_setSpeed(self, step)
+        #return _renderd.Marquee_setSpeed(self, step)
+        self.step = step
         return
 
 
@@ -1201,6 +1205,8 @@ class AudioSequencer(AudioRenderable):
         self.repeat = repeat
         self.audio = []
         self.effects = []
+        self.level = 1
+        self.mix = 1
         return
 
     def addItem(self, child):
