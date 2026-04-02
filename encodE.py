@@ -37,6 +37,9 @@ sevendaycoop = dsm.rget(f"Config.{cver}.Local_7DayForecast").coopId
 headlinecounty = dsm.rget(f"Config.{cver}.Local_NWSHeadlines").zone
 getawaycoop = dsm.rget(f"Config.{cver}.Local_GetawayForecast").coopId
 
+metrofcstcoop = [v[0] for v in dsm.rget(f"Config.{cver}.Local_MetroForecastMap").fcstValue[0][1]]
+regfcstcoop = [v[0] for v in dsm.rget(f"Config.{cver}.Local_RegionalForecastMap").fcstValue[0][1]]
+
 lat = dsm.rget("primaryLat")
 lon = dsm.rget("primaryLon")
 
@@ -44,6 +47,11 @@ coopid.add(textfcstcoop)
 coopid.add(daypartcoop)
 coopid.add(sevendaycoop)
 coopid.update(getawaycoop)
+
+hourlycoop = set()
+hourlycoop.add(daypartcoop)
+hourlycoop.update(metrofcstcoop)
+hourlycoop.update(regfcstcoop)
 
 coopid = list(coopid)
 
@@ -65,6 +73,9 @@ for cid in coopid:
         print(f"Found coopId {cid}!")
         cidmap[cid] = (res[7], res[8])
 
+def visround(v):
+    return 999 if v is None else round(v)
+
 if not doonly or only == "sensor":
     print(f"starting sensor data!")
     dat = r.get(f"https://wx.lewolfyt.cc?geo={lat},{lon}&include=current,historical").json()
@@ -74,7 +85,7 @@ if not doonly or only == "sensor":
     data.humidity = dat["current"]["conditions"]["humidity"]
     data.dewpoint = dat["current"]["conditions"]["dewPoint"]
     data.altimeter = dat["current"]["conditions"]["pressure"]
-    data.visibility = dat["current"]["conditions"]["visibility"]
+    data.visibility = visround(dat["current"]["conditions"]["visibility"])
     data.windDirection = windmap[dat["current"]["conditions"]["windCardinal"]]
     data.windSpeed = dat["current"]["conditions"]["windSpeed"]
     data.gusts = dat["current"]["conditions"]["windGusts"]
@@ -96,7 +107,7 @@ if not doonly or only == "obs":
             data.humidity = dat["current"]["conditions"]["humidity"]
             data.dewpoint = dat["current"]["conditions"]["dewPoint"]
             data.altimeter = dat["current"]["conditions"]["pressure"]
-            data.visibility = dat["current"]["conditions"]["visibility"]
+            data.visibility = visround(dat["current"]["conditions"]["visibility"])
             data.windDirection = windmap[dat["current"]["conditions"]["windCardinal"]]
             data.windSpeed = dat["current"]["conditions"]["windSpeed"]
             data.gusts = dat["current"]["conditions"]["windGusts"]
@@ -145,6 +156,9 @@ else:
     times.append(time.mktime((y,m,d+1,12,0,0,0,0,-1)))
     times.append(time.mktime((y,m,d+2,0,0,0,0,0,-1)))
 #i'm just gonna... lie!
+def fixac(ac):
+    codes = ac.split(":")
+    return ":".join([c for c in codes if not c.startswith("DA")])
 if not doonly or only == "text":
     print(times)
     print("starting textfcst!")
@@ -159,7 +173,7 @@ if not doonly or only == "text":
             if "day" in textfcst[ix]:
                 fcsts.append(twccommon.Data(
                     daypartName=textfcst[ix]["day"]["daypart_name"],
-                    audioCode=textfcst[ix]["day"]["vocal_key"],
+                    audioCode=fixac(textfcst[ix]["day"]["vocal_key"]),
                     phrase=textfcst[ix]["day"]["narrative"]
                 ))
                 expiry.append(textfcst[ix]["expire_time_gmt"])
@@ -168,7 +182,7 @@ if not doonly or only == "text":
                     break
                 fcsts.append(twccommon.Data(
                     daypartName=textfcst[ix]["night"]["daypart_name"],
-                    audioCode=textfcst[ix]["night"]["vocal_key"],
+                    audioCode=fixac(textfcst[ix]["night"]["vocal_key"]),
                     phrase=textfcst[ix]["night"]["narrative"]
                 ))
                 expiry.append(textfcst[ix]["expire_time_gmt"])
@@ -179,7 +193,7 @@ if not doonly or only == "text":
             else:
                 fcsts.append(twccommon.Data(
                     daypartName=textfcst[ix]["night"]["daypart_name"],
-                    audioCode=textfcst[ix]["night"]["vocal_key"],
+                    audioCode=fixac(textfcst[ix]["night"]["vocal_key"]),
                     phrase=textfcst[ix]["night"]["narrative"]
                 ))
                 expiry.append(textfcst[ix]["expire_time_gmt"])
@@ -196,30 +210,31 @@ if not doonly or only == "text":
     dsm.rcommit()
 
 if not doonly or only == "hourly":
-    print(f"starting local hourly for coopid {daypartcoop}!")
-    try:
-        print(cidmap[daypartcoop])
-        dat = r.get(f"https://wx.lewolfyt.cc?geo={','.join(cidmap[daypartcoop])}").json()
+    print(f"starting local hourly!")
+    for coop in list(hourlycoop):
+        try:
+            print(cidmap[coop])
+            dat = r.get(f"https://wx.lewolfyt.cc?geo={','.join(cidmap[coop])}").json()
+            
+            for hr in dat["hourly"]:
+                data = twccommon.Data()
+                data.skyCondition = hr["narrationCode"]
+                data.temp = round(hr["temperature"])
+                data.windDir = windmap[hr["windCardinal"]]
+                data.windSpeed = hr["windSpeed"]
+                data.heatIndex = round(hr["heatIndex"])
+                data.windChill = round(hr["windChill"])
+                #hr["expires"]
+                print("hourly data for", hr["valid"])
+                dsm.rset(f"hourlyFcst.{coop}.{hr['valid']}", data, expiretime)
+        except:
+            print(traceback.print_exc())
+            print(f"daypart failure for {coop}")
         
-        for hr in dat["hourly"]:
-            data = twccommon.Data()
-            data.skyCondition = hr["narrationCode"]
-            data.temp = round(hr["temperature"])
-            data.windDir = windmap[hr["windCardinal"]]
-            data.windSpeed = hr["windSpeed"]
-            data.heatIndex = round(hr["heatIndex"])
-            data.windChill = round(hr["windChill"])
-            #hr["expires"]
-            print("hourly data for", hr["valid"])
-            dsm.rset(f"hourlyFcst.{daypartcoop}.{hr['valid']}", data, expiretime)
-    except:
-        print(traceback.print_exc())
-        print(f"daypart failure for {daypartcoop}")
-    
     dsm.rcommit()
 
 if not doonly or only == "fcst":
-    cidlist = [sevendaycoop] + getawaycoop
+    cidlist = list(set([sevendaycoop] + getawaycoop + metrofcstcoop + regfcstcoop))
     for ci in cidlist:
         try:
             print(f"starting forecast data for {ci}!")
@@ -231,12 +246,15 @@ if not doonly or only == "fcst":
                 jj = (i*2+1) if dat["extended"]["daily"][0]["partiallyObserved"] else (i*2)
                 dailydat = dat["extended"]["daily"][j]
                 daypartdat = dat["extended"]["daypart"][jj]
+                daypartdat2 = dat["extended"]["daypart"][jj+1]
                 
                 y,m,d,H,M,S,wday,jday,dst = time.localtime(dailydat["valid"])
                 ktime = time.mktime((y,m,d,0,0,0,wday,jday,-1))
                 
                 data = twccommon.Data()
                 data.daySkyCondition = daypartdat["narrationCode"]
+                data.skyCondition = daypartdat["narrationCode"]
+                data.eveningSkyCondition = daypartdat2["narrationCode"]
                 data.highTemp = dailydat["calendarTempMax"]
                 data.lowTemp = dailydat["calendarTempMin"]
                 #dailydat["expires"]
@@ -510,6 +528,9 @@ if not doonly or only == "bulletin":
             for f in alerts["features"]:
                 try:
                     props = f["properties"]
+                    if props["event"] not in codes:
+                        print(f"skipping {props['event']} since it's not in the list")
+                        continue
                     bull = twccommon.Data()
                     code = codes[props["event"]]
                     bull.pil = code[:3]

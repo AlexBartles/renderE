@@ -147,8 +147,9 @@ def _getLasCrawlText():
 
 import math
 import random
+import rendereglobals as rg
 def _getBkgAudioFilename():
-    files = glob.glob(os.path.join(os.environ["RENDEREROOT"], 'bgm', '*'))
+    files = glob.glob(rg.newjoin(os.environ["RENDEREROOT"], 'bgm', '*'))
     print(files)
     files.sort()
     numFiles = len(files)

@@ -3,9 +3,9 @@
 # Decompiled from: Python 3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]
 # Embedded file name: psp.py
 # Compiled at: 2007-01-12 11:17:30
-import os.path, string, types, twc.dsmarshal, twc.rsutil as rsutil, rsfix
+import os.path, rsfix
 import nethandler
-from twc import DataStoreInterface
+
 _includePath = ['.']
 
 def setIncludePath(path=[]):
@@ -35,6 +35,8 @@ def evalPage(page, namespace={}, includePath=None):
     namespace["reduce"] = reduce
     page = page.replace("os.stat", "newstat")
     page = page.replace("os.newaccess", "newaccess")
+    page = page.replace("os.path.exists", "newexists")
+    page = page.replace("os.path.join", "newjoin")
     if includePath == None:
         includePath = _includePath
     p1 = page.find('<%')
@@ -60,7 +62,7 @@ def evalPage(page, namespace={}, includePath=None):
             val = str(val)
             val.replace("/usr/twc/domestic", os.environ["RENDEREDOMESTIC"])
             fname = None
-            if val[0] == '/':
+            if val[0] == '/' or val[1] == ":":
                 if os.path.exists(val):
                     fname = val
                 elif nethandler.requestNetAssetExt(val):
@@ -96,7 +98,7 @@ def evalPage(page, namespace={}, includePath=None):
                         break
 
             if fname == None:
-                raise RuntimeError('file %s in PSP include tag not found' % sub2)
+                raise RuntimeError(f'file {sub2} in PSP include tag not found (searching for {values} in paths {includePath})')
             f = open(fname, 'r')
             sub2 = f.read()
             f.close()
@@ -114,7 +116,7 @@ def evalPage(page, namespace={}, includePath=None):
     elif cmd == '!':
         #print(sub2[:100])
         try:
-            exec(rsfix.fix_if(sub2).replace("os.stat", "newstat").replace("os.newaccess", "newaccess"), namespace)
+            exec(rsfix.fix_if(sub2).replace("os.stat", "newstat").replace("os.newaccess", "newaccess").replace("os.path.exists", "newexists").replace("os.path.join", "newjoin"), namespace)
         except Exception as e:
             raise e
         return sub1 + evalPage(sub3, namespace, includePath)
@@ -132,6 +134,9 @@ def evalRenderScript(page, namespace={}, includePath=None):
     that will be common to render script evaluation.  As an example,
     a get function will be added that retrieves data from the DataStore.
     """
+    from twc import DataStoreInterface
+    import twc.dsmarshal
+    import twc.rsutil as rsutil
     namespace['rsutil'] = rsutil
     namespace['ds'] = DataStoreInterface
     namespace['dsm'] = twc.dsmarshal

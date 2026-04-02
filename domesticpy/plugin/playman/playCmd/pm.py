@@ -5,8 +5,9 @@
 # Compiled at: 2007-01-12 11:33:37
 import domestic, os, stat, sys, time, twc, twc.DataStoreInterface as ds, twc.dsmarshal as dsm, twc.playlist, twc.products, twc.DataEventLog as DataEventLog, twcWx.mapping, twccommon, twccommon.Log as Log, twccommon.PluginManager as PluginManager
 from functools import reduce
+import rendereglobals as rg
 
-tempdir = os.path.join(os.environ["RENDEREROOT"], "temp")
+tempdir = rg.newjoin(os.environ["RENDEREROOT"], "temp")
 
 def init(config):
     global _config
@@ -15,7 +16,7 @@ def init(config):
     _config = twccommon.Data()
     _config.__dict__.update(config.__dict__)
     _pluginMgr = PluginManager.PluginManager(config.playlistPluginRoot)
-    _runlog = twc.EventLog.EventLog(os.path.join(tempdir, "runlog"), 3600)
+    _runlog = twc.EventLog.EventLog(rg.newjoin(tempdir, "runlog"), 3600)
     return
 
 
@@ -495,9 +496,9 @@ def _cull():
     return
 
 
-_ROOT = os.path.join(os.environ["RENDEREDOMESTIC"], "products", "pm")
+_ROOT = rg.newjoin(os.environ["RENDEREDOMESTIC"], "products", "pm")
 _NETROOT = '/usr/twc/domestic/products/pm'
-_LOG_ROOT = os.path.join(os.environ["RENDEREROOT"], "temp", "logs")
+_LOG_ROOT = rg.newjoin(os.environ["RENDEREROOT"], "temp", "logs")
 os.makedirs(_LOG_ROOT, exist_ok=True)
 _pl = _ProdLoader()
 _pluginMgr = None

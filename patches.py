@@ -4,6 +4,10 @@ import nethandler
 import os
 import rendereglobals as rg
 import loadtools
+from pathlib import PurePath
+import builtins
+import types
+
 string.__dict__["letters"] = string.ascii_letters
 string.__dict__["find"] = (lambda s, f : s.find(f))
 string.__dict__["upper"] = (lambda s : str(s).upper())
@@ -15,6 +19,13 @@ def sfix(s, sep, maxsplit=-1):
     return s.split(sep, maxsplit)
 string.__dict__["replace"] = rfix
 string.__dict__["split"] = sfix
+def fixifsub(val):
+    if val is None:
+        return -1
+    if isinstance(val, types.FunctionType):
+        return val
+    return val
+builtins.__dict__["ehuehuehue_i_added_a_function"] = fixifsub #this is the new winner of "most ridiculous python thing i have ever done"
 oldtime = time.struct_time
 
 def unprint(stuff):
@@ -48,38 +59,60 @@ def newaccess(path, mode):
     else:
         return os.access(path, mode)
 
+import traceback as tb
 def newstat(path):
-    if path.startswith(os.path.join(os.path.dirname(os.path.abspath(__file__)), "net").replace("\\", "/")):
-        return os.stat(path)
-    if not os.access(path, os.R_OK):
-        newpath = nethandler.requestNetAssetExt(path)
-        if newpath:
-            return os.stat(newpath)
+    try:
+        ptest = rg.newjoin(os.path.dirname(os.path.abspath(__file__)), "net")
+        if path.startswith(ptest):
+            return os.stat(path)
+        if not os.access(path, os.R_OK):
+            newpath = nethandler.requestNetAssetExt(path)
+            if newpath:
+                return os.stat(newpath)
+            else:
+                return os.stat(path)
         else:
             return os.stat(path)
+    except:
+        tb.print_exc()
+        print(path)
+
+def newexists(path):
+    if path.startswith("/twc/data/map.cuts"):
+        return os.path.exists(path.replace("/twc/data/map.cuts", rg.newjoin(os.environ["TWCPERSDIR"], "data", "map.cuts")))
+    if not os.path.exists(path):
+        newpath = nethandler.requestNetAssetExt(path)
+        return bool(newpath)
     else:
-        return os.stat(path)
+        return True
 
 rg.newaccess = newaccess
 rg.newstat = newstat
+rg.newexists = newexists
 
 def runrs(filename):
     crs = loadtools.compilers(filename)
     print(type(crs))
-    ns = {"apply": apply, "newaccess": newaccess, "newstat": newstat}
-    exec(crs.replace("os.stat", "newstat").replace("os.access", "newaccess"), ns, ns)
+    ns = {"apply": apply, "newaccess": newaccess, "newexists": newexists, "newstat": newstat, "newjoin": rg.newjoin}
+    exec(crs.replace("os.stat", "newstat").replace("os.access", "newaccess").replace("os.path.exists", "newexists").replace("os.path.join", "newjoin"), ns, ns)
 
 def runrsc(filename):
     dat = "global layerProps\n"
-    with open(filename, "r") as f:
+    with open(filename.replace("\\", "/"), "r") as f:
         dat += f.read()
-    ns = {"apply": apply, "newaccess": newaccess, "newstat": newstat, "reduce": reduce}
-    exec(compile(unprint(dat).replace("os.stat", "newstat").replace("os.access", "newaccess"), filename, "exec"), ns, ns)
+    ns = {"apply": apply, "newaccess": newaccess, "newexists": newexists, "newstat": newstat, "reduce": reduce, "newjoin": rg.newjoin}
+    fixed = unprint(dat).replace("os.stat", "newstat").replace("os.access", "newaccess").replace("os.path.exists", "newexists").replace("os.path.join", "newjoin")
+    
+    try:
+        exec(compile(fixed, filename, "exec"), ns, ns)
+    except Exception as e:
+        with open("crash_rsc.txt", "w") as f:
+            f.write(fixed)
+        raise e
 
 rg.runrsfunction = runrs
 rg.runrscfunction = runrsc
 
-#i've said it before but THIS is my most cursed python code
 def yes_i_am_real_struct_time(seq=None, tm_year=0, tm_mon=0, tm_mday=0, tm_hour=0, tm_min=0, tm_sec=0, tm_wday=0, tm_yday=0, tm_isdst=0):
     if seq:
         return oldtime(seq)

@@ -72,6 +72,7 @@ def load(playlistId, playlistName, duration, bulletins):
 
 
 def toggleNationalLDL(id, activate, time=0, frame=0):
+    print("i am the")
     global _activate
     if _activate not in vars():
         _activate = 0
@@ -91,6 +92,7 @@ def toggleNationalLDL(id, activate, time=0, frame=0):
     load(_config.playlistId, playlistName, _config.duration, bulletins)
     eventValue = (_config.playlistId, time, frame, twccommon.Data(nationalLdl=1))
     #twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.run', eventValue)
+    print("i am the national ldl")
     pcpm.run(*eventValue)
     return
 

@@ -6,7 +6,7 @@ import twccommon
 import domestic.dataUtil as dataUtil
 import twcWx.dataUtil as wxDataUtil
 import twc.dsmarshal as dsm
-
+import rendereglobals as rg
 
 class AnimatedMap(twc.products.Product):
     """This class supports maps that "animate" (i.e. - support multiple data
@@ -66,10 +66,11 @@ class AnimatedMap(twc.products.Product):
         data.noDataAvailableText = "Temporarily Unavailable"
 
         # check for a map cut
-        mapCut = '/twc/data/map.cuts/%s.map.tif' % (data.productString,)
+        mapCut = rg.newjoin(os.environ["TWCPERSDIR"], "data", "map.cuts", '%s.map.tif' % (data.productString,))
 
         # if there's no map cut, we're not valid (regardless if there's data)
         if os.path.exists(mapCut) == 0:
+            print(data.productString, mapCut)
             twccommon.Log.warning("no map cut found for %s. Can't display product." % (data.productString,))
             data.noDataAvailable = 1
             return

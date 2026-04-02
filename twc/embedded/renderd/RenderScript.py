@@ -530,10 +530,14 @@ class Marquee(Text):
         #_renderd.createMarquee(self, font, str, step, repeat)
         self.fnt = font
         self.s = str
+        self.step = step
+        self.repeat = repeat
+        self.pos = 0
         return
 
     def setSpeed(self, step):
-        return _renderd.Marquee_setSpeed(self, step)
+        #return _renderd.Marquee_setSpeed(self, step)
+        self.step = step
         return
 
 
@@ -649,14 +653,38 @@ class ClipboardImage(Image):
         #_renderd.createClipboardImage(self)
         return
 
-
+import json
 class VectorImage(GraphicRenderable):
     """A image made up of points, lines, and curves."""
 
     def __init__(self, name, lineThickness=1, evict=0):
         GraphicRenderable.__init__(self)
+        self.polys = []
+        self.lineThickness = lineThickness
+        self.im = None
+        self.tx = None
+        if os.path.exists(name + ".vg"):
+            with open(name + ".vg", "r") as f:
+                fl = json.loads(f.read())
+            self._size = (fl[0], fl[1])
+            self.polys = fl[2]
+            self.im = rg.rl.gen_image_color(fl[0], fl[1], rg.rl.BLANK)
+            for pol in self.polys:
+                for i in range(len(pol)):
+                    if i == (len(pol)-1):
+                        break
+                    first = pol[i]
+                    second = pol[i+1]
+                    rg.rl.image_draw_line_ex(self.im, first, second, self.lineThickness, rg.rl.WHITE)
+    
+    def unload(self):
+        if self.tx:
+            rg.rl.unload_texture(self.tx)
+            self.tx = None
+        if self.im:
+            rg.rl.unload_image(self.im)
+            self.im = None
         #_renderd.createVectorImage(self, name, lineThickness, evict)
-        return
 
 
 class CompositeRenderable(GraphicRenderable):
@@ -780,7 +808,7 @@ class RichText(CompositeRenderable):
             (r, g, b, a) = color
             gr = Text(font, strText)
             gr.setColor(r, g, b, a)
-            gr.setPosition(w, 0)
+            gr.setPosition(w, font.sy)
             (wgr, hgr) = gr.size()
             tempList.append(gr)
             w += wgr
@@ -1025,6 +1053,8 @@ class SetVisibility(Effect):
         self.fired = False
         self.frame = 0
         self.frozen = False
+        
+        self.fader = None
         if target != None:
             self.setTarget(target)
         return
@@ -1125,7 +1155,7 @@ class AudioEffect(Effect):
     def setTarget(self, target):
         target.addAudioEffect(self)
 
-
+import random
 class EffectSequencer(Renderable):
 
     def __init__(self, target, repeat=0, loopLimit=0):
@@ -1139,9 +1169,18 @@ class EffectSequencer(Renderable):
         target.addEffectSequencer(self, repeat, loopLimit)
         return
 
-    def addEffect(self, effect, duration):
+    def _eval_fader(self):
+        if len(self.effects) > 1:
+            for i in range(len(self.effects)-1):
+                if (type(self.effects[i][0]) == SetVisibility) and (type(self.effects[i+1][0]) == Fader):
+                    self.effects[i][0].fader = self.effects[i+1][0].startAlpha
+                elif (type(self.effects[i][0]) == SetVisibility):
+                    self.effects[i][0].fader = None
+    
+    def addEffect(self, effect, duration, confirm=False):
         self.effects.append((effect, duration))
         self.total += duration
+        self._eval_fader()
         return
 
 
@@ -1166,6 +1205,8 @@ class AudioSequencer(AudioRenderable):
         self.repeat = repeat
         self.audio = []
         self.effects = []
+        self.level = 1
+        self.mix = 1
         return
 
     def addItem(self, child):

@@ -35,7 +35,7 @@ zzz = 1
 rl = rg.rl
 
 #rl.set_config_flags(rl.ConfigFlags.FLAG_WINDOW_UNDECORATED | rl.ConfigFlags.FLAG_WINDOW_TRANSPARENT)
-#rl.set_config_flags(rl.ConfigFlags.FLAG_WINDOW_UNDECORATED)
+rl.set_config_flags(rl.ConfigFlags.FLAG_WINDOW_UNDECORATED)
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 sock.bind(("localhost", 7245))
@@ -58,6 +58,7 @@ def loadtif(filename):
     return (rl.load_texture_from_image(im2), im2.width, im2.height)
 
 names = ["RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "RenderE", "ReReRenderD", "RemixD"]
+windbg = ""
 
 splashes = [
     "Functioning not guaranteed",
@@ -83,7 +84,13 @@ splashes = [
     "Remember that greed is one of the seven deadly sins.",
     "Let's put this show together.",
     "The IntelliStar for the common man, woman, or otherwise stated.",
-    "We do TWC preservation, the right way.™"
+    "We do TWC preservation, the right way.™",
+    "Weather coverage you can count on.",
+    "Prepare your computer! It's gonna get ugly.",
+    "Now you can be the MSO everyone needs.",
+    "There is no such thing as the RenderD window.",
+    "Run that funky forecast, white boy!",
+    "Azmo, brick, biatch, and now.. this. Hello!"
 ]
 
 fortune = random.choice(splashes)
@@ -294,7 +301,7 @@ def ebucolorbars():
     l = Layer()
     p = Page()
     l.addPage(p)
-    im = JPEG_Image(os.path.join(os.environ["RENDEREROOT"], "ebu"))
+    im = JPEG_Image(rg.newjoin(os.environ["RENDEREROOT"], "ebu"))
     im.setSize(720, 480)
     im.setPosition(0, 0)
     p.addItem(im)
@@ -564,6 +571,8 @@ def calceffects(quad):
                 quad.s = effect.s
         elif type(effect) == SetVisibility:
             visible = effect.visible
+            if effect.fader is not None:
+                fader = effect.fader
         if hasattr(effect, "frame"):
             if not effect.frozen:
                 effect.frame += 1
@@ -584,7 +593,7 @@ def calceffects(quad):
     if drawlevel == 0:
         xxw -= (activedrawlayer[6]/720*(xxx*2))
         yyw -= (activedrawlayer[7]/480*(yyy*2))
-    return xxw, yyw, mat, fader
+    return xxw, yyw, mat, fader, qx, qy
 
 def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False, off=(0, 0)):
     effects = quad.effects
@@ -654,6 +663,8 @@ def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False, off=(0, 0)):
         elif type(effect) == SetVisibility:
             #if effect.frozen or effect.frame > 0:
             visible = effect.visible
+            if effect.fader is not None:
+                fader = effect.fader
         if hasattr(effect, "frame"):
             if not effect.frozen and not se:
                 effect.frame += 1
@@ -757,6 +768,8 @@ def draw_poly(quad : TIFF_Image, tex=white):
             pts2 = [(rl.Vector3(p[0].x*pX, p[0].y*pY, p[0].z), p[1], p[2], p[3], p[4]) for p in pts2]
         elif type(effect) == SetVisibility:
             visible = effect.visible
+            if effect.fader is not None:
+                fader = effect.fader
         if hasattr(effect, "frame"):
             if not effect.frozen:
                 effect.frame += 1
@@ -843,7 +856,8 @@ def update_audio(item, activeeffects=None):
         audio_vols.append(item.level)
         audio_mixes.append(mixl)
 
-def update_audioseq(seq : AudioSequencer):
+def update_audioseq(seq : AudioSequencer, ex={"mix": None}):
+    global windbg
     if len(seq.audio) == 0:
         return
     if seq.done:
@@ -860,6 +874,7 @@ def update_audioseq(seq : AudioSequencer):
             break
         ea += 1
     if seq.playingidx != ea:
+        windbg += "A sound has ended\n"
         if type(seq.audio[seq.playingidx]) not in (NullAudioClip, AudioSequencer):
             seq.audio[seq.playingidx].file.stop()
         seq.playingidx = ea
@@ -871,7 +886,28 @@ def update_audioseq(seq : AudioSequencer):
     
     
     if type(seq.audio[ea]) == AudioSequencer:
-        update_audioseq(seq.audio[ea])
+        mixl = seq.mix
+        def applyeffect(effect : AudioEffect):
+            nonlocal mixl
+            if type(effect) == AudioFader:
+                dist = (effect.frame/effect.frames)
+                dist = min(dist, 1)
+                mixl = effect.startMixLevel*(1-dist) + effect.endMixLevel*dist
+            if hasattr(effect, "frame"):
+                if not effect.frozen:
+                    effect.frame += 1
+            
+        def loopover(eflist):
+            for effect in eflist:
+                if type(effect) == AudioEffectSequencer:
+                    updateseq(effect)
+                    loopover(effect.activeeffects)
+                else:
+                    applyeffect(effect)
+        
+        loopover(effects)
+        
+        update_audioseq(seq.audio[ea], {"mix": mixl})
     else:
         item = seq.audio[ea]
         mixl = item.mix
@@ -899,7 +935,7 @@ def update_audioseq(seq : AudioSequencer):
                 item.chan = item.file.play()
             audio_chans.append(item.chan)
             audio_vols.append(item.level)
-            audio_mixes.append(mixl)
+            audio_mixes.append(ex["mix"] if ex["mix"] is not None else mixl)
 
 mode_3d_tracker = 0
 
@@ -915,8 +951,6 @@ def unload_tree(item):
     if hasattr(item, "elements"):
         for i in item.elements:
             unload_tree(i)
-
-windbg = ""
 
 vtex = None
 def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0}):
@@ -954,7 +988,7 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
                 RenderControl.actuallyRunAQueuedCommand(cmd)
             if not extra["lloop"]:
                 item.pages[item.pa][0].__del__()
-                windbg += "unloaded a page\n"
+                #windbg += "unloaded a page\n"
             #and here
             item.pa = (ea-1)
             item.pages[item.pa][0].started = True
@@ -969,11 +1003,6 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
     elif type(item) == Page:
         for el in item._elements:
             draw_item(el, extra)
-    elif isinstance(item, Image):
-        if type(item) is not CompositedImage: #i'll figure out what a CompositedImage is later.
-            if not item.texture:
-                item.texture = rl.load_texture_from_image(item.im2)
-            draw_quad(item, item.texture, off=extra["off"])
     elif isinstance(item, Icon):
         if item.textures is None:
             item.textures = [rl.load_texture_from_image(f) for f in item._ims]
@@ -1016,11 +1045,18 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
             #rl.image_alpha_premultiply(cimg)
             item.cachedtex = rl.load_texture_from_image(item.cimg)
         item._size = (item.cimg.width, item.cimg.height)
+        if type(item) == Marquee:
+            item.pos += item.step
+            item.pos %= item._size[0]
+            draw_quad(item, item.cachedtex, off=(extra["off"][0]+720-item.pos, extra["off"][0])) #i'll hardcode this until weatherscan forces me to not
+        else:
+            draw_quad(item, item.cachedtex, off=extra["off"])
         #rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA_PREMULTIPLY)
-        draw_quad(item, item.cachedtex, off=extra["off"])
         #rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA)
     elif isinstance(item, Clock):
-        item.s = datetime.now().strftime(item.format)
+        def fix_strftime(tm, format):
+            return tm.strftime(format.replace("%l", str(int(tm.strftime("%I")))))
+        item.s = fix_strftime(datetime.now(), item.format)
         if (item.lasts != item.s) and item.cachedtex is not None:
             if item.cimg:
                 rl.unload_image(item.cimg)
@@ -1045,7 +1081,7 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
             item.cachedtex = rl.load_texture_from_image(item.cimg)
         item._size = (item.cimg.width, item.cimg.height)
         draw_quad(item, item.cachedtex)
-    elif type(item) in (CompositeRenderable, ScrollingCompositeRenderable, RichText):
+    elif type(item) in (CompositeRenderable, ScrollingCompositeRenderable, RichText, CompositedImage):
         drawlevel += 1
         #print(drawlevel)
         if type(item) == ScrollingCompositeRenderable:
@@ -1064,7 +1100,7 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
         rl.clear_background(rl.Color(0, 0, 0, 0))
         rl.rl_set_clip_planes(0.01, 10000)
         
-        xx2, yy2, transfo, fader = calceffects(item)
+        xx2, yy2, transfo, fader, xx2p, yy2p = calceffects(item)
         
         #print(xx2, yy2)
         #xx2, yy2 = 0, 0
@@ -1086,7 +1122,10 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
                 fov,
                 rl.CameraProjection.CAMERA_PERSPECTIVE
             )
-        rl.begin_mode_3d(camera2)
+        if isinstance(item, RichText):
+            rl.begin_mode_3d(camera)
+        else:
+            rl.begin_mode_3d(camera2)
         mode_3d_tracker += 1
         rl.rl_disable_depth_test()
         rl.rl_disable_depth_mask()
@@ -1103,7 +1142,10 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
                 draw_item(ch, extra={"tex": item.rtex, "cam": camera2, "off": camoff})
                 rl.begin_texture_mode(item.rtex)
                 rl.rl_set_clip_planes(0.01, 10000)
-                rl.begin_mode_3d(camera2)
+                if isinstance(item, RichText):
+                    rl.begin_mode_3d(camera)
+                else:
+                    rl.begin_mode_3d(camera2)
                 mode_3d_tracker += 1
                 rl.rl_disable_depth_test()
                 rl.rl_disable_depth_mask()
@@ -1134,7 +1176,10 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
             rl.rl_disable_depth_mask()
             rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA)
             #draw_quad_nocal(DummyQuad(0, 0, 720, 480), item.ftex.texture, transfo, fader)
-            if type(item) == ScrollingCompositeRenderable:
+            if type(item) == RichText:
+                xxr, yyr = item._position
+                draw_quad(DummyQuad(xxr, yyr, 720, 480, effects=item.effects), item.ftex.texture, se=True)
+            elif type(item) == ScrollingCompositeRenderable:
                 draw_quad(DummyQuad(*item._position, *item.bbox, effects=item.effects), item.ftex.texture, se=True)
             else:
                 draw_quad(DummyQuad(0, 0, 720, 480, effects=item.effects), item.ftex.texture, se=True)
@@ -1148,7 +1193,10 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
             rl.rl_disable_depth_mask()
             drawlevel += 1
             #draw_quad_nocal(DummyQuad(0, 0, 720, 480), item.ftex.texture, transfo, fader)
-            if type(item) == ScrollingCompositeRenderable:
+            if type(item) == RichText:
+                xxr, yyr = item._position
+                draw_quad(DummyQuad(xxr, yyr, 720, 480, effects=item.effects), item.ftex.texture, se=True)
+            elif type(item) == ScrollingCompositeRenderable:
                 draw_quad(DummyQuad(*item._position, *item.bbox, effects=item.effects), item.ftex.texture, se=True)
             else:
                 draw_quad(DummyQuad(0, 0, 720, 480, effects=item.effects), item.ftex.texture, se=True)
@@ -1160,6 +1208,11 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
         if item.debug:
             tex = rl.load_image_from_texture(item.rtex.texture)
             rl.export_image(tex, "image2.png")
+    elif isinstance(item, Image):
+        if type(item) is not CompositedImage:
+            if not item.texture:
+                item.texture = rl.load_texture_from_image(item.im2)
+            draw_quad(item, item.texture, off=extra["off"])
     elif type(item) is Polygon:
         draw_poly(item)
     elif isinstance(item, AudioSequencer):
@@ -1173,6 +1226,12 @@ def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0})
         item.timer += 1
         if item.timer == item.activeFrame():
             RenderControl.actuallyRunAQueuedCommand(item)
+    elif isinstance(item, VectorImage):
+        if item.polys:
+            if not item.tx:
+                item.tx = rg.rl.load_texture_from_image(item.im)
+            if item.im:
+                draw_quad(item, item.tx)
     else:
         pass
         #print("drawing unrecognized type: ", type(item))
@@ -1195,6 +1254,8 @@ RenderControl.setLayer("Video", vl)
 #RenderControl.activateLayer("Video")
 
 trans = False
+
+starid = dsm.defaultedGet("starId", "StarID Unavailable")
 
 while not rl.window_should_close():
     audio_chans = []
@@ -1259,15 +1320,14 @@ while not rl.window_should_close():
     rl.end_mode_3d()
     mode_3d_tracker -= 1
     if DEBUG:
-        layer_list = "\n".join(["Layer Order:"] + [f"{l[0]} (depth {l[4]})" for l in sortedLayers])
-        # lines = windbg.split("\n")
-        # if len(lines) > 12:
-        #     lines = lines[-12:]
+        #layer_list = "\n".join(["Layer Order:"] + [f"{l[0]} (depth {l[4]})" for l in sortedLayers])
+        lines = windbg.split("\n")
+        if len(lines) > 12:
+            lines = lines[-12:]
         rl.draw_fps(10, 10)
-        rl.draw_text(f"Unloading: {len(rg.unloadqueue)}", 10, 40, 20, rl.WHITE)
-        rl.draw_text(f"Queued Commands: {len(rg.queuedcommands)}", 10, 70, 20, rl.WHITE)
-        rl.draw_text(f"Unloaded (Last Second): {len(last_sec)}", 10, 100, 20, rl.WHITE)
-        rl.draw_text(layer_list, 10, 130, 20, rl.WHITE)
+        rl.draw_text(f"StarID: {starid}", 10, 40, 20, rl.WHITE)
+        rl.draw_text(f"Audio Playing: {len(audio_chans)}", 10, 70, 20, rl.WHITE)
+        rl.draw_text("\n".join(lines), 10, 100, 20, rl.WHITE)
     for i in range(len(last_sec)):
         last_sec[i] -= 1
     

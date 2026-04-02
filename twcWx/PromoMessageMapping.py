@@ -22,8 +22,8 @@ class PromoMessageMappingHandler(xmlUtil.LookupSubHandler):
             self._key = self._key + 1
         return
 
-
-filePath = os.path.join(os.environ["RENDEREMEDIA"], '/mappings/promoMessage/')
+import rendereglobals as rg
+filePath = rg.newjoin(os.environ["RENDEREMEDIA"], '/mappings/promoMessage/')
 
 class PromoMessageMapping(mapping.Map):
 

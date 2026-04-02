@@ -11,3 +11,4 @@ __pycache__/*
 net/*
 temp/*
 bgm/*
+domesticpy/data/map.cuts/*

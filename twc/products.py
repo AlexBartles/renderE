@@ -243,7 +243,7 @@ def _processImpls(impls):
     ns["reduce"] = reduce
     ns["functools"] = functools
     ns["filterfixer9000"] = filterfixer9000
-    code = loadtools.fixsort(py).replace("os.access", "newaccess").replace("os.stat", "newstat").replace("filter", "filterfixer9000")
+    code = loadtools.fixsort(py).replace("os.access", "newaccess").replace("os.stat", "newstat").replace("os.path.exists", "newexists").replace("filter", "filterfixer9000").replace("os.path.join", "newjoin")
     implid += 1
     exec(code, ns, ns)
     prodClass = ns['Product']

@@ -174,15 +174,14 @@ def setImageData(type, fname):
     twccommon.Log.info('set %s image: %s' % (type, fname))
     return
 
-
+import mapcut
 def setMapCut(type):
-    _signalRPC('execd.map.process', (type,))
+    mapcut.process(type)
     twccommon.Log.info('set map cut: %s' % type)
     return
 
 
 def setMapData(key, data, expiration, update=0):
-    return #todo
     mapForceKey = MAP_FORCE_KEY
     try:
         mapCutRequired = dsm.get(mapForceKey)
@@ -213,8 +212,8 @@ def setMapData(key, data, expiration, update=0):
                 dsm.set(pendingKey, mapPendingList, 0)
                 ds.commit()
             twccommon.Log.info('set %s' % (mapDataKey,))
-            _setData(mapDataKey, data, expiration, update)
-            setMapCut(key)
+            _setData(mapDataKey.replace("Config.0", "Config.1"), data, expiration, update)
+            setMapCut(key.replace("Config.0", "Config.1"))
     return
 
 
@@ -399,6 +398,10 @@ def _setData(key, data, expiration, update):
     ds.commit()
     return
 
+def _rsetData(key, data, expiration, update):
+    dsm.rset(key, data, expiration, update)
+    ds.rcommit()
+    return
 
 def _signalEvent(type, value):
     twc.MiscCorbaInterface.signalEvent(CHANNEL_NAME, type, value)
