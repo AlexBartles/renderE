@@ -6,8 +6,9 @@
 import os, sys
 import patches
 import rendereglobals as rg
+import domesticpy.plugin.playman.playCmd.bulletin as bulletin
+bulletin.forceInactive = True
 import playmaninit
-#import playmaninit
 import twc
 import twccommon.Log
 import twc.dsmarshal
@@ -20,9 +21,10 @@ wxdata = domestic.wxdata
 
 def execfile(filename, globa=None, loca=None):
     with open(filename, "r", encoding="windows-1252") as f:
-        exec(compile(f.read(), filename, 'exec'), globa, loca)
+        exec(f.read(), globa, loca)
 
 def do_absolutely_nothing(*args, **kwargs):
+    print("abort:")
     print(args, kwargs)
 
 def main():
