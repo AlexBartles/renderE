@@ -19,6 +19,7 @@ _lastRotation = None
 _rotation = None
 _crawlActive = 0
 _firstLoad = 1
+forceInactive = 0
 
 def init(config):
     global _config
@@ -29,7 +30,7 @@ def init(config):
     Log.info('initializing bulletin plugin')
     _params = twccommon.Data()
     active = dsm.defaultedGet(DSKEY_CRAWL_ACTIVE, 1)
-    if active:
+    if active and not forceInactive:
         _activate(1)
     setCountyInterestList(_interestlist)
     return
