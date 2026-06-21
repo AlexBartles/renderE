@@ -128,7 +128,11 @@ class Product:
             reppaths = [e.replace("/usr/twc/domestic", os.environ["RENDEREDOMESTIC"]) for e in inclpaths]
 
             print(reppaths)
-            rsc = twc.psp.evalPage(self.__rs, ns, reppaths+inclpaths)
+            try:
+                rsc = twc.psp.evalPage(self.__rs, ns, reppaths+inclpaths)
+            except:
+                renderElog("ERROR IN GRS", self.getName(), self.getShortName())
+                raise
             return rsc
         elif self.__pres:
             return twc.presToRenderScript(self.__pres, layerName, **ns)
@@ -258,6 +262,8 @@ import functools, nethandler
 implid = 0
 
 from patches import filterfixer9000, unprint
+import traceback
+import sys
 
 def _processImpls(impls):
     global implid
@@ -269,7 +275,11 @@ def _processImpls(impls):
     ns["reduce"] = reduce
     ns["functools"] = functools
     ns["filterfixer9000"] = filterfixer9000
-    code = loadtools.fixsort(unprint(py)).replace("os.access", "newaccess").replace("os.stat", "newstat").replace("os.path.exists", "newexists").replace("filter", "filterfixer9000").replace("os.path.join", "newjoin").replace("    \t", "        ").replace("\t", "        ")
+    try:
+        code = loadtools.fixsort(unprint(py)).replace("os.access", "newaccess").replace("os.stat", "newstat").replace("os.path.exists", "newexists").replace("filter", "filterfixer9000").replace("os.path.join", "newjoin").replace("    \t", "        ").replace("\t", "        ")
+    except:
+        print(traceback.format_exc(), file=sys.stderr)
+        raise
     implid += 1
     exec(code, ns, ns)
     prodClass = ns['Product']

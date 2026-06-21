@@ -37,7 +37,8 @@ runrscfunction = None
 newaccess = None
 newstat = None
 newexists = None
-font_cache = {}
+import builtins
+builtins.__dict__["rg_font_cache"] = {}
 
 #optionally, specify your environment vars here
 

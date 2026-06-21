@@ -7,34 +7,9 @@ from . import _renderd
 from .RenderScript import *
 import rendereglobals as rg
 
-def unloadLayer(l): #i'd deprecate this but it may still have some sort of value
-    return
-    if isinstance(l, Layer):
-        for page in l.pages:
-            unloadLayer(page)
-    elif isinstance(l, Page):
-        for item in l.elements:
-            unloadLayer(item)
-    elif isinstance(l, CompositeRenderable):
-        for item in l.items:
-            unloadLayer(item)
-        if l.rtex:
-            rg.rl.unload_render_texture(l.rtex)
-        if l.ftex:
-            rg.rl.unload_render_texture(l.ftex)
-    elif isinstance(l, AudioSequencer):
-        for item in l.audio:
-            unloadLayer(item)
-    elif isinstance(l, Text):
-        if l.cachedtex:
-            rg.rl.unload_texture(l.cachedtex)
-    elif isinstance(l, Image):
-        if l.im2:
-            rg.rl.unload_image(l.im2)
-            l.im2 = None
-        if l.texture:
-            rg.rl.unload_texture(l.texture)
-            l.texture = None
+def unloadLayer(l):
+    if l is not None:
+        l.pages = [] #yea they'll PROBABLY get garbage collected
 
 rct = 0
 rctb = 0
@@ -138,6 +113,7 @@ def actuallyRunAQueuedCommand(cmd):
                 ix = i+0
                 break
         if ix > -1:
+            unloadLayer(rg.layers[ix][1])
             rg.layers[ix][1] = cmd.layer
     elif type(cmd) in (ActivateLayer, ActivateLayerCmd):
         ix = -1

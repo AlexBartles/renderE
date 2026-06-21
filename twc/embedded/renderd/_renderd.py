@@ -5,6 +5,7 @@ import os
 import glob
 import nethandler
 import libmv
+import builtins
 rl = rg.rl
 pg = rg.pg
 
@@ -28,7 +29,7 @@ def createImage(self, name, evict=0, x1=0, y1=0, x2=1, y2=1):
         else:
             name = nethandler.requestNetAsset(name, "gfx")
         if not name:
-            print(f"No suitable image found for {ogname}!")
+            renderElog(f"No suitable image found for {ogname}!")
             exit(1)
     
     yy1 = 1-y2
@@ -91,9 +92,9 @@ def createIcon(self, name, evict=0):
 
 def createTTFont(self, name, pointSize, shadow, sr=0.08, sg=0.08, sb=0.08, sa=1.0, sx=1, sy=2, t=0, l=None, evict=0):
     self.pxSize = round(pointSize)
-    if (name, self.pxSize) in rg.font_cache:
-        cached = rg.font_cache[(name, pointSize)]
-        self.font, self.reallineheight, self.ascent, self.descent = cached
+    if (name, self.pxSize) in list(builtins.__dict__["rg_font_cache"].keys()):
+        cached = builtins.__dict__["rg_font_cache"][(name, pointSize)]
+        self.font, self.reallineheight, self.ascent, self.descent, self.ref = cached
     else:
         ogname = name+""
         pname = parsePath(name)
@@ -109,10 +110,11 @@ def createTTFont(self, name, pointSize, shadow, sr=0.08, sg=0.08, sb=0.08, sa=1.
         self.font = pg.Font(name, self.pxSize)
         self.ascent = self.font.get_ascent()*0.93
         self.descent = self.font.get_descent()*0.93
-        ag = self.font.render("Ag", True, (255, 255, 255)).get_height()
+        ag = self.font.render("Ag", True, (255, 255, 255))
         ag2 = self.font.render("Ag\nAg", True, (255, 255, 255)).get_height()
-        self.reallineheight = (ag2-ag)*0.93
-        rg.font_cache[(name, self.pxSize)] = (self.font, self.reallineheight, self.ascent, self.descent)
+        self.reallineheight = (ag2-ag.get_height())*0.93
+        self.ref = ag
+        builtins.__dict__["rg_font_cache"][(ogname, self.pxSize)] = (self.font, self.reallineheight, self.ascent, self.descent, self.ref)
     self.scol = (sr, sg, sb, sa)
 
 def createAudio(self):

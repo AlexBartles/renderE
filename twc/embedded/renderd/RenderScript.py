@@ -8,7 +8,24 @@ import rendereglobals as rg
 from . import _renderd
 import os
 
+rg.__dict__["box_thing"] = None
+
 load_stuff = {}
+
+def fix_font_text(surf, ascent, descent, ref=None):
+    #pygame sometimes renders text with blank space on the bottom idk why, but it messes with baseline-based text drawing
+    #this is notable for making the flat rock LF ldl look really bad
+    if ref is None:
+        ref = surf
+    diff = (ascent-descent) - ref.height
+    #renderElog("diff", diff)
+    if diff == 0:
+        return surf
+    elif diff < 0:
+        return surf.subsurface(rg.pg.Rect(0, 0, surf.width, surf.height+diff)).copy()
+    else:
+        newsurf = rg.pg.Surface((surf.width, surf.height+diff))
+        newsurf.blit(surf, (0, 0))
 
 class ObjectWrapper:
 
@@ -19,7 +36,7 @@ class ObjectWrapper:
         pass
 
     def add_loaded(self):
-        cname = self.__class__.__name__
+        cname = type(self).__name__
         if cname not in load_stuff:
             load_stuff[cname] = 1
         else:
@@ -419,6 +436,7 @@ class GraphicRenderable(Renderable):
         self.unloaded = False
         self.added = False
         self.dynamicfilter = None
+        self.add_loaded()
     
     def size(self):
         return self._size
@@ -463,10 +481,16 @@ class GraphicRenderable(Renderable):
 
     def addDynamicFilter(self, filter):
         self.dynamicfilter = filter
+    
+    def __del__(self):
+        self.remove_loaded()
+        return super().__del__()
 
 class Box(GraphicRenderable):
 
     def __init__(self):
+        #if not rg.__dict__["box_thing"]:
+        #    rg.__dict__["box_thing"] = self
         super().__init__()
         return
         
@@ -503,7 +527,7 @@ class Clock(GraphicRenderable):
         else:
             self.tz = dut.tz.gettz(timezone)
         
-        self.textbase : rg.pg.Surface = self.fnt.font.render(builtins.str(self.s), True, (255, 255, 255))
+        self.textbase : rg.pg.Surface = fix_font_text(self.fnt.font.render(builtins.str(self.s), True, (255, 255, 255)), self.ascent, self.descent, self.fnt.ref)
         self.textbase = rg.pg.transform.smoothscale_by(self.textbase, (1, 0.93))
         
         self._lastcol = tuple(list(self._color))
@@ -512,17 +536,21 @@ class Clock(GraphicRenderable):
         
         self.basesize = self.textbase.get_size()
         #_renderd.createClock(self, font, format, lcase_ampm, justification, timezone, timezoneDisplay)
+        
+    
+    def correct_aspect(self, surf):
+        return rg.pg.transform.smoothscale_by(fix_font_text(surf, self.ascent, self.descent, self.fnt.ref), (1, 0.93))
     
     def create_cimg(self):
         if self.fnt.shadow:
-            newsurf = rg.pg.Surface((self._textsize[0]+abs(self.fnt.sx*2), self._textsize[1]+abs(self.fnt.sy*2)), rg.pg.SRCALPHA)
+            newsurf = rg.pg.Surface((self._textsize[0]+self.fnt.sx, self._textsize[1]+self.fnt.sy), rg.pg.SRCALPHA)
             newsurf.fill((0, 0, 0, 0))
-            newsurf.blit(self.fnt.font.render(self.s, True, [c*255 for c in self.fnt.scol]), (self.fnt.sx, self.fnt.sy))
-            newsurf.blit(self.fnt.font.render(self.s, True, [c*255 for c in self._color]), (0, 0))
+            newsurf.blit(self.correct_aspect(self.fnt.font.render(self.s, True, [c*255 for c in self.fnt.scol])), (self.fnt.sx, self.fnt.sy))
+            newsurf.blit(self.correct_aspect(self.fnt.font.render(self.s, True, [c*255 for c in self._color])), (0, 0))
         else:
             newsurf = rg.pg.Surface(self._textsize, rg.pg.SRCALPHA)
-            newsurf.blit(self.fnt.font.render(self.s, True, [c*255 for c in self._color]), (0, 0))
-        newsurf = rg.pg.transform.smoothscale_by(newsurf, (1, 0.93))
+            newsurf.blit(fix_font_text(self.fnt.font.render(self.s, True, [c*255 for c in self._color]), self.ascent, self.descent, self.fnt.ref), (0, 0))
+            newsurf = rg.pg.transform.smoothscale_by(newsurf, (1, 0.93))
         buf = BytesIO()
         rg.pg.image.save(newsurf, buf, ".bmp")
         self.cimg = rg.rl.load_image_from_memory(".bmp", buf.getvalue(), len(buf.getvalue()))
@@ -577,7 +605,7 @@ class Text(GraphicRenderable):
         self.descent = self.fnt.font.get_descent()
         
         
-        self.textbase : rg.pg.Surface = self.fnt.font.render(builtins.str(self.s), True, (255, 255, 255))
+        self.textbase : rg.pg.Surface = fix_font_text(self.fnt.font.render(builtins.str(self.s), True, (255, 255, 255)), self.ascent, self.descent, self.fnt.ref)
         self.textbase = rg.pg.transform.smoothscale_by(self.textbase, (1, 0.93))
         
         self.basesize = self.textbase.get_size()
@@ -588,7 +616,7 @@ class Text(GraphicRenderable):
         self.debug = debug
     
     def correct_aspect(self, surf):
-        return rg.pg.transform.smoothscale_by(surf, (1, 0.93))
+        return rg.pg.transform.smoothscale_by(fix_font_text(surf, self.ascent, self.descent, self.fnt.ref), (1, 0.93))
     
     def create_cimg(self):
         if self.fnt.shadow:
@@ -598,7 +626,7 @@ class Text(GraphicRenderable):
             newsurf.blit(self.correct_aspect(self.fnt.font.render(self.s, True, [c*255 for c in self._color])), (0, 0))
         else: 
             newsurf = rg.pg.Surface(self._textsize, rg.pg.SRCALPHA)
-            newsurf.blit(self.fnt.font.render(self.s, True, [c*255 for c in self._color]), (0, 0))
+            newsurf.blit(fix_font_text(self.fnt.font.render(self.s, True, [c*255 for c in self._color]), self.ascent, self.descent, self.fnt.ref), (0, 0))
             newsurf = rg.pg.transform.smoothscale_by(newsurf, (1, 0.93))
         buf = BytesIO()
         rg.pg.image.save(newsurf, buf, ".bmp")
@@ -1468,11 +1496,28 @@ class LineRenderer(GraphicRenderable):
         self.rightmost = 0
         self.topmost = 0
         self.bottommost = 0
-        self.thickness = 1
+        self.thickness = round(thickness)
+        self.rgba = (1, 1, 1, 1)
+        self.cached = None
         return
 
+    def drawLines(self):
+        if self._size == (0, 0):
+            return
+        tempsurf = rg.pg.Surface(self._size, rg.pg.SRCALPHA)
+        
+        buf = BytesIO()
+        if self.thickness == 1:
+            rg.pg.draw.aalines(tempsurf, (255, 255, 255), False, [(v[0]+self.leftmost, self._size[1] - v[1] + self.bottommost) for v in self.vertices])
+        else:
+            rg.pg.draw.lines(tempsurf, (255, 255, 255), False, [(v[0]+self.leftmost, self._size[1] - v[1] + self.bottommost) for v in self.vertices], self.thickness)
+        rg.pg.image.save(tempsurf, buf, ".bmp")
+        bv = buf.getvalue()
+        self.cached = rg.rl.load_image_from_memory(".bmp", bv, len(bv))
+
     def addVertex(self, x, y, r=1, g=1, b=1, a=1):
-        self.vertices.append((rg.rl.Vector3(x, y, -rg.zzz), r, g, b, a))
+        self.vertices.append((x, y, r, g, b, a))
+        self.rgba = (r, g, b, a)
         if x < self.leftmost:
             self.leftmost = x
         if y > self.topmost:
@@ -1483,3 +1528,11 @@ class LineRenderer(GraphicRenderable):
             self.bottommost = y
         self._size = (abs(self.rightmost-self.leftmost), abs(self.topmost-self.bottommost))
         return
+    
+    def unload(self):
+        if self.tx:
+            rg.rl.unload_texture(self.tx)
+            self.tx = None
+        if self.cached:
+            rg.rl.unload_image(self.cached)
+            self.cached = None

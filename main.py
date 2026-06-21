@@ -3,7 +3,10 @@ if __name__ != "__main__":
     print("ggwp")
     import tscard
 else:
+    import os
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
     import rendereglobals as rg
+    import receivere
     import loadtools
     import math
     from PIL import Image
@@ -14,11 +17,13 @@ else:
     import domestic.renderTools as renderTools
     import twc
     import twccommon.embedded
+    import domesticpy.conf.receiverd
+    #wccommon.embedded.runconfpy(os.path.join(os.path.dirname(__file__), "domesticpy", "conf", "receiverd.py"))
     import socket
-    import os
     import threading as th
     import time
     import random
+    import gc
 
     import builtins
     def renderel(*args):
@@ -80,7 +85,7 @@ else:
         tscard.SDI_URL = sys.argv[1]
         print(f"Set SDI URL to {sys.argv[1]}")
 
-    fov = 40
+    fov = 60
     screensize = (720, 480)
     zzz = 1
     rl = rg.rl
@@ -554,6 +559,8 @@ else:
     white = rl.load_texture_from_image(whiteimg)
     redimg = rl.gen_image_color(1, 1, rl.RED)
     red = rl.load_texture_from_image(redimg)
+    orangeimg = rl.gen_image_color(1, 1, rl.ORANGE)
+    orange = rl.load_texture_from_image(orangeimg)
     once = True
 
     def mod2(a, b=720):
@@ -647,13 +654,18 @@ else:
         visible = not not quad.visible
         def applyeffect(effect : GraphicEffect):
             nonlocal mat, xxw, yyw, fader, qx, qy, visible
+            if hasattr(effect, "frame"):
+                if not effect.frozen:
+                    effect.frame += 1
             if type(effect) == Rotate:
+                mat = rl.matrix_multiply(mat, rl.matrix_scale(1/1.2, 1, 1))
                 if effect.xr:
                     mat = rl.matrix_multiply(mat, rl.matrix_rotate_x(math.radians(effect.angle*effect.frame)))
                 if effect.yr:
                     mat = rl.matrix_multiply(mat, rl.matrix_rotate_y(math.radians(effect.angle*effect.frame)))
                 if effect.zr:
                     mat = rl.matrix_multiply(mat, rl.matrix_rotate_z(math.radians(effect.angle*effect.frame)))
+                mat = rl.matrix_multiply(mat, rl.matrix_scale(1.2, 1, 1))
             elif type(effect) == Slider:
                 #xxw -= (effect.dx*effect.frame/720*(xxx*2))
                 #yyw -= (effect.dy*effect.frame/480*(yyy*2))
@@ -687,9 +699,9 @@ else:
                 visible = effect.visible
                 if effect.fader is not None:
                     fader = effect.fader
-            if hasattr(effect, "frame"):
-                if not effect.frozen:
-                    effect.frame += 1
+            # if hasattr(effect, "frame"):
+            #     if not effect.frozen:
+            #         effect.frame += 1
             
         def loopover(eflist):
             for effect in eflist:
@@ -849,7 +861,7 @@ else:
 
     rl.set_shader_value(lclipshader, disablelc, rl.ffi.new("int *", 0), rl.ShaderUniformDataType.SHADER_UNIFORM_INT)
 
-    def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False, off=(0, 0), premult=False, clipoverride=None):
+    def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False, off=(0, 0), premult=False, clipoverride=None, skip=False, forcebilinear=False):
         effects = quad.effects
         #rl.set_texture_filter(tex, rl.TextureFilter.TEXTURE_FILTER_POINT)
         plane.materials[0].maps.texture = tex
@@ -857,6 +869,7 @@ else:
             rl.set_texture_filter(tex, rl.TextureFilter.TEXTURE_FILTER_TRILINEAR)
         qqx, qqy = quad._position
         
+        clipoverride_override = False
         clipx = 0
         clipy = 0
         clipw = 720
@@ -866,7 +879,10 @@ else:
         forcebilinear = ((getattr(quad, "optimal_size", quad._size) != quad._size) and isinstance(quad, Icon))
         
         if isinstance(quad, Text) or isinstance(quad, Clock):
-            qqy += quad.descent
+            if not skip:
+                qqy += quad.descent
+            else:
+                qqy += 2
             #print(quad.ascent-quad.descent, quad.cimg.height)
             qqy -= quad.s.count("\n")*quad.fnt.reallineheight
             if quad.fnt.shadow:
@@ -929,7 +945,10 @@ else:
         total_angle_y = 0
         total_angle_z = 0
         def applyeffect(effect : GraphicEffect):
-            nonlocal mat, xxw, yyw, fader, qx, qy, visible, clipx, clipy, clipw, cliph, absclip_left, absclip_right, absclip_top, absclip_bottom, total_angle_x, total_angle_y, total_angle_z
+            if hasattr(effect, "frame"):
+                if not effect.frozen and not se:
+                    effect.frame += 1
+            nonlocal mat, xxw, yyw, fader, qx, qy, visible, clipx, clipy, clipw, cliph, absclip_left, absclip_right, absclip_top, absclip_bottom, total_angle_x, total_angle_y, total_angle_z, clipoverride_override
             if type(effect) == Rotate:
                 if effect.xr:
                     mat = rl.matrix_multiply(mat, rl.matrix_rotate_x(math.radians(effect.angle*effect.frame)))
@@ -997,15 +1016,16 @@ else:
                         if plane == Clipper.CP_BOTTOM:
                             absclip_bottom = pos
                 else:
+                    clipoverride_override = True
                     clipx = qxbase + (effect.left or 0)
                     clipy = qybase + (effect.bottom or 0)
                     
                     clipw = wbase - (effect.left or 0) + (effect.right or 0)
                     cliph = hbase - (effect.bottom or 0) + (effect.top or 0)
                 
-            if hasattr(effect, "frame"):
-                if not effect.frozen and not se:
-                    effect.frame += 1
+            # if hasattr(effect, "frame"):
+            #     if not effect.frozen and not se:
+            #         effect.frame += 1
         
         def loopover(eflist):
             for effect in eflist:
@@ -1048,10 +1068,17 @@ else:
         
         rl.set_shader_value(lclipshader, disablelc, rl.ffi.new("int *", int(drawlevel > 0)), rl.ShaderUniformDataType.SHADER_UNIFORM_INT)
         
-        rl.set_shader_value(lclipshader, bloc5, rl.ffi.new('float *', float(clipx)), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
-        rl.set_shader_value(lclipshader, bloc6, rl.ffi.new('float *', float(clipy)), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
-        rl.set_shader_value(lclipshader, bloc7, rl.ffi.new('float *', float(clipw)), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
-        rl.set_shader_value(lclipshader, bloc8, rl.ffi.new('float *', float(cliph)), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
+        if isinstance(quad, DummyQuad) and quad.clipping_override and not clipoverride_override:
+            clx, cly, clw, clh = quad.clipping_override
+            rl.set_shader_value(lclipshader, bloc5, rl.ffi.new('float *', float(clx)), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
+            rl.set_shader_value(lclipshader, bloc6, rl.ffi.new('float *', float(cly)), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
+            rl.set_shader_value(lclipshader, bloc7, rl.ffi.new('float *', float(clw)), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
+            rl.set_shader_value(lclipshader, bloc8, rl.ffi.new('float *', float(clh)), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
+        else:
+            rl.set_shader_value(lclipshader, bloc5, rl.ffi.new('float *', float(clipx)), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
+            rl.set_shader_value(lclipshader, bloc6, rl.ffi.new('float *', float(clipy)), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
+            rl.set_shader_value(lclipshader, bloc7, rl.ffi.new('float *', float(clipw)), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
+            rl.set_shader_value(lclipshader, bloc8, rl.ffi.new('float *', float(cliph)), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
 
         rl.set_shader_value(lclipshader, blocT, rl.ffi.new('float *', float(absclip_top)), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
         rl.set_shader_value(lclipshader, blocB, rl.ffi.new('float *', float(absclip_bottom)), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
@@ -1066,7 +1093,7 @@ else:
             rl.draw_model_ex(plane, rl.Vector3(-xxw, -yyw, -zzz), rl.Vector3(0, 0, 0), 0, rl.Vector3(1, 1, 1), col)
 
     class DummyQuad():
-        def __init__(self, x, y, w, h, effects=[], visible=True, seq_start_after=False, added=False):
+        def __init__(self, x, y, w, h, effects=[], visible=True, seq_start_after=False, added=False, clipping_override=None):
             self._position = (x, y)
             self._size = (w, h)
             self.effects = effects
@@ -1074,6 +1101,7 @@ else:
             self.visible = visible
             self.seq_start_after = seq_start_after
             self.added = added
+            self.clipping_override = clipping_override
         def size(self):
             return self._size
         def position(self):
@@ -1111,12 +1139,14 @@ else:
         def applyeffect(effect : GraphicEffect):
             nonlocal mat, xxw, yyw, fader, pts2, visible
             if type(effect) == Rotate:
+                mat = rl.matrix_multiply(mat, rl.matrix_scale(1/1.2, 1, 1))
                 if effect.xr:
                     mat = rl.matrix_multiply(mat, rl.matrix_rotate_x(math.radians(effect.angle*effect.frame)))
                 if effect.yr:
                     mat = rl.matrix_multiply(mat, rl.matrix_rotate_y(math.radians(effect.angle*effect.frame)))
                 if effect.zr:
                     mat = rl.matrix_multiply(mat, rl.matrix_rotate_z(math.radians(effect.angle*effect.frame)))
+                mat = rl.matrix_multiply(mat, rl.matrix_scale(1.2, 1, 1))
             elif type(effect) == Slider:
                 #xxw -= (effect.dx*effect.frame/720*(xxx*2))
                 #yyw -= (effect.dy*effect.frame/480*(yyy*2))
@@ -1353,7 +1383,7 @@ else:
                 renderElog(effect[0], effect[1])
             else:
                 renderElog(type(effect).__name__)
-    def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0}):
+    def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0}, scr=False):
         global mode_3d_tracker
         global once
         global drawlevel
@@ -1398,8 +1428,8 @@ else:
                         for cmd in item.pages[current_page][0]._onEndCommands:
                             RenderControl.actuallyRunAQueuedCommand(cmd)
                     if last_frame_page != current_page:
-                        if not activedrawlayer[5]:
-                            item.pages[last_frame_page][0].__del__()
+                        #if not activedrawlayer[5]:
+                        #    item.pages[last_frame_page] = (None, item.pages[last_frame_page][1])
                         for cmd in item.pages[current_page][0]._onStartCommands:
                             RenderControl.actuallyRunAQueuedCommand(cmd)
                 else:
@@ -1473,9 +1503,9 @@ else:
                 item.cachedtex = None
                 item.lasts = item.s
                 item.cimg = None
-                item._textsize = item.fnt.font.render(item.s, True, (255, 255, 255)).size
+                item._textsize = RenderControl.fix_font_text(item.fnt.font.render(item.s, True, (255, 255, 255)), item.ascent, item.descent, item.fnt.ref).size
             if item.cachedtex is None:
-                item._textsize = item.fnt.font.render(item.s, True, (255, 255, 255)).size
+                item._textsize = RenderControl.fix_font_text(item.fnt.font.render(item.s, True, (255, 255, 255)), item.ascent, item.descent, item.fnt.ref).size
                 item.create_cimg()
                 item.cachedtex = rl.load_texture_from_image(item.cimg)
             item._size = (item.cimg.width, item.cimg.height)
@@ -1485,14 +1515,14 @@ else:
                 item.pos %= (item._size[0]+(720 if not item.bounds else item.bounds[0]))
                 draw_quad(item, item.cachedtex, off=(extra["off"][0]+(720 if not item.bounds else item.bounds[0])-item.pos, extra["off"][0]), premult=True) #i'll hardcode this until weatherscan forces me to not
             else:
-                draw_quad(item, item.cachedtex, off=extra["off"], premult=True)
+                draw_quad(item, item.cachedtex, off=extra["off"], premult=True, skip=(scr and not item.fnt.shadow))
                 if DEBUG:
                     draw_quad(DummyQuad(item._position[0], item._position[1]-2, item._size[0], 2, [], added=item.added), red, off=extra["off"], premult=True)
             #rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA_PREMULTIPLY)
             rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA)
         elif isinstance(item, Clock):
             def fix_strftime(tm, format):
-                return tm.strftime(format.replace("%l", str(int(tm.strftime("%I"))))).replace("<z>", item.timezoneDisplay)
+                return tm.strftime(format.replace("%l", str(int(tm.strftime("%I"))).rjust(2))).replace("<z>", item.timezoneDisplay)
             item.s = fix_strftime(datetime.now(tz=item.tz), item.format)
             if (item.lasts != item.s) and item.cachedtex is not None:
                 if item.cimg:
@@ -1508,6 +1538,8 @@ else:
             rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA_PREMULTIPLY)
             draw_quad(item, item.cachedtex, off=extra["off"], premult=True)
             rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA)
+            if DEBUG:
+                draw_quad(DummyQuad(item._position[0], item._position[1]-2, item._size[0], 2, [], added=item.added), orange, off=extra["off"], premult=True)
         elif isinstance(item, RichText):
             for i in item.items:
                 draw_item(i, {"off": item._position})
@@ -1558,8 +1590,8 @@ else:
             for iii, ch in enumerate(item.items):
                 if isinstance(item, ScrollingCompositeRenderable):
                     camoff = (720+xx+item.scroll, 0)
-                    if isinstance(ch, Text):
-                        xx += ch.size()[0]
+                    #if isinstance(ch, Text):
+                    xx += ch.size()[0]
                 if isinstance(ch, CompositeRenderable) and not (type(ch) is RichText):
                     draw_item(ch, extra={"tex": item.rtex, "cam": camera2, "off": camoff})
                     rl.begin_texture_mode(item.rtex)
@@ -1573,7 +1605,7 @@ else:
                     rl.rl_disable_depth_test()
                     rl.rl_disable_depth_mask()
                 else:
-                    draw_item(ch, {"off": camoff})
+                    draw_item(ch, {"off": camoff}, scr=(isinstance(item, ScrollingCompositeRenderable)))
             
             rl.end_mode_3d()
             mode_3d_tracker -= 1
@@ -1605,7 +1637,8 @@ else:
                 #     draw_quad(DummyQuad(xxr, yyr, 720, 480, effects=item.effects), item.ftex.texture, se=True)
                 # el
                 #rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA_PREMULTIPLY)
-                draw_quad(DummyQuad(0, 0, 720, 480, effects=item.effects, visible=item.visible, added=item.added), item.ftex.texture, se=True, premult=True)
+                clo = None #if not type(item) is ScrollingCompositeRenderable else (*item._position, *item.bbox)
+                draw_quad(DummyQuad(0, 0, 720, 480, effects=item.effects, visible=item.visible, added=item.added, clipping_override=clo), item.ftex.texture, se=True, premult=True)
                 rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA)
             else:
                 #rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA_PREMULTIPLY)
@@ -1616,7 +1649,8 @@ else:
                 rl.rl_disable_depth_test()
                 rl.rl_disable_depth_mask()
                 drawlevel += 1
-                draw_quad(DummyQuad(0, 0, 720, 480, effects=item.effects, visible=item.visible, added=item.added), item.ftex.texture, se=True, premult=True)
+                clo = None #if not type(item) is ScrollingCompositeRenderable else (*item._position, *item.bbox)
+                draw_quad(DummyQuad(0, 0, 720, 480, effects=item.effects, visible=item.visible, added=item.added, clipping_override=clo), item.ftex.texture, se=True, premult=True)
                 drawlevel -= 1
                 rl.end_mode_3d()
                 mode_3d_tracker -= 1
@@ -1659,6 +1693,13 @@ else:
                     rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA_PREMULTIPLY)
                     draw_quad(item, item.tx)
                     rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA)
+        elif isinstance(item, LineRenderer):
+            if not item.vertices:
+                return
+            if not item.cached:
+                item.drawLines()
+                item.tx = rl.load_texture_from_image(item.cached)
+            draw_quad(item, item.tx)
         else:
             pass
             #print("drawing unrecognized type: ", type(item))
@@ -1696,9 +1737,11 @@ else:
         def wxsloadthread():
             #sendSignal('playman', 'playCmd.backgroundMusic.load', ""),
             pmrs.load('/usr/twc/wxscan/products/misc','setupLayers')
+            pmrs.load('/twc/products/ext/ticker', 'CityTicker')
         th.Thread(target=wxsloadthread).start()
         import wxsclock
         th.Thread(target=wxsclock.main).start()
+        
 
     # bloc = rl.get_shader_location(lclipshader, "box")
     # rl.set_shader_value(lclipshader, bloc, rl.Vector4(20, 20, 680, 440), rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4)
@@ -1813,7 +1856,10 @@ else:
             sdih.set_volume(video_audio_level)
             #print("set volume", vol)
         if music_player:
-            rg.pg.mixer.music.set_volume(video_audio_level)
+            if MUTE:
+                rg.pg.mixer.music.set_volume(0)
+            else:
+                rg.pg.mixer.music.set_volume(video_audio_level)
         
         rl.end_mode_3d()
         mode_3d_tracker -= 1
@@ -1824,8 +1870,11 @@ else:
                 if not isinstance(layer[1].pages, list):
                     return 0
                 return len(layer[1].pages)
-            layer_list = "\n".join([f"Render Size {rl.get_render_width()} {rl.get_render_height()}"] + [f"{l[0]} (depth {l[4]}) (transforms: x y {l[6]} {l[7]} w h {l[8]} {l[9]} sx sy {l[10]} {l[11]} tx ty {l[12]} {l[13]}) (Loops: {l[5]}) (Pages: {getnpages(l)})" for l in sortedLayers])
+            #layer_list = "\n".join([f"Info {rl.get_render_width()} {rl.get_render_height()}"] + [f"{l[0]} (depth {l[4]}) (transforms: x y {l[6]} {l[7]} w h {l[8]} {l[9]} sx sy {l[10]} {l[11]} tx ty {l[12]} {l[13]}) (Loops: {l[5]}) (Pages: {getnpages(l)})" for l in sortedLayers])
             #layer_list = "\n".join(["QC Info:"] + [f"{type(cmd).__name__} {tm} {fo} {round(time.time()+RenderControl.rctf/30-tm-fo/30)}" for cmd, tm, fo, whatevss in rg.queuedcommands])
+            itemz = sorted(list(load_stuff.items()), key=lambda x: x[1], reverse=True)
+            layer_list = "\n".join(["Loaded Items:"] + [f"{k}: {v}" for k, v in itemz])
+            
             lines = windbg.split("\n")
             if len(lines) > 12:
                 lines = lines[-12:]
@@ -1834,6 +1883,15 @@ else:
             rl.draw_text(f"Audio Playing: {len(audio_chans)} QC {len(rg.queuedcommands)}", 10, 70, 20, rl.WHITE)
             vlist = '\n'.join([str(round(vol*100))+'%\n' for vol in audio_finalvols])
             rl.draw_text(layer_list, 10, 100, 10, rl.WHITE)
+            #sorry box thing, but your service is no longer needed. you will remain here in our memory-leaking hearts
+            #at least, until some OTHER freaky memory leak rears its ugly head
+            #if rl.is_key_pressed(rl.KeyboardKey.KEY_F):
+            #    renderElog([type(f) for f in gc.get_referrers(rg.__dict__["box_thing"])])
+                # for f in gc.get_referrers(rg.__dict__["box_thing"]):
+                #     if type(f) != dict:
+                #         renderElog(f)
+            #    import objgraph
+            #    objgraph.show_backrefs(rg.__dict__["box_thing"], max_depth=3, filename="obj.png")
         for i in range(len(last_sec)):
             last_sec[i] -= 1
         

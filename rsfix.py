@@ -42,6 +42,7 @@ def fix(rs):
     rs = rs.replace(" as.", " aseq.")
     rs = rs.replace("-as.", "-aseq.")
     rs = rs.replace(" as,", " aseq,")
+    rs = rs.replace("return as\n", "return aseq\n")
     rs = rs.replace("Exception, e", "Exception as e")
     rs = rs.replace("/twc/data/map.cuts", rg.newjoin(os.environ["RENDEREROOT"], "map.cuts"))
     rs = rs.replace("os.path.join", "newjoin")
