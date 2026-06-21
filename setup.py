@@ -341,7 +341,7 @@ def load_crawls(reload=False):
     global crawldata
     if not reload:
         import twc.dsmarshal as dsm
-        crawldata = dsm.configGet("Ldl_LASCrawl")
+        crawldata = dsm.defaultedConfigGet("Ldl_LASCrawl", [])
         crawls = [list(c) for c in crawldata.crawls]
     pagemap["crawl"] = {
         "type": "textpage",
