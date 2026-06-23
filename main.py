@@ -130,7 +130,7 @@ else:
         "The programmer has a nap. Holdout! Programmer!",
         "The letter R has the correct vertical size",
         "specificable.lewolfyt.cc",
-        "Weather. News. Freedom. SpecifiCable.",
+        "Weather. Technology. Freedom. SpecifiCable.",
         "I hope your computer is decent!",
         "We call it the CPU fryer 9000.",
         "bash: fortune: command not found",
@@ -887,7 +887,7 @@ else:
             qqy -= quad.s.count("\n")*quad.fnt.reallineheight
             if quad.fnt.shadow:
                 #qqx -= quad.fnt.sx
-                qqy -= abs(quad.fnt.sy)+2
+                qqy -= abs(quad.fnt.sy)+1
         x_offset = 0
         if isinstance(quad, Clock):
             if quad.justification == Clock.CENTER:
