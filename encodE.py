@@ -827,7 +827,7 @@ if (not doonly or only == "headlines") and not (nb or wxs):
                     traceback.print_exc()
                     print("anywho,")
             print("expires", hexpiretime)
-            dsm.rset(f"hdln.PAZ021", twccommon.Data(headlines=headlines, vocal=vocal), hexpiretime)
+            dsm.rset(f"hdln.{headlinecounty}", twccommon.Data(headlines=headlines, vocal=vocal), hexpiretime)
         except:
             print("headline failure!")
 
@@ -908,8 +908,8 @@ def encode():
     if (not doonly or only == "traffic") and tomtom_key and not wxs and not notraffic:
         threads.append(th.Thread(target=gettraffic))
     
-    #if (not doonly or only == "headlines") and only != "clearbulletin" and not (nb or wxs):
-    #    threads.append(th.Thread(target=getheadlines))
+    if (not doonly or only == "headlines") and only != "clearbulletin" and not (nb or wxs):
+        threads.append(th.Thread(target=getheadlines))
     
     if calm:
         for t in threads:
@@ -928,16 +928,17 @@ if auto:
     encoded = True
     while True:
         lt = time.localtime(time.time())
-        if (lt.tm_min % 20) == 0:
+        if (lt.tm_min % 10) == 0:
             if not encoded:
                 encode()
                 encoded = True
         else:
             if encoded:
                 encoded = False
+                dsm.rcommit()
                 print("------------------------------")
             time.sleep(1)
-            print(f"Next encode in {19-(lt.tm_min % 20)} mins {59-(lt.tm_sec % 60)} secs".ljust(34), end="\r")
+            print(f"Next encode in {9-(lt.tm_min % 5)} mins {59-(lt.tm_sec % 60)} secs".ljust(34), end="\r")
 else:
     encode()
 
