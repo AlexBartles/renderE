@@ -577,7 +577,6 @@ codes = {
     "Hurricane Local Statement": "HLS001",
     "Dense Fog Warning": "NPW042",
     "River Flood Warning": "FLW001",
-    "Excessive Heat Warning Update": "NPW033",
     "Red Cross Message": "RED001",
     "Tornado Warning Update": "SVS002",
     "Flood Watch Update": "FFS009",
@@ -688,6 +687,9 @@ if (not doonly or only == "bulletin") and only != "clearbulletin" and not nb:
                 for f in alerts["features"]:
                     try:
                         props = f["properties"]
+                        oldevent = props["event"].upper()
+                        if "Extreme" in props["event"]:
+                            props["event"] = props["event"].replace("Extreme", "Excessive")
                         if props["event"] not in codes:
                             print(f"skipping {props['event']} since it's not in the list")
                             continue
@@ -695,7 +697,7 @@ if (not doonly or only == "bulletin") and only != "clearbulletin" and not nb:
                         code = codes[props["event"]]
                         bull.pil = code[:3]
                         bull.pilExt = code[3:] #this is the only one. so i'm using it.
-                        bull.text = props["headline"]
+                        bull.text = props["description"].replace("\n\n", " ").replace("\n", " ").upper().replace(oldevent, props["event"].upper())
                         print(f"adding bulletin for {c}: {bull.text}")
                         bull.issueTime = int(datetime.fromisoformat(props["sent"]).timestamp())
                         bull.expiration = int(datetime.fromisoformat(props["expires"]).timestamp())
@@ -804,23 +806,26 @@ if (not doonly or only == "headlines") and not (nb or wxs):
     def getheadlines():
         try:
             print("getting headlines for", headlinecounty)
-            alerts = r.get(f"https://api.weather.gov/alerts/active?zone={headlinecounty}").json()
+            alerts = r.get(f"https://api.weather.com/v3/alerts/headlines?areaId={headlinecounty}:US&format=json&language=en-US&apiKey=e1f10a1e78da46f5b10a1e78da96f525").json()
             hexpiretime = 1
-            zoneprops = {}
             headlines = []
             vocal = []
-            for f in alerts["features"]:
+            for alert in alerts["alerts"]:
                 try:
-                    props = f["properties"]
-                    headline = props["headline"]
-                    hexpiretime = max(int(datetime.fromisoformat(props["expires"]).timestamp()), hexpiretime)
+                    headline = alert["headlineText"]
+                    hexpiretime = alert["expireTimeUTC"]
                     
-                    if props["event"] not in codes:
-                        print("event", props["event"], "not in codes")
+                    olddescription = alert["eventDescription"]+""
+                    if "Extreme" in alert["eventDescription"]:
+                        alert["eventDescription"] = alert["eventDescription"].replace("Extreme", "Excessive")
+                    
+                    if alert["eventDescription"] not in codes:
+                        print("event", alert["eventDescription"], "not in codes")
                         continue
                     
+                    headline = headline.replace(olddescription, alert["eventDescription"])
                     headlines.append(headline)
-                    vocalcode = (codes[props["event"]], "I", "")
+                    vocalcode = (codes[alert["eventDescription"]], "I", "")
                     vocal.append(vocalcode)
                     print(f"added headline {headline} {vocal}")
                 except:
