@@ -18,12 +18,12 @@ def init(config):
     else:
         _activate = 0
     _config = twccommon.Data()
-    if twc.personalityCode == 4:
-        _config.duration = 18000
-        _config.expiration = 1200
-    else:
-        _config.duration = 5400
-        _config.expiration = 300
+    #if twc.personalityCode == 4:
+    #    _config.duration = 18000
+    #    _config.expiration = 1200
+    #else:
+    _config.duration = 5400
+    _config.expiration = 300
     if twc.personalityCode < 2:
         _config.playlistId = 'NationalLDL'
         _config.defaultPlaylistName = 'Ldl.nationalDefaultUp'
@@ -120,6 +120,7 @@ else:
             playlistSchedule = dsm.defaultedGet('Config.%s.Playlist.NationalLdl.scheduleLong' % dsm.getConfigVersion())
         else:
             twccommon.Log.warning('Unknown displayMode=%s' % displayMode)
+            
             playlistSchedule = None
         if playlistSchedule == None:
             twccommon.Log.error('Unable to choose LDL playlist. No LDL Playlists are configured!')
@@ -134,15 +135,23 @@ else:
 
         except Exception as e:
             twccommon.Log.error('Unable choose LDL playlist for day %d time %d:%d' % (dow, H, M))
+            raise e
 
         return None
         return
 
 import domesticpy.plugin.playman.playCmd.pm as pcpm
-if twc.personalityCode < 2:
+if twc.personalityCode == 0:
     def load(playlistId, playlistName, duration, bulletins):
         tmpLdlWarningMode = _getLdlWarningMode(bulletins)
         eventValue = (playlistId, duration, _config.expiration, "[DynamicSchedule('%s')]" % playlistName, twccommon.Data(ldlBulletins=bulletins, ldlWarningMode=tmpLdlWarningMode, nationalLdl=1))
+        #twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.load', eventValue)
+        pcpm.load(*eventValue)
+        return
+elif twc.personalityCode == 1:
+    def load(playlistId, playlistName, duration, bulletins, displayMode):
+        tmpLdlWarningMode = _getLdlWarningMode(bulletins)
+        eventValue = (playlistId, duration, _config.expiration, "[DynamicSchedule('%s')]" % playlistName, twccommon.Data(ldlBulletins=bulletins, ldlWarningMode=tmpLdlWarningMode, nationalLdl=1, displayMode=displayMode))
         #twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.load', eventValue)
         pcpm.load(*eventValue)
         return
@@ -168,7 +177,7 @@ else:
         return 1
         return
 
-if twc.personalityCode < 2:
+if twc.personalityCode == 0:
     def toggleNationalLDL(id, activate, time=0, frame=0):
         if time is None:
             time = 0
@@ -191,6 +200,33 @@ if twc.personalityCode < 2:
         playlistName = _getPlaylistName(ldlWarningMode)
         load(_config.playlistId, playlistName, _config.duration, bulletins)
         eventValue = (_config.playlistId, time, frame, twccommon.Data(nationalLdl=1))
+        #twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.run', eventValue)
+        print("i am the national ldl")
+        pcpm.run(*eventValue)
+        return
+elif twc.personalityCode == 1:
+    def toggleNationalLDL(id, activate, displayMode=None, time=0, frame=0):
+        if time is None:
+            time = 0
+        print("i am the")
+        global _activate
+        if _activate not in vars():
+            _activate = 0
+        id = int(id)
+        time = int(time)
+        frame = int(frame)
+        activate = int(activate)
+        if _activate == 0 and activate == 0:
+            return
+        _activate = activate
+        bulletins = _ldlBulletins()
+        ldlWarningMode = _getLdlWarningMode(bulletins)
+        if activate == 0:
+            load(_config.playlistId, _config.downPlaylistName, 1, bulletins, displayMode)
+            return
+        playlistName = _getPlaylistName(ldlWarningMode)
+        load(_config.playlistId, playlistName, _config.duration, bulletins, displayMode)
+        eventValue = (_config.playlistId, time, frame, twccommon.Data(nationalLdl=1, displayMode=displayMode))
         #twc.MiscCorbaInterface.signalEvent('SystemEventChannel', 'playman.playCmd.pm.run', eventValue)
         print("i am the national ldl")
         pcpm.run(*eventValue)

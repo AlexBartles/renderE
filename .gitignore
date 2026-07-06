@@ -12,3 +12,4 @@ net/*
 temp/*
 bgm/*
 domesticpy/data/map.cuts/*
+*.pyc

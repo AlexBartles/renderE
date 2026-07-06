@@ -1,14 +1,14 @@
 # uncompyle6 version 3.9.3
 # Python bytecode version base 2.2 (60717)
 # Decompiled from: Python 3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]
-# Embedded file name: SkyCondMapping.py
+# Embedded file name: TextFcstMapping.py
 # Compiled at: 2005-12-01 07:18:53
-import types, twc, twcWx.xmlUtil as xmlUtil, twcWx.mapping as mapping, os, nethandler
+import types, twcWx.xmlUtil as xmlUtil, twcWx.mapping as mapping, twc, os, nethandler
 
-class SkyCondMappingHandler(xmlUtil.LookupSubHandler):
+class SnowAccumMappingHandler(xmlUtil.LookupSubHandler):
 
     def __init__(self, container):
-        self._elements = [('key', int, xmlUtil.REQUIRED), ('iconFile', str, xmlUtil.REQUIRED), ('textModifier', str, xmlUtil.REQUIRED), ('group', int, xmlUtil.OPTIONAL), ('precipitation', int, xmlUtil.OPTIONAL)]
+        self._elements = [('key', str, xmlUtil.REQUIRED), ('inches', str, xmlUtil.REQUIRED), ('label', str, xmlUtil.REQUIRED)]
         xmlUtil.LookupSubHandler.__init__(self, container)
         return
 
@@ -22,9 +22,9 @@ class SkyCondMappingHandler(xmlUtil.LookupSubHandler):
         return
 
 import rendereglobals as rg
-filePath = rg.newjoin(os.environ["RENDEREMEDIA"]+'/mappings/skyCondLocales/')
+filePath = rg.newjoin(os.environ["RENDEREMEDIA"], '/mappings/snowAccum/')
 
-class SkyCondMapping(mapping.Map):
+class SnowAccumMapping(mapping.Map):
 
     def __init__(self, refresh=0):
         mapping.Map.__init__(self, refresh)
@@ -34,7 +34,8 @@ class SkyCondMapping(mapping.Map):
         path = filePath + data + '.xml'
         if not os.path.exists(path):
             path = nethandler.requestNetAssetExt(filePath+data, "xml")
-        map = xmlUtil.parseXML(path, SkyCondMappingHandler)
+        print(path)
+        map = xmlUtil.parseXML(path, SnowAccumMappingHandler)
         if map:
             return (map, path)
         else:

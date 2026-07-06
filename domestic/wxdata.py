@@ -4,7 +4,10 @@
 # Embedded file name: wxdata.py
 # Compiled at: 2007-01-12 11:33:26
 import re, time, types, shutil, twc.dsmarshal, twc.DataStoreInterface, twc.InterestList, twc.MiscCorbaInterface, twccommon, twccommon.Log, domestic.BulletinInfo, os, glob
-import domesticpy.plugin.playman.playCmd.pm as pcpm
+if twc.personality == "WxScan":
+    import wxscanpy.plugin.playman.playCmd.pm as pcpm
+else:
+    import domesticpy.plugin.playman.playCmd.pm as pcpm
 from xml.sax import make_parser, handler
 import nethandler as nh
 ds = twc.DataStoreInterface
@@ -499,7 +502,7 @@ def _signalEvent(type, value):
 
 def _signalRPC(rpcName, args):
     #twc.MiscCorbaInterface.signalEvent(CHANNEL_NAME, rpcName, repr(args))
-    fullname = "domesticpy.plugin."+rpcName
+    fullname = ("wxscanpy" if twc.personality == "WxScan" else "domesticpy") + ".plugin."+rpcName
     #this is the single unholiest function i have ever written.
     fn = fullname.split(".")[-1]
     di = __import__(".".join(fullname.split(".")[:-1]), fromlist=[fn])

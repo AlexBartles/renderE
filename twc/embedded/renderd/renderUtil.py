@@ -4,6 +4,7 @@
 # Embedded file name: renderUtil.py
 # Compiled at: 2007-01-12 11:17:28
 import glob, os, os.path, string, time, twc
+import twc.dsmarshal as dsm
 from . import RenderControl, RenderScript
 
 def rgbaConvert(r, g, b, a=255.0):
@@ -354,7 +355,7 @@ def shiftGradient(grad, hue, sat, val):
     return new
 
 modern = (twc.personality == "Texarkana")
-def getBevelBox(w, h, color=None, debug=False, shift=bevelshift):
+def getBevelBox(w, h, color=None, debug=False, shift=bevelshift, holiday=None, force=False):
     bevelWidth = 3
     if color is None or len(color) != 5:
         color = [[(113, 143, 178, 255), (59, 98, 148, 255)], [(24, 51, 92, 255), (15, 34, 67, 255)], [(39, 79, 133, 255), (61, 100, 150, 255)], [(14, 32, 65, 255), (27, 57, 107, 255)], [(20, 51, 141, 153), (64, 91, 153, 153)]]
@@ -395,6 +396,28 @@ def getBevelBox(w, h, color=None, debug=False, shift=bevelshift):
         colorLeft = shiftGradient(colorLeft, *shift)
         colorRight = shiftGradient(colorRight, *shift)
         colorBox = shiftGradient(colorBox, *shift)
+    
+    severe = dsm.defaultedGet("SevereMode", 0)
+    if severe and modern and not force:
+        c1 = (180, 180, 180, 255)
+        c2 = (180, 180, 180, 0)
+        
+        c5 = (120, 120, 120, 255)
+        c6 = (120, 120, 120, 0)
+        
+        c3 = (120, 120, 120, 140)
+        c4 = (90, 90, 90, 140)
+        colorBox = [c3, c4]
+        colorRight = [c1, c2, c5, c6]
+        colorLeft = [c1, c2, c5, c6]
+        colorTop = [c1, c2, c5, c6]
+        colorBottom = [c1, c2, c5, c6]
+        bevelWidth = 6
+    
+    if modern and holiday and not (severe and not force):
+        colorBox[1] = (*holiday, 140)
+        colorLeft[2] = (*holiday, 255)
+        colorLeft[3] = (*holiday, 0)
     
     if not modern:
         (r, g, b, a) = colorTop[0]
@@ -502,7 +525,6 @@ def getBevelBox(w, h, color=None, debug=False, shift=bevelshift):
         bottomEdge.addVertex(inset, inset, r3, g3, b3, a3)
         bottomEdge.addVertex(bevelWidth, bevelWidth, r4, g4, b4, a4)
         bottomEdge.addVertex(w - bevelWidth, bevelWidth, r4, g4, b4, a4)
-
         
         leftEdge.addVertex(inset, h - inset, r1, g1, b1, a1)
         leftEdge.addVertex(0, h, r1, g1, b1, a1)
@@ -511,12 +533,13 @@ def getBevelBox(w, h, color=None, debug=False, shift=bevelshift):
         leftEdge.addVertex(bevelWidth, bevelWidth, r4, g4, b4, a4)
         leftEdge.addVertex(bevelWidth, h - bevelWidth, r2, g2, b2, a2)
         
-        rightEdge.addVertex(bevelWidth - inset, inset, r3, g3, b3, a3)
-        rightEdge.addVertex(bevelWidth, 0, r3, g3, b3, a3)
-        rightEdge.addVertex(bevelWidth, h, r1, g1, b1, a1)
-        rightEdge.addVertex(bevelWidth - inset, h - inset, r1, g1, b1, a1)
-        rightEdge.addVertex(0, h - bevelWidth, r2, g2, b2, a2)
+        
         rightEdge.addVertex(0, bevelWidth, r4, g4, b4, a4)
+        rightEdge.addVertex(0, h - bevelWidth, r2, g2, b2, a2)
+        rightEdge.addVertex(bevelWidth - inset, h - inset, r1, g1, b1, a1)
+        rightEdge.addVertex(bevelWidth, h, r1, g1, b1, a1)
+        rightEdge.addVertex(bevelWidth, 0, r3, g3, b3, a3)
+        rightEdge.addVertex(bevelWidth - inset, inset, r3, g3, b3, a3)
         rightEdge.setPosition(w - bevelWidth, 0)
 
         
@@ -555,3 +578,9 @@ def slideInOut(p, gr, totalDuration, fadeInDuration=5, fadeOutDuration=5, moveDi
     p.addItem(fade)
     return
 
+def addBrandLogo(p):
+    images = dsm.defaultedGet("brandLogo", [])
+    for im, x, y in images:
+        img = RenderScript.TIFF_Image(im)
+        img.setPosition(x, y)
+        p.addItem(img)

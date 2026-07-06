@@ -6,10 +6,13 @@
 import os, sys
 import patches
 import rendereglobals as rg
-import domesticpy.plugin.playman.playCmd.bulletin as bulletin
+import twc
+if twc.personality == "WxScan":
+    import wxscanpy.plugin.playman.playCmd.bulletin as bulletin
+else:
+    import domesticpy.plugin.playman.playCmd.bulletin as bulletin
 bulletin.forceInactive = True
 import playmaninit
-import twc
 import twccommon.Log
 import twc.dsmarshal
 import twc.DataStoreInterface

@@ -6,6 +6,7 @@ import sqlite3 as sql
 import time
 from datetime import datetime
 import sys
+import json
 import argparse
 import threading as th
 import re
@@ -47,7 +48,7 @@ print("by LeWolfYT")
 print("LFRecord.db is from MARIENCODER!")
 print("Make sure to support it too!")
 
-tomtom_key = "cJG5MpqFVuqA6VfHYFcDxz2NoQOmmBVG" #tomtom key
+tomtom_key = "" #tomtom key
 
 expiretime = time.time()+30*60
 
@@ -371,7 +372,36 @@ if (not doonly or only == "uvf") or only == "tag":
         except:
             print(traceback.print_exc())
             print(f"uvf failure for {uvcoop}")
+
+if (not doonly or only == "aqi") or only == "tag":
+    with open("stationmap2.json", "r") as f:
+        stationmap = json.loads(f.read())
     
+    def getaqi(override=None):
+        print(f"starting aqi data!")
+        for aqi in aqis:
+            print("getting aqi for", aqi)
+            try:
+                dat = r.get(f"https://api.weather.com/v3/wx/globalAirQuality/forecast/hourly/24hour?geocode={','.join([str(l) for l in stationmap[aqi]])}&language=en-US&format=json&scale=EPA&apiKey=71f92ea9dd2f4790b92ea9dd2f779061").json()
+                #print(dat)
+                dat = dat["globalairquality"]
+                
+                y,m,d,H,M,S,dow,doy,dst = time.localtime(time.time())
+                todayStart = time.mktime((y,m,d,0,0,0,0,0,-1))
+                tomStart   = time.mktime((y,m,d+1,0,0,0,0,0,-1))
+
+                # get uv fcst
+                # check for fcst time - before 4pm = today, after 4pm = tom
+                
+                for ii in range(len(dat["validTimeGmt"])):
+                    i = len(dat["validTimeGmt"])-ii-1
+                    valid = dat["validTimeGmt"][i]
+                    pollutants = sorted([(p.replace("O3", "OZONE"), pd["categoryIndex"][i]) for p, pd in dat["pollutants"].items()], key=lambda d: d[1], reverse=True)
+                    print("setting", 'airQuality.%s.%d' % (aqi, valid))
+                    dsm.rset('airQuality.%s.%d' % (aqi, tomStart if valid == tomStart else todayStart), twccommon.Data(pollutants=pollutants, actionDay=int(pollutants[0][1] > 1)), expiretime)
+            except:
+                print(traceback.print_exc())
+                print(f"aqi failure for {aqi}")
 
 if only == "tag":
     def gettag():
@@ -755,7 +785,10 @@ if (not doonly or only == "traffic") and tomtom_key and not wxs and not notraffi
             tlat /= len(coords)
             return tlon, tlat
         for box in trafficrep.latLongBoxes:
-            data2 = r.get(f"https://api.tomtom.com/traffic/services/5/incidentDetails?bbox={box[0][0]},{box[0][1]},{box[1][0]},{box[1][1]}&fields=%7Bincidents%7Btype,geometry%7Btype,coordinates%7D,properties%7BiconCategory,events%7Bdescription%7D,from,to,startTime,endTime,tmc%7Bdirection%7D,magnitudeOfDelay%7D%7D%7D&language=en-US&timeValidityFilter=present&key={tomtom_key}").json()["incidents"]
+            data2 = r.get(f"https://api.tomtom.com/traffic/services/5/incidentDetails?bbox={box[0][0]},{box[0][1]},{box[1][0]},{box[1][1]}&fields=%7Bincidents%7Btype,geometry%7Btype,coordinates%7D,properties%7BiconCategory,events%7Bdescription%7D,from,to,startTime,endTime,tmc%7Bdirection%7D,magnitudeOfDelay%7D%7D%7D&language=en-US&timeValidityFilter=present&key={tomtom_key}").json()
+            if "incidents" not in data2:
+                print(data2)
+            i = data2["incidents"]
             
             for data in data2:
                 icat = data["properties"]["iconCategory"]
@@ -897,6 +930,9 @@ def encode():
             #i wish there was a better way to do this
             for cid in coopid:
                 threads.append(th.Thread(target=getuvf, args=(cid,)))
+    
+    if (not doonly or only == "aqi") or only == "tag":
+        threads.append(th.Thread(target=getaqi))
     
     if only == "tag":
         threads.append(th.Thread(target=gettag))

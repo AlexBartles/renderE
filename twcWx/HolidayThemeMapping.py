@@ -18,7 +18,7 @@ class HolidayThemeMappingHandler(xmlUtil.LookupSubHandler):
         return
 
 import rendereglobals as rg
-filePath = rg.newjoin('/media/mappings/holidayThemes/')
+filePath = rg.newjoin('/mappings/holidayThemes/')
 print(filePath)
 
 class HolidayThemeMapping(mapping.Map):

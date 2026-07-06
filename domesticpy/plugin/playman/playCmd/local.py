@@ -93,10 +93,12 @@ if twc.personalityCode < 4:
             print('LAS CRAWL TEXT')
         pres.bkgAudioFilename = None
         if not tscard.SDI_URL:
-            pres.bkgAudioFilename = _getBkgAudioFilename()
+            pres.bkgAudioFilename = _getBkgAudioFilename(pres.durationSeconds)
         #if pres.channelChangeRequest == 1 or pres.alternateFeedActive == 1:
         #    pres.bkgAudioFilename = _getBkgAudioFilename()
         scheds = _selectSchedule(pres)
+        if twc.personalityCode == 1:
+            pres.bkgImage = _getBkgImage()
         if scheds != None:
             _load(id, pres.duration, pres.expire, scheds, pres)
         return
@@ -244,7 +246,7 @@ _schedGroupDefaultTmpl = "[\n    DynamicSchedule('%(defaultGroup)s.%(durationSec
 _schedNoFallbackTmpl = "[\n    DynamicSchedule('%(defaultGroup)s.%(durationSeconds)s.%(version)s'),\n]"
 _schedNoFallbackGroupOverrideTmpl = "[\n    DynamicSchedule('%(group)s.%(durationSeconds)s.%(version)s'),\n    DynamicSchedule('%(defaultGroup)s.%(durationSeconds)s.%(version)s'),\n]"
 
-_flavorMap = {'S': (57 * 30 + 20, 0, 1), 'D': (60 * 30, 0, 0), 'E': (60 * 30, 1, 0), 'K': (90 * 30, 0, 0), 'O': (90 * 30, 1, 0), 'N': (120 * 30, 0, 0), 'L': (120 * 30, 1, 0), 'M': (120 * 30, 2, 0), 'T': (140 * 30, 0, 0)}
+_flavorMap = {'S': (57 * 30 + 20, 0, 1), 'D': (60 * 30, 0, 0), 'E': (60 * 30, 1, 0), 'K': (90 * 30, 0, 0), 'O': (90 * 30, 1, 0), 'N': (120 * 30, 0, 0), 'L': (120 * 30, 1, 0), 'M': (120 * 30, 2, 0), 'T': (140 * 30, 0, 0), 'J': (170 * 30, 0, 0)}
 
 forcelascrawl = True
 
@@ -312,9 +314,16 @@ def _getLasCrawlText():
 
 import math
 import random
-def _getBkgAudioFilename():
-    files = glob.glob(rg.newjoin(os.environ["RENDEREROOT"], 'bgm', '*'))
+def _getBkgAudioFilename(dur=None):
+    files = None
+    if dur is not None:
+        bgmp = rg.newjoin(os.environ["RENDEREROOT"], 'bgm', str(dur))
+        if os.path.exists(bgmp):
+            files = glob.glob(rg.newjoin(bgmp, '*'))
+    if files is None:
+        files = glob.glob(rg.newjoin(os.environ["RENDEREROOT"], 'bgm', '*'))
     print(files)
+    files = [f for f in files if os.path.isfile(f)]
     files.sort()
     numFiles = len(files)
     if numFiles == 0:
@@ -326,6 +335,29 @@ def _getBkgAudioFilename():
         return files[math.floor(ndx)]
     return
 
+import twcWx.dataUtil as wxDataUtil
+def _removeInvalidImages(imgs, folder):
+    return [img for img in imgs if os.path.isfile(os.path.join(folder, img)) and not img.startswith(".")]
+
+def _getBkgImage():
+    y,m,d,H,M,S, dow, doy, dst = time.localtime()
+    dateStr = "%02d%02d" % (m, d)
+    holiday = wxDataUtil.getHolidayTheme(dateStr, "holidayThemes")
+    ix = dsm.defaultedGet("backgroundIndex", -1)
+    holidayTheme = False
+    if holiday:
+        try:
+            bgs = _removeInvalidImages(os.listdir("bgs/"+holiday.holiday), "bgs/"+holiday.holiday)
+            holidayTheme = True
+        except Exception as e:
+            bgs = _removeInvalidImages(os.listdir("bgs"), "bgs")
+            holidayTheme = False
+    else:
+        bgs = _removeInvalidImages(os.listdir("bgs"), "bgs")
+    ix += 1
+    ix %= len(bgs)
+    dsm.set("backgroundIndex", ix, 0)
+    return (f"bgs/{holiday.holiday}/" if holidayTheme else "bgs/") +  bgs[ix]
 
 def _activeBulletins():
     counties = dsm.defaultedConfigGet('interestlist.county')

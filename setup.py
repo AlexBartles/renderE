@@ -16,7 +16,7 @@ root.configure(takefocus=False)
 mypath = os.path.dirname(os.path.abspath(__file__))
 
 pg.mixer.init()
-bgm = pg.mixer.Sound(os.path.join(mypath, "setup", "setup2.mod"))
+bgm = pg.mixer.Sound(os.path.join(mypath, "setup", "funk.ogg"))
 
 pg.display.init()
 pg.font.init()
@@ -1139,6 +1139,8 @@ while running:
             if transitioning:
                 continue
             shifty = max(shifty+(event.y*2)*(int(event.flipped)*2-1), 0)
+        elif event.type == pg.MOUSEMOTION:
+            input_mode = "mouse"
     if not running:
         break
     page = pagemap[apage]

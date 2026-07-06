@@ -4,6 +4,7 @@
 # Embedded file name: bulletin.py
 # Compiled at: 2007-05-14 11:20:55
 import wxscan, wxscan.dataUtil, wxscan.BulletinInfo as BulletinInfo, os, time, twc.dsmarshal as dsm, twc.DataStoreInterface as ds, twccommon, twccommon.Log as Log, twc.MiscCorbaInterface, wxscan.RunLog, rendereglobals as rg
+from functools import cmp_to_key
 
 DSKEY_ILIST_COUNTY = 'interestlist.county'
 KEY_SVRMODE = 'SevereMode'
@@ -162,11 +163,11 @@ def _selectBulletinRotation(bulletins, windowSize):
     if not bulletins:
         return []
     data = _split(bulletins.values(), (lambda e: e.category))
-    categories = data.keys()
+    categories = list(data.keys())
     categories.sort()
     categories.reverse()
-    bull = data[categories[0]]
-    bull.sort(_compareBulletin)
+    bull = list(data[categories[0]])
+    bull.sort(key=cmp_to_key(_compareBulletin))
     return _debigulate(bull, windowSize)
     return
 

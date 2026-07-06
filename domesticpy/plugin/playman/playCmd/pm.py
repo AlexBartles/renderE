@@ -13,14 +13,17 @@ def init(config):
     global _config
     global _pluginMgr
     global _runlog
+    global _bkgImage
     _config = twccommon.Data()
     _config.__dict__.update(config.__dict__)
     _pluginMgr = PluginManager.PluginManager(config.playlistPluginRoot)
     _runlog = twc.EventLog.EventLog(rg.newjoin(tempdir, "runlog"), 3600)
+    _bkgImage = None
     return
 
 
 def load(id, duration, expire, schedules, params, runlogEvents=None):
+    global _bkgImage
     try:
         if twc.personalityCode > 2:
             fname = '%s/playlistload' % tempdir
@@ -31,6 +34,8 @@ def load(id, duration, expire, schedules, params, runlogEvents=None):
         #_pl._rmOldLocalModules(['%s/lib' % _ROOT])
         if runlogEvents == None:
             runlogEvents = []
+        if twc.personalityCode == 1 and hasattr(params, "bkgImage"):
+            _bkgImage = params.bkgImage
         argData = twccommon.Data(id=id, duration=duration, expire=expire, schedules=schedules, params=params, expireTime=time.time() + expire / 30, runlogEvents=runlogEvents)
         _presentations[id] = argData
         Log.info('attempting to build presentation (id=%s, schedule=%s)...' % (id, schedules))
@@ -215,9 +220,13 @@ class _ProdLoader(twc.products.ProductLoader):
         return
 
     def loadProduct(self, prodType, prodName, prodInst):
+        global _bkgImage
         print('loading product %s_%s...' % (prodType, prodName))
         params = self.getDefaultParams()
-        pparams = getAttribs('%s_%s' % (prodType, prodName), params)
+        if twc.personalityCode < 2:
+            pparams = getAttribs('%s_%s' % (prodType, prodName), params)
+        else:
+            pparams = getAttribs('%s_%s' % (prodType, prodName), prodInst, params)
         params = twccommon.mergeStructs([params, pparams])
         (prodFile, searchPath) = _findFile(prodType, '%s.prod' % prodName)
         libPath = list(map((lambda e: '%s/lib' % e), searchPath))
@@ -230,6 +239,8 @@ class _ProdLoader(twc.products.ProductLoader):
         params.prodName = prodName
         params.prodInst = prodInst
         params.product = '%s_%s' % (prodType, prodName)
+        if _bkgImage is not None:
+            params.bkgImage = (_bkgImage, None)
         tmp = sys.path[:]
         try:
             print(libPath, sys.path)
@@ -293,8 +304,9 @@ elif twc.personalityCode == 4:
     def getAttribs(product, prodInst, params=None):
         cfgVersion = int(dsm.getConfigVersion())
         try:
-            #kl = ['Config', 'Config.%d' % cfgVersion, 'Config.%d.%s' % (cfgVersion, product), 'Config.%d.%s.%d' % (cfgVersion, product, prodInst), 'Config.%d.Override' % cfgVersion]
-            kl = ['Config', 'Config.%d' % cfgVersion, 'Config.%d.%s' % (cfgVersion, product), 'Config.%d.Override' % cfgVersion]
+            kl = ['Config', 'Config.%d' % cfgVersion, 'Config.%d.%s' % (cfgVersion, product), 'Config.%d.%s.%d' % (cfgVersion, product, prodInst), 'Config.%d.Override' % cfgVersion]
+            #kl = ['Config', 'Config.%d' % cfgVersion, 'Config.%d.%s' % (cfgVersion, product), 'Config.%d.Override' % cfgVersion]
+            
         except:
             print("EEEEE!")
             print(product, prodInst, params, cfgVersion)
@@ -306,8 +318,8 @@ elif twc.personalityCode == 4:
 else:
     def getAttribs(product, prodInst, params=None):
         cfgVersion = int(dsm.getConfigVersion())
-        #kl = ['Config', 'Config.%d' % cfgVersion, 'Config.%d.%s' % (cfgVersion, product), 'Config.%d.%s.%d' % (cfgVersion, product, prodInst), 'Config.%d.Override' % cfgVersion]
-        kl = ['Config', 'Config.%d' % cfgVersion, 'Config.%d.%s' % (cfgVersion, product), 'Config.%d.Override' % cfgVersion]
+        kl = ['Config', 'Config.%d' % cfgVersion, 'Config.%d.%s' % (cfgVersion, product), 'Config.%d.%s.%d' % (cfgVersion, product, prodInst), 'Config.%d.Override' % cfgVersion]
+        #kl = ['Config', 'Config.%d' % cfgVersion, 'Config.%d.%s' % (cfgVersion, product), 'Config.%d.Override' % cfgVersion]
         fullParams = twc.getAttribList(kl)
         if params:
             fullParams = twccommon.mergeStructs([params, fullParams])
@@ -379,6 +391,7 @@ def _buildBestSchedPresentations(argData, schedLoaders):
     for schedLoader in schedLoaders:
         try:
             Log.info('building schedule %s...' % schedLoader)
+            renderElog('building schedule %s...' % schedLoader)
             params = argData.params.clone()
             _pl.setDefaultParams(params)
             schedule = schedLoader.getSchedule(argData.duration)

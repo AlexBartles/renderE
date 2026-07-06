@@ -5,6 +5,7 @@
 # Compiled at: 2007-01-12 11:17:30
 import glob, os, os.path, twccommon, twccommon.Log as Log, twc.dsmarshal as dsm, twc.psp, urllib, lxml.etree
 from . import SkyConditionCodes
+from . import products
 import nethandler
 Data = twccommon.Data
 DefaultedData = twccommon.DefaultedData
@@ -127,7 +128,7 @@ def presToRenderScript(pres, layerName, **ns):
     return
 
 
-def findRsrc(rsrc, ext, req=1, language=None):
+def findRsrc(rsrc, ext="tif", req=1, language=None):
     if rsrc.startswith("net/backgrounds"):
         rsrc = rsrc.replace("net/backgrounds", "net/media/backgrounds", 1)
     rsrcRoot = [os.environ["RENDEREMEDIA"], os.environ["RENDERERSRC"], "net/rsrc", "net/media"]

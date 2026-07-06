@@ -44,6 +44,7 @@ def datatojson(dt):
     return jsond
 
 def set(key, data, expiration, update=0, session=0):
+    print(f"setting {key}")
     if isinstance(data, str):
         ds.set([(key, data, expiration)], session)
         return ''

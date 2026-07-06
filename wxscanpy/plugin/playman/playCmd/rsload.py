@@ -41,6 +41,7 @@ import nethandler, patches
 def _load(pDir, pName, params=twccommon.Data()):
     try:
         fname = pDir + '/' + pName + '.rs'
+        renderElog(fname)
         fname2 = nethandler.requestNetAssetExt(fname)
         f = open(fname2)
         page = patches.unprint(f.read())

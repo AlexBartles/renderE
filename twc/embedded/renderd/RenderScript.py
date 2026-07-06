@@ -148,7 +148,7 @@ class Font(ObjectWrapper):
         return 0
 
     def leading(self):
-        return self.font.get_linesize()
+        return 0
 
     def stringSize(self, str):
         bn = self.font.size(str)
@@ -162,6 +162,66 @@ class Font(ObjectWrapper):
         (w, h) = self.stringSize(str)
         return h
 
+from PIL import Image as Img
+import freetype
+import numpy as np
+
+class Character:
+    def __init__(self, font, color, char):
+        tfont : freetype.Face = font.font
+        tfont.load_char(char, freetype.FT_LOAD_RENDER | freetype.FT_LOAD_TARGET_LIGHT)
+        self.char = char
+    
+        slot = tfont.glyph
+        bitmap = slot.bitmap
+        width = bitmap.width
+        rows = bitmap.rows
+        
+        self.bearing = slot.bitmap_top
+        self.hbearing = slot.bitmap_left
+        self.advance = slot.metrics.horiAdvance / 64.0
+        
+        self.empty = (width == 0 or rows == 0)
+        if self.empty:
+            return
+        
+        shadow = font.shadow
+        alpha = Img.frombytes("L", (width, rows), bytes(bitmap.buffer))
+        
+        if shadow:
+            mainimage = Img.new("RGB", alpha.size, color)
+            shadowimage = Img.new("RGB", alpha.size, tuple([round(i*255) for i in font.scol]))
+            mainimage.putalpha(alpha)
+            shadowimage.putalpha(alpha)
+            self.pilimage = Img.new("RGBA", (alpha.size[0]+font.sx, alpha.size[1]+font.sy))
+            self.pilimage.paste(shadowimage, (font.sx, font.sy), shadowimage)
+            self.pilimage.alpha_composite(mainimage, (0, 0))
+        else:
+            self.pilimage = Img.new("RGB", alpha.size, color)
+            self.pilimage.putalpha(alpha)
+        
+        buf = BytesIO()
+        self.pilimage.save(buf, "BMP")
+        bv = buf.getvalue()
+        self.image = rg.rl.load_image_from_memory(".bmp", bv, len(bv))
+        rg.rl.image_alpha_premultiply(self.image)
+        self.texture = None
+        
+    def load(self):
+        if self.empty:
+            return
+        if self.texture is None:
+            self.texture = rg.rl.load_texture_from_image(self.image)
+    
+    def unload(self):
+        if self.empty:
+            return
+        if self.texture is not None:
+            rg.rl.unload_texture(self.texture)
+            self.texture = None
+        if self.image is not None:
+            rg.rl.unload_texture(self.image)
+            self.image = None
 
 class TTFont(Font):
 
@@ -170,11 +230,35 @@ class TTFont(Font):
         self.scol = (sr, sg, sb, sa)
         self.sx = sx*1
         self.sy = sy*1
+        self.chars = {}
+        self.t = t
+        self.name = None
         Font.__init__(self, pointSize)
         if l == None:
             l = pointSize
         _renderd.createTTFont(self, name, pointSize, shadow, sr, sg, sb, sa, sx, sy, t / 2, l, evict)
 
+    def get_char(self, char, color):
+        if self.shadow:
+            ckey = (char, self.name, color, self.pointSize(), self.sx, self.sy, self.scol)
+        else:
+            ckey = (char, self.name, color, self.pointSize())
+        if ckey not in builtins.__dict__["rg_font_cache"]:
+            character = Character(self, color, char)
+            builtins.__dict__["rg_font_cache"][ckey] = character
+        else:
+            character = builtins.__dict__["rg_font_cache"][ckey]
+        
+        return character
+
+    def stringSize(self, str):
+        return get_text_size(str, (235, 235, 235), self)
+
+    def tracking(self):
+        return self.t
+
+    def leading(self):
+        return self.l
 
 class TTOutlineFont(Font):
 
@@ -520,52 +604,25 @@ class Clock(GraphicRenderable):
         self.cachedimg = None
         self.cimg = None
         self.fnt = font
-        self.ascent = self.fnt.ascent
-        self.descent = self.fnt.descent
+        self.glist = None
+        self.ksize = None
         if timezone == "":
             self.tz = None
         else:
             self.tz = dut.tz.gettz(timezone)
         
-        self.textbase : rg.pg.Surface = fix_font_text(self.fnt.font.render(builtins.str(self.s), True, (255, 255, 255)), self.ascent, self.descent, self.fnt.ref)
-        self.textbase = rg.pg.transform.smoothscale_by(self.textbase, (1, 0.93))
-        
         self._lastcol = tuple(list(self._color))
-        self._textsize = self.textbase.size
-        self._size = self.textbase.size
+        #self._textsize = self.textbase.size
+        #self._size = self.textbase.size
         
-        self.basesize = self.textbase.get_size()
+        #self.basesize = self.textbase.get_size()
         #_renderd.createClock(self, font, format, lcase_ampm, justification, timezone, timezoneDisplay)
-        
-    
-    def correct_aspect(self, surf):
-        return rg.pg.transform.smoothscale_by(fix_font_text(surf, self.ascent, self.descent, self.fnt.ref), (1, 0.93))
-    
-    def create_cimg(self):
-        if self.fnt.shadow:
-            newsurf = rg.pg.Surface((self._textsize[0]+self.fnt.sx, self._textsize[1]+self.fnt.sy), rg.pg.SRCALPHA)
-            newsurf.fill((0, 0, 0, 0))
-            newsurf.blit(self.correct_aspect(self.fnt.font.render(self.s, True, [c*255 for c in self.fnt.scol])), (self.fnt.sx, self.fnt.sy))
-            newsurf.blit(self.correct_aspect(self.fnt.font.render(self.s, True, [c*255 for c in self._color])), (0, 0))
-        else:
-            newsurf = rg.pg.Surface(self._textsize, rg.pg.SRCALPHA)
-            newsurf.blit(fix_font_text(self.fnt.font.render(self.s, True, [c*255 for c in self._color]), self.ascent, self.descent, self.fnt.ref), (0, 0))
-            newsurf = rg.pg.transform.smoothscale_by(newsurf, (1, 0.93))
-        buf = BytesIO()
-        rg.pg.image.save(newsurf, buf, ".bmp")
-        self.cimg = rg.rl.load_image_from_memory(".bmp", buf.getvalue(), len(buf.getvalue()))
-        rg.rl.image_alpha_premultiply(self.cimg)
+
+    def size(self):
+        return self.ksize or get_text_size(self.s, tuple([round(c*255) for c in self._color]), self.fnt, self)
 
     def unload(self):
-        if self.cimg:
-            rg.rl.unload_image(self.cimg)
-            self.cimg = None
-        if self.cachedimg:
-            rg.rl.unload_image(self.cachedimg)
-            self.cachedimg = None
-        if self.cachedtex:
-            rg.rl.unload_texture(self.cachedtex)
-            self.cachedtex = None
+        pass
 
 class TimeCode(GraphicRenderable):
 
@@ -590,6 +647,71 @@ def crop_text(surf: rg.pg.Surface):
         final_left += 1
     return surf.subsurface(rg.pg.Rect(final_left, 0, surf.get_width()-final_left, surf.get_height()))
 
+
+tracking = True
+def get_text_size(s, col, font : TTFont, store=None):
+    width = 0
+    lines = 0
+    for line in s.split("\n"):
+        lines += 1
+        lwidth = 0
+        i = 1
+        for c in line:
+            last_char = (i == len(line))
+            char = font.get_char(c, col)
+            lwidth += char.advance
+            if tracking:
+                lwidth += (font.tracking() * font.pointSize() / 2000)
+            if font.font.has_kerning and not last_char:
+                if not s[i] == "\n":
+                    kern = font.font.get_kerning(ord(c), ord(s[i]), mode=0).x / 64.0
+                    lwidth += kern
+            i += 1
+        if tracking:
+            lwidth -= (font.tracking() * font.pointSize() / 2000)
+        if lwidth > width:
+            width = lwidth+0
+    
+    out = (round(width), font.leading()*lines)
+    if store:
+        store.ksize = out
+    return out
+
+def build_glyph_list(x, y, s, col, font : TTFont, top=False):
+    """
+    Outputs a list of coordinates and textures for drawing text.
+    This should make the new text system a BIT less horrible to work with.
+    """
+    xx = x+0
+    yy = y+0
+    
+    glyphs = []
+    i = 1
+    for char in s:
+        last_char = (i == len(s))
+        if char == "\n":
+            xx = x+0
+            yy -= font.leading()
+        else:
+            character = font.get_char(char, col)
+            if not character.empty:
+                offset = -character.image.height+character.bearing
+                glyphs.append([char, int(xx)+character.hbearing, yy+offset])
+            xx += character.advance
+            if font.font.has_kerning and not last_char:
+                if not s[i] == "\n":
+                    kern = font.font.get_kerning(ord(char), ord(s[i]), mode=0).x / 64.0
+                    xx += kern
+            if tracking:
+                xx += (font.tracking() * font.pointSize() / 2000)
+        i += 1
+    if top:
+        under = font.get_char("_", col)
+        yo = under.image.height - under.bearing + 4
+        for g in glyphs:
+            g[2] = g[2] + yo
+    return glyphs
+
 class Text(GraphicRenderable):
 
     def __init__(self, font : TTFont, str, debug=False):
@@ -598,53 +720,14 @@ class Text(GraphicRenderable):
         self.s = builtins.str(str)
         self.lasts = builtins.str(self.s)
         self.bounds = None
-        self.cachedimg = None
-        self.cachedtex = None
         self.buf = BytesIO()
-        self.ascent = self.fnt.font.get_ascent()
-        self.descent = self.fnt.font.get_descent()
-        
-        
-        self.textbase : rg.pg.Surface = fix_font_text(self.fnt.font.render(builtins.str(self.s), True, (255, 255, 255)), self.ascent, self.descent, self.fnt.ref)
-        self.textbase = rg.pg.transform.smoothscale_by(self.textbase, (1, 0.93))
-        
-        self.basesize = self.textbase.get_size()
-        self._lastcol = tuple(list(self._color))
-        self._textsize = self.textbase.size
-        self._size = self.textbase.size
+        self.glist = None
         self.cimg = None
         self.debug = debug
-    
-    def correct_aspect(self, surf):
-        return rg.pg.transform.smoothscale_by(fix_font_text(surf, self.ascent, self.descent, self.fnt.ref), (1, 0.93))
-    
-    def create_cimg(self):
-        if self.fnt.shadow:
-            newsurf = rg.pg.Surface((self._textsize[0]+self.fnt.sx, self._textsize[1]+self.fnt.sy), rg.pg.SRCALPHA)
-            newsurf.fill((0, 0, 0, 0))
-            newsurf.blit(self.correct_aspect(self.fnt.font.render(self.s, True, [c*255 for c in self.fnt.scol])), (self.fnt.sx, self.fnt.sy))
-            newsurf.blit(self.correct_aspect(self.fnt.font.render(self.s, True, [c*255 for c in self._color])), (0, 0))
-        else: 
-            newsurf = rg.pg.Surface(self._textsize, rg.pg.SRCALPHA)
-            newsurf.blit(fix_font_text(self.fnt.font.render(self.s, True, [c*255 for c in self._color]), self.ascent, self.descent, self.fnt.ref), (0, 0))
-            newsurf = rg.pg.transform.smoothscale_by(newsurf, (1, 0.93))
-        buf = BytesIO()
-        rg.pg.image.save(newsurf, buf, ".bmp")
-        self.cimg = rg.rl.load_image_from_memory(".bmp", buf.getvalue(), len(buf.getvalue()))
-        if self.debug:
-            rg.rl.export_image(self.cimg, "cimgg.png")
-        rg.rl.image_alpha_premultiply(self.cimg)
+        self.ksize = None
     
     def unload(self):
-        if self.cimg:
-            rg.rl.unload_image(self.cimg)
-            self.cimg = None
-        if self.cachedimg:
-            rg.rl.unload_image(self.cachedimg)
-            self.cachedimg = None
-        if self.cachedtex:
-            rg.rl.unload_texture(self.cachedtex)
-            self.cachedtex = None
+        pass
 
     def font(self):
         return self.fnt
@@ -655,19 +738,13 @@ class Text(GraphicRenderable):
         return
 
     def size(self):
-        if self.bounds:
-            return self.bounds
-        return self.basesize
+        return self.bounds or self.ksize or get_text_size(self.s, tuple([round(c*255) for c in self._color]), self.fnt, self)
 
     def setBoundingBoxSize(self, w, h):
         self.bounds = (w, h)
     
     def setColor(self, r=0, g=0, b=0, a=1):
         super().setColor(r, g, b, a)
-        if self.cimg:
-            rg.rl.unload_image(self.cimg)
-            self.cimg = None
-        self.create_cimg()
         return
         
 
@@ -708,11 +785,17 @@ class QTMovie(GraphicRenderable):
         return
 
     def unload(self):
-        for im in self.images:
-            rg.rl.unload_image(im)
+        if self.images is not None:
+            for im in self.images:
+                if im is not None:
+                    rg.rl.unload_image(im)
+                im = None
         self.images = []
-        for tx in self.textures:
-            rg.rl.unload_texture(tx)
+        if self.textures is not None:
+            for tx in self.textures:
+                if tx is not None:
+                    rg.rl.unload_texture(tx)
+                tx = None
         self.textures = []
 
 class Icon(GraphicRenderable):
@@ -740,7 +823,7 @@ class Icon(GraphicRenderable):
             return
         if self.textures:
             for i, tx in enumerate(self.textures):
-                if tx:
+                if tx is not None:
                     print(f"unloading texture {i}")
                     rg.rl.unload_texture(tx)
                 tx = None
@@ -748,7 +831,7 @@ class Icon(GraphicRenderable):
             print(self._ims)
             print(self.name)
             for i, im in enumerate(self._ims):
-                if im:
+                if im is not None:
                     print(f"unloading image {i}")
                     rg.rl.unload_image(im)
                 self._ims[i] = None
@@ -857,7 +940,7 @@ class VectorImage(GraphicRenderable):
             self.im = None
         #_renderd.createVectorImage(self, name, lineThickness, evict)
 
-
+import nethandler as nh
 class CompositeRenderable(GraphicRenderable):
 
     def __init__(self, debug=False):
@@ -885,6 +968,8 @@ class CompositeRenderable(GraphicRenderable):
     def size(self):
         top = None
         right = None
+        bottom = 0
+        left = 0
         for child in self.items:
             pos = child.position()
             size = child.size()
@@ -896,11 +981,16 @@ class CompositeRenderable(GraphicRenderable):
                 top = pos[1]+size[1]
             else:
                 top = max(top, pos[1]+size[1])
+            #keep track of left and bottom, might be useful?
+            left = min(pos[0], left)
+            bottom = min(pos[1], bottom)
         if not top:
             top = 0
         if not right:
             right = 0
+        
         return (abs(right), abs(top))
+        #return (abs(right-left), abs(top-bottom))
     
     def bsize(self):
         xx, yy = self.position()
@@ -1359,6 +1449,7 @@ class EffectSequencer(Renderable):
         self.effects = []
         self.activeeffects = []
         self.timer = (not getattr(target, "added", True))-1 #+target.seq_start_after #first frame is time 0 but 1 gets added first
+        self.timerdefault = (not getattr(target, "added", True))-1
         
         self.total = 0
         self.repeat = repeat
@@ -1379,7 +1470,7 @@ class EffectSequencer(Renderable):
                     self.effects[i][0].fader = None
     
     def addEffect(self, effect, duration, confirm=False):
-        self.effects.append((effect, duration))
+        self.effects.append((effect, duration or 9999999999999999999999)) #band-aid fixes ftw
         self.total += duration
         self._eval_fader()
         return

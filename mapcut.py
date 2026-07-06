@@ -6,6 +6,7 @@ import os
 import json
 #import pygame as pg
 import rendereglobals as rg
+import traceback as tb
 
 def vginfo(vgfile):
     extents = [1, 1]
@@ -127,4 +128,39 @@ def process(mtype, debug=False, vonly=False):
             f.write(json.dumps([fdcw, fdch, finalpl], indent=4))
 
 if __name__ == "__main__":
-    process('Config.1.Local_RegionalDopplerRadar', vonly=True)
+    try:
+        process('Config.1.Local_RegionalDopplerRadar')
+    except:
+        tb.print_exc()
+    try:
+        process('Config.1.Local_MetroDopplerRadar')
+    except:
+        tb.print_exc()
+    try:
+        process('Config.1.Local_RegionalForecastMap')
+    except:
+        tb.print_exc()
+    try:
+        process('Config.1.Local_MetroForecastMap')
+    except:
+        tb.print_exc()
+    try:
+        process('Config.1.Local_RegionalObservationMap')
+    except:
+        tb.print_exc()
+    try:
+        process('Config.1.Local_MetroObservationMap')
+    except:
+        tb.print_exc()
+    try:
+        process('Config.1.Local_Satellite')
+    except:
+        tb.print_exc()
+    try:
+        process('Config.1.Local_RadarSatelliteComposite')
+    except:
+        tb.print_exc()
+    try:
+        process('Config.0.Radar_LocalDoppler')
+    except:
+        tb.print_exc()

@@ -34,6 +34,7 @@ def _fix_if(m):
 ifpattern = r"\s([A-Za-z0-9_]+)\s*(<|>|>=|<=)\s*([A-Za-z0-9_]+)"
 
 def fix(rs):
+    rs = rs.replace("data.items()[0]", "list(data.items())[0]")
     rs = rs.replace("as =", "aseq =")
     rs = rs.replace("(as,", "(aseq,")
     rs = rs.replace("(as.", "(aseq.")

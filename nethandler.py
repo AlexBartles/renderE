@@ -76,6 +76,8 @@ def requestNetAsset(path : str, extensions, check=False):
 def requestNetAssetExt(path : str, ext=None, check=False):
     if os.path.exists(path):
         return path
+    if os.path.exists("net"+path):
+        return "net"+path
     out = newjoin(temp, path.strip("/"))+("."+ext if ext else "")
     if os.path.exists(out):
         return out

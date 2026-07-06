@@ -23,7 +23,7 @@ class BackgroundMusicMappingHandler(xmlUtil.LookupSubHandler):
         return
 
 import rendereglobals as rg
-filePath = rg.newjoin(os.environ["RENDEREMEDIA"], '/mappings/audio/')
+filePath = rg.newjoin('/mappings/audio/')
 
 class BackgroundMusicMapping(mapping.Map):
 

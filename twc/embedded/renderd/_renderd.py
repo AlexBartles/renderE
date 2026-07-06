@@ -6,6 +6,7 @@ import glob
 import nethandler
 import libmv
 import builtins
+import freetype
 rl = rg.rl
 pg = rg.pg
 
@@ -91,30 +92,30 @@ def createIcon(self, name, evict=0):
     self._size = (self._ims[0].width, self._ims[0].height)
 
 def createTTFont(self, name, pointSize, shadow, sr=0.08, sg=0.08, sb=0.08, sa=1.0, sx=1, sy=2, t=0, l=None, evict=0):
-    self.pxSize = round(pointSize)
-    if (name, self.pxSize) in list(builtins.__dict__["rg_font_cache"].keys()):
-        cached = builtins.__dict__["rg_font_cache"][(name, pointSize)]
-        self.font, self.reallineheight, self.ascent, self.descent, self.ref = cached
+    self.pointsize = pointSize
+    ogname = name+""
+    pname = parsePath(name)
+    possible = glob.glob(pname+".*")
+    if len(possible) > 0:
+        name = possible[0]
     else:
-        ogname = name+""
-        pname = parsePath(name)
-        possible = glob.glob(pname+".*")
-        if len(possible) > 0:
-            name = possible[0]
-        else:
-            name = nethandler.requestNetAsset(name, "font")
-        if not name:
-            print(f"No suitable font found for {ogname}!")
-            exit(1)
-        
-        self.font = pg.Font(name, self.pxSize)
-        self.ascent = self.font.get_ascent()*0.93
-        self.descent = self.font.get_descent()*0.93
-        ag = self.font.render("Ag", True, (255, 255, 255))
-        ag2 = self.font.render("Ag\nAg", True, (255, 255, 255)).get_height()
-        self.reallineheight = (ag2-ag.get_height())*0.93
-        self.ref = ag
-        builtins.__dict__["rg_font_cache"][(ogname, self.pxSize)] = (self.font, self.reallineheight, self.ascent, self.descent, self.ref)
+        name = nethandler.requestNetAsset(name, "font")
+    if not name:
+        print(f"No suitable font found for {ogname}!")
+        exit(1)
+    
+    self.font = freetype.Face(name)
+    self.name = name
+    self.font.set_char_size(64*pointSize)
+    
+    matrix = freetype.Matrix(int(1 * 65536), 0, 0, int(8/9 * 65536))
+    freetype.FT_Set_Transform(self.font._FT_Face, matrix, freetype.Vector(0, 0))
+    
+    print(dir(self.font.size))
+    self.ascent = self.font.size.ascender / 64.0
+    self.descent = self.font.size.descender / 64.0
+    self.l = l or (self.font.size.height / 64.0)
+    #builtins.__dict__["rg_font_cache"][(ogname, self.pxSize)] = (self.font, self.reallineheight, self.ascent, self.descent, self.ref)
     self.scol = (sr, sg, sb, sa)
 
 def createAudio(self):

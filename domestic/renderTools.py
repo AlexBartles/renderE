@@ -18,6 +18,7 @@ from twc.embedded.renderd.RenderScript import TTFont
 from twc.embedded.renderd.RenderScript import TIFF_Image
 from twc.embedded.renderd.RenderScript import Clipper
 import twc
+import twc.dsmarshal as dsm
 from functools import reduce
 
 def apply(func, args, kwargs=None):
@@ -173,6 +174,8 @@ def createTitleBarModern(string1, string2):
     bg2V = 0
     bg2TV = 0
     
+    severe = dsm.defaultedGet("SevereMode", 0)
+    
     if string1:
         tr1 = Text(titleFont1, string1)
         tr1w, tr1h = tr1.size()
@@ -209,8 +212,8 @@ def createTitleBarModern(string1, string2):
             tr2.setColor(r, g, b, a)
             crTitleTxt2.addItem(tr2)
         pp = Polygon()
-        (r, g, b, a) = rgbaConvert(80, 139, 200, 255)
-        (r2, g2, b2, a2) = rgbaConvert(82, 121, 161, 255)
+        (r, g, b, a) = (rgbaConvert(80, 139, 200, 255) if not severe else rgbaConvert(200, 0, 0, 255))
+        (r2, g2, b2, a2) = (rgbaConvert(82, 121, 161, 255) if not severe else rgbaConvert(161, 0, 0, 255))
         pp.addVertex(bgSide, 0, r2, g2, b2, a2)
         pp.addVertex(0, bgSide, r2, g2, b2, a2)
         pp.addVertex(0, bg1H, r, g, b, a)
@@ -489,12 +492,13 @@ def ldlWatchSlide(p, grList, duration):
     return
 
 def slide(p, gr, time, dur, dest):
-    
+    #pass
     sx, sy = gr.position()
     es = EffectSequencer(gr)
     es.addEffect(NullEffect(None), int(time))
     es.addEffect(Slider(None, (dest[0]-sx)/dur, (dest[1]-sy)/dur), int(dur))
-    p.addItem(gr)
+    #p.addItem(gr)
+    p.addItem(es)
 
 def clipObj(p, gr, left=0, right=720, top=720, bottom=0):
     c = Clipper(gr)

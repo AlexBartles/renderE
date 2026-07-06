@@ -8,3 +8,4 @@ numpy
 miniaudio
 python-dateutil
 audioop-lts; python_version >= "3.13"
+freetype

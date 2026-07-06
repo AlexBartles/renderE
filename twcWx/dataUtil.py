@@ -3,7 +3,7 @@
 # Decompiled from: Python 3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]
 # Embedded file name: dataUtil.py
 # Compiled at: 2005-12-01 07:18:53
-import twccommon, twcWx.SkyCondMapping as sky, twcWx.TextFcstMapping as txt, twcWx.IncidentTypeMapping as inc, twcWx.BackgroundMusicMapping as bkgMusic, twcWx.PromoMessageMapping as promoMsg, twcWx.WelcomeMessageMapping as welcomeMsg , twcWx.HolidayThemeMapping as holidayTheme
+import twc, twccommon, twc.dsmarshal as dsm, twcWx.SkyCondMapping as sky, twcWx.TextFcstMapping as txt, twcWx.IncidentTypeMapping as inc, twcWx.BackgroundMusicMapping as bkgMusic, twcWx.PromoMessageMapping as promoMsg, twcWx.WelcomeMessageMapping as welcomeMsg, twcWx.HolidayThemeMapping as holidayTheme, twcWx.SnowAccumMapping as snowAccum
 incidentTypeMap = inc.IncidentTypeMapping(1)
 
 def getIncidentType(typeID, mappingFile, default=None):
@@ -112,14 +112,29 @@ def getHolidayThemeList(mappingFile):
 
 
 def getHolidayTheme(date, mappingFile):
+    if twc.personality == "Texarkana":
+        severe = dsm.defaultedGet("SevereMode", 0)
+        if severe:
+            return twccommon.Data(holiday="severe", R=255, G=0, B=0)
     list = holidayThemeMap.getList(mappingFile)
     holiday = None
     for h in list:
         if date == h.date:
-            holiday = h.holiday
+            holiday = h
             break
     return holiday
-    
+
+snowMap = snowAccum.SnowAccumMapping(1)
+
+def getSnowMapping(code, mappingFile, default=None):
+    result = snowMap.get(code, mappingFile)
+    if result == None:
+        if default == None:
+            result = twccommon.Data(label='', inches='')
+        else:
+            result = default
+    return result
+    return
 
 def validateAttr(obj, attrs):
     for attr in attrs:

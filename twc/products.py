@@ -5,7 +5,7 @@
 # Compiled at: 2007-01-12 11:17:30
 import lxml.etree, string, twc.DataStoreInterface as ds, twc.dsmarshal as dsm, twc.psp, twccommon, xml.dom.minidom
 from functools import reduce
-import loadtools
+import loadhelpers
 import os
 class Product:
 
@@ -18,6 +18,7 @@ class Product:
         self.__data = twc.Data()
         self.__testData = twc.Data()
         self.__label = []
+        self._data = self.__data
         return
 
     def getName(self):
@@ -261,7 +262,10 @@ def _toString(node):
 import functools, nethandler
 implid = 0
 
-from patches import filterfixer9000, unprint
+def filterfixer9000(fun, it):
+    return list(filter(fun, it))
+
+from patches import unprint
 import traceback
 import sys
 
@@ -276,7 +280,7 @@ def _processImpls(impls):
     ns["functools"] = functools
     ns["filterfixer9000"] = filterfixer9000
     try:
-        code = loadtools.fixsort(unprint(py)).replace("os.access", "newaccess").replace("os.stat", "newstat").replace("os.path.exists", "newexists").replace("filter", "filterfixer9000").replace("os.path.join", "newjoin").replace("    \t", "        ").replace("\t", "        ")
+        code = loadhelpers.fixsort(unprint(py)).replace("os.access", "newaccess").replace("os.stat", "newstat").replace("os.path.exists", "newexists").replace("filter", "filterfixer9000").replace("os.path.join", "newjoin").replace("    \t", "        ").replace("\t", "        ")
     except:
         print(traceback.format_exc(), file=sys.stderr)
         raise

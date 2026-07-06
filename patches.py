@@ -2,11 +2,16 @@ import string
 import time
 import nethandler
 import os
+import sys
 import rendereglobals as rg
-import loadtools
 from pathlib import PurePath
 import builtins
 import types
+
+def renderel(*args):
+    print(*args, file=sys.stderr)
+builtins.__dict__["renderElog"] = renderel #for testing purposes only
+
 
 def newrange(*args):
     if len(args) == 1:
@@ -89,9 +94,6 @@ def newstat(path):
         tb.print_exc()
         print(path)
 
-def filterfixer9000(fun, it):
-    return list(filter(fun, it))
-
 def newexists(path):
     if path.startswith("/twc/data/map.cuts"):
         return os.path.exists(path.replace("/twc/data/map.cuts", rg.newjoin(os.environ["TWCPERSDIR"], "data", "map.cuts")))
@@ -126,9 +128,10 @@ iid = 0
 def revmap(*args):
     return list(map(*args))
 
+import loadhelpers
 def runrs(filename):
     global iid
-    crs = loadtools.compilers(filename)
+    crs = loadhelpers.compilers(filename)
     print(type(crs))
     ns = {"apply": apply, "newaccess": newaccess, "newexists": newexists, "newstat": newstat, "newjoin": rg.newjoin, "range": newrange, "map": revmap, "newisfile": newisfile, "newstrftime": newstrftime}
     try:
