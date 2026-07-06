@@ -12,6 +12,11 @@ def renderel(*args):
     print(*args, file=sys.stderr)
 builtins.__dict__["renderElog"] = renderel #for testing purposes only
 
+def execfile(filename, globa=None, loca=None):
+    with open(filename, "r", encoding="windows-1252") as f:
+        exec(f.read(), globa, loca)
+
+builtins.__dict__["execfile"] = execfile
 
 def newrange(*args):
     if len(args) == 1:
