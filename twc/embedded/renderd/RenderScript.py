@@ -193,15 +193,15 @@ class Character:
             shadowimage = Img.new("RGB", alpha.size, tuple([round(i*255) for i in font.scol]))
             mainimage.putalpha(alpha)
             shadowimage.putalpha(alpha)
-            self.pilimage = Img.new("RGBA", (alpha.size[0]+font.sx, alpha.size[1]+font.sy))
-            self.pilimage.paste(shadowimage, (font.sx, font.sy), shadowimage)
-            self.pilimage.alpha_composite(mainimage, (0, 0))
+            pilimage = Img.new("RGBA", (alpha.size[0]+font.sx, alpha.size[1]+font.sy))
+            pilimage.paste(shadowimage, (font.sx, font.sy), shadowimage)
+            pilimage.alpha_composite(mainimage, (0, 0))
         else:
-            self.pilimage = Img.new("RGB", alpha.size, color)
-            self.pilimage.putalpha(alpha)
+            pilimage = Img.new("RGB", alpha.size, color)
+            pilimage.putalpha(alpha)
         
         buf = BytesIO()
-        self.pilimage.save(buf, "BMP")
+        pilimage.save(buf, "BMP")
         bv = buf.getvalue()
         self.image = rg.rl.load_image_from_memory(".bmp", bv, len(bv))
         rg.rl.image_alpha_premultiply(self.image)
@@ -685,9 +685,12 @@ def build_glyph_list(x, y, s, col, font : TTFont, top=False):
     xx = x+0
     yy = y+0
     
-    glyphs = []
+    char_to_glyph = {}
+    glist = set()
+    clist = {}
     i = 1
     for char in s:
+        glist.add(char)
         last_char = (i == len(s))
         if char == "\n":
             xx = x+0
@@ -696,7 +699,10 @@ def build_glyph_list(x, y, s, col, font : TTFont, top=False):
             character = font.get_char(char, col)
             if not character.empty:
                 offset = -character.image.height+character.bearing
-                glyphs.append([char, int(xx)+character.hbearing, yy+offset])
+                if char not in char_to_glyph:
+                    char_to_glyph[char] = []
+                    clist[char] = character
+                char_to_glyph[char].append([int(xx)+character.hbearing, yy+offset])
             xx += character.advance
             if font.font.has_kerning and not last_char:
                 if not s[i] == "\n":
@@ -708,9 +714,10 @@ def build_glyph_list(x, y, s, col, font : TTFont, top=False):
     if top:
         under = font.get_char("_", col)
         yo = under.image.height - under.bearing + 4
-        for g in glyphs:
-            g[2] = g[2] + yo
-    return glyphs
+        for g in glist:
+            for c in char_to_glyph[g]:
+                c[2] = c[2] + yo
+    return glist, clist, char_to_glyph
 
 class Text(GraphicRenderable):
 
@@ -895,6 +902,9 @@ class CompositedImage(Image):
             rg.rl.unload_render_texture(self.ftex)
             self.ftex = None
 
+    def bounds(self):
+        return None
+
     def addItem(self, child):
         self.items.append(child)
         return
@@ -965,11 +975,13 @@ class CompositeRenderable(GraphicRenderable):
         self.items.append(child)
         return
 
-    def size(self):
+    def bounds(self):
         top = None
         right = None
-        bottom = 0
         left = 0
+        bottom = 0
+        tleft = None
+        tbottom = None
         for child in self.items:
             pos = child.position()
             size = child.size()
@@ -982,6 +994,14 @@ class CompositeRenderable(GraphicRenderable):
             else:
                 top = max(top, pos[1]+size[1])
             #keep track of left and bottom, might be useful?
+            if not tleft:
+                tleft = pos[0]
+            else:
+                tleft = min(tleft, pos[0])
+            if not tbottom:
+                tbottom = pos[1]
+            else:
+                tbottom = min(tbottom, pos[1])
             left = min(pos[0], left)
             bottom = min(pos[1], bottom)
         if not top:
@@ -989,8 +1009,12 @@ class CompositeRenderable(GraphicRenderable):
         if not right:
             right = 0
         
-        return (abs(right), abs(top))
+        return (left, bottom, right, top, tleft, tbottom)
         #return (abs(right-left), abs(top-bottom))
+    
+    def size(self):
+        b = self.bounds()
+        return (abs(b[2]), abs(b[3]))
     
     def bsize(self):
         xx, yy = self.position()

@@ -860,7 +860,7 @@ else:
 
     rl.set_shader_value(lclipshader, disablelc, rl.ffi.new("int *", 0), rl.ShaderUniformDataType.SHADER_UNIFORM_INT)
 
-    def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False, off=(0, 0), premult=False, clipoverride=None, skip=False, forcebilinear=False, se2=False, ho=(0, 0), hw=None, clo=0):
+    def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False, off=(0, 0), premult=False, clipoverride=None, skip=False, forcebilinear=False, se2=False, ho=(0, 0), hw=None, clo=0, crb=None):
         effects = quad.effects
         #rl.set_texture_filter(tex, rl.TextureFilter.TEXTURE_FILTER_POINT)
         plane.materials[0].maps.texture = tex
@@ -941,11 +941,14 @@ else:
         q_width = quad._size[0]
         q_height = quad._size[1]
         
+        x_off = 0
+        y_off = 0
+        
         def applyeffect(effect : GraphicEffect):
             if hasattr(effect, "frame"):
                 if not effect.frozen and not se and not se2:
                     effect.frame += 1
-            nonlocal q_width, q_height, mat, xxw, yyw, fader, qx, qy, visible, clipx, clipy, clipw, cliph, absclip_left, absclip_right, absclip_top, absclip_bottom, total_angle_x, total_angle_y, total_angle_z, clipoverride_override, forcebilinear
+            nonlocal x_off, y_off, q_width, q_height, mat, xxw, yyw, fader, qx, qy, visible, clipx, clipy, clipw, cliph, absclip_left, absclip_right, absclip_top, absclip_bottom, total_angle_x, total_angle_y, total_angle_z, clipoverride_override, forcebilinear
             if type(effect) == Rotate:
                 if effect.xr:
                     mat = rl.matrix_multiply(mat, rl.matrix_rotate_x(math.radians(effect.angle*effect.frame)))
@@ -981,6 +984,9 @@ else:
                 q_width *= (1+pX)
                 q_height *= (1+pY)
                 forcebilinear = True
+                if crb:
+                    qx -= crb[4] * pX
+                    qy -= crb[5] * pY
             elif type(effect) == SetPosition:
                 if not se:
                     #xxw = (-quad._size[0]/2-effect.x)/720*(xxx*2)
@@ -1547,11 +1553,12 @@ else:
             rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA_PREMULTIPLY)
             ccol = tuple([round(c*255) for c in item._color])
             if item.glist:
-                items = item.glist
+                glist, clist, ctg = item.glist
             else:
-                items = build_glyph_list(*item._position, item.s, ccol, item.fnt, top=(scr and not item.fnt.shadow))
-                item.glist = items
+                glist, clist, ctg = build_glyph_list(*item._position, item.s, ccol, item.fnt, top=(scr and not item.fnt.shadow))
+                item.glist = glist, clist, ctg
             xo = 0
+            yo = item.fnt.sy * (scr and item.fnt.shadow)
             if type(item) == Marquee:
                 item.pos += item.step
                 item.pos %= ((item.ksize or get_text_size(item.s, tuple([round(c*255) for c in item._color]), item.fnt, item))[0]+(720 if not item.bounds else item.bounds[0]))
@@ -1565,30 +1572,35 @@ else:
                 #xo = 0
             i = 0
             ho = (0, 0)
-            for c, x, y in items:
-                char = item.fnt.get_char(c, ccol)
+            for g in glist:
+                if g not in clist:
+                    continue
+                char = clist[g]
                 char.load()
-                if i == 0:
-                    ho = (x+0, y+0)
-                skip = False
-                clipo = None
-                if isinstance(item, Marquee):
-                    if (x-xo-item._position[0]) > item.bounds[0]:
-                        skip = True
-                    if (x-xo-item._position[0]+char.image.width) < 0:
-                        skip = True
-                    clipo = (*item._position, *item.bounds)
-                else:
-                    if extra.get("off") and scr:
-                        if (x-xo+extra["off"][0]) > activedrawlayer[8]-activedrawlayer[12]:
+                ciw = char.image.width
+                cih = char.image.height
+                for x, y in ctg[g]:
+                    if i == 0:
+                        ho = (x+0, y+0)
+                    skip = False
+                    clipo = None
+                    if isinstance(item, Marquee):
+                        if (x-xo-item._position[0]) > item.bounds[0]:
                             skip = True
-                        if (x-xo+extra["off"][0]+char.image.width) < -activedrawlayer[12]:
+                        if (x-xo-item._position[0]+ciw) < 0:
                             skip = True
-                    
-                if not skip:
-                    draw_quad(DummyQuad(x-xo, y, char.image.width, char.image.height, item.effects, visible=item.visible, seq_start_after=item.seq_start_after, added=item.added), char.texture, off=extra["off"], premult=True, se2=(i!=0), ho=(x-ho[0], y-ho[1]), hw=item.size(), clo=(xo * 2 * (type(item) is Clock)), clipoverride=clipo)
-                i += 1
-                #draw_quad(item, item.cachedtex, off=extra["off"], premult=True, skip=(scr and not item.fnt.shadow))
+                        clipo = (item._position[0], item._position[1]-5, item.bounds[0], item.bounds[1]+10)
+                    else:
+                        if extra.get("off") and scr:
+                            if (x-xo+extra["off"][0]) > activedrawlayer[8]-activedrawlayer[12]:
+                                skip = True
+                            if (x-xo+extra["off"][0]+ciw) < -activedrawlayer[12]:
+                                skip = True
+                        
+                    if not skip:
+                        draw_quad(DummyQuad(x-xo, y+yo, ciw, cih, item.effects, visible=item.visible, seq_start_after=item.seq_start_after, added=item.added), char.texture, off=extra["off"], premult=True, se2=(i!=0), ho=(x-ho[0], y-ho[1]), hw=item.size(), clo=(xo * 2 * (type(item) is Clock)), clipoverride=clipo)
+                    i += 1
+                    #draw_quad(item, item.cachedtex, off=extra["off"], premult=True, skip=(scr and not item.fnt.shadow))
             if DEBUG:
                 draw_quad(DummyQuad(item._position[0], item._position[1]-2, item._size[0], 2, [], added=item.added), red if isinstance(item, Text) else orange, off=extra["off"], premult=True)
             #rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA_PREMULTIPLY)
@@ -1691,7 +1703,8 @@ else:
                 # el
                 #rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA_PREMULTIPLY)
                 clo = None if not type(item) is ScrollingCompositeRenderable else (*item._position, *item.bbox)
-                draw_quad(DummyQuad(0, 0, *screensize, effects=item.effects, visible=item.visible, added=item.added, clipping_override=clo), item.ftex.texture, se=True, premult=True, clipoverride=clo)
+                b = item.bounds()
+                draw_quad(DummyQuad(0, 0, *screensize, effects=item.effects, visible=item.visible, added=item.added, clipping_override=clo), item.ftex.texture, se=True, premult=True, clipoverride=clo, crb=b)
                 rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA)
             else:
                 #rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA_PREMULTIPLY)
@@ -1703,7 +1716,8 @@ else:
                 rl.rl_disable_depth_mask()
                 drawlevel += 1
                 clo = None
-                draw_quad(DummyQuad(0, 0, *screensize, effects=item.effects, visible=item.visible, added=item.added, clipping_override=clo), item.ftex.texture, se=True, premult=True)
+                b = item.bounds()
+                draw_quad(DummyQuad(0, 0, *screensize, effects=item.effects, visible=item.visible, added=item.added, clipping_override=clo), item.ftex.texture, se=True, premult=True, crb=b)
                 drawlevel -= 1
                 rl.end_mode_3d()
                 mode_3d_tracker -= 1
