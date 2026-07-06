@@ -35,3 +35,9 @@ encodE is a data encoder bundled with RenderE. To use it, follow these instructi
 1. Set up renderE (including configuration)
 2. While renderE is running, run encodE.py
 3. Run a local forecast using the commands
+
+* `-ns` and `--nosensor` disable SENSOR data that causes CC to show a mixed-case title
+* `-wxs` and `--weatherscan` enable a mode that works with Weatherscan
+* `-nb` and `--nobulletins` disables bulletins
+* `-nt` and `--notraffic` disables traffic (if a key is added to the file)
+* `-c` and `--calm` run data encoding at a slower pace to use less CPU
