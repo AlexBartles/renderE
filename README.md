@@ -41,3 +41,7 @@ encodE is a data encoder bundled with RenderE. To use it, follow these instructi
 * `-nb` and `--nobulletins` disables bulletins
 * `-nt` and `--notraffic` disables traffic (if a key is added to the file)
 * `-c` and `--calm` run data encoding at a slower pace to use less CPU
+
+## Support
+
+Support is available in [our Discord server](https://discord.gg/tRkZFVy82u)!
