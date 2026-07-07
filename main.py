@@ -3,6 +3,8 @@ if __name__ != "__main__":
     print("ggwp")
     import tscard
 else:
+    print("Adding patches...")
+    import patches
     renderElog("Loading renderE...")
     import os
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
@@ -52,8 +54,6 @@ else:
     import json
     import traceback as tb
     from datetime import datetime
-    renderElog("Adding patches...")
-    import patches
     renderElog("Importing dsmarshal...")
     import twc.dsmarshal as dsm
     import pickle
