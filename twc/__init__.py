@@ -10,6 +10,7 @@ import nethandler
 Data = twccommon.Data
 DefaultedData = twccommon.DefaultedData
 
+forceInactive = False
 personality = nethandler.personality
 personalityCode = ["Perris", "Texarkana", "WxScan", "FlatRock", "Watt"].index(personality)
 

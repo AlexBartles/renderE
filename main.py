@@ -3,19 +3,29 @@ if __name__ != "__main__":
     print("ggwp")
     import tscard
 else:
+    renderElog("Loading renderE...")
     import os
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    renderElog("Importing rendereglobals...")
     import rendereglobals as rg
+    renderElog("Importing receiverE...")
     import receivere
+    renderElog("Importing loadhelpers...")
     import loadhelpers
     import math
     from PIL import Image
     from io import BytesIO
+    renderElog("Importing RenderScript...")
     from twc.embedded.renderd.RenderScript import *
+    renderElog("Importing RenderControl...")
     import twc.embedded.renderd.RenderControl as RenderControl
+    renderElog("Importing renderUtil...")
     import twc.embedded.renderd.renderUtil as renderUtil
+    renderElog("Importing renderTools...")
     import domestic.renderTools as renderTools
+    renderElog("Importing twc...")
     import twc
+    renderElog("Importing twccommon.embedded...")
     import twccommon.embedded
     import domesticpy.conf.receiverd
     #wccommon.embedded.runconfpy(os.path.join(os.path.dirname(__file__), "domesticpy", "conf", "receiverd.py"))
@@ -27,6 +37,7 @@ else:
 
     import builtins
 
+    renderElog("Importing playman...")
     if twc.personality == "WxScan":
         import wxscanpy.plugin.playman.playCmd.local as pmlc
         import wxscanpy.plugin.playman.playCmd.pm as pm
@@ -41,11 +52,16 @@ else:
     import json
     import traceback as tb
     from datetime import datetime
+    renderElog("Adding patches...")
     import patches
+    renderElog("Importing dsmarshal...")
     import twc.dsmarshal as dsm
     import pickle
     import argparse
+    renderElog("Importing tscard...")
     import tscard
+    
+    renderElog("Imports done!")
 
     rg.pg.mixer.init(frequency=48000, size=-16, channels=2)
 
@@ -64,9 +80,11 @@ else:
     aparse.add_argument("-o", "--offline", action="store_true", help="Disabled network connectivity.")
     aparse.add_argument("-g", "--grateful", action="store_true", help="Signifies that you are grateful for what you already have, and that you wouldn't like any more TWC content.")
     aparse.add_argument("-bgm", "--bgmplayer", action="store_true", help="Enables a music player that shuffles all files in the \"bgm\" folder.")
+    aparse.add_argument("-v", "--verbose", action="store_true", help="Adds a lot of additional logging")
     args = aparse.parse_args()
 
     grateful = args.grateful
+    VERBOSE = args.verbose
 
     import nethandler as nh
     nh.offline = args.offline
@@ -87,7 +105,11 @@ else:
     zzz = 1
     rl = rg.rl
 
+    if VERBOSE:
+        renderElog("Setting window config flags...")
     rl.set_config_flags((rl.ConfigFlags.FLAG_WINDOW_UNDECORATED * args.noframe) | (rl.ConfigFlags.FLAG_WINDOW_TRANSPARENT * args.trans) | rl.ConfigFlags.FLAG_WINDOW_ALWAYS_RUN | rl.ConfigFlags.FLAG_WINDOW_HIGHDPI)
+    if VERBOSE:
+        renderElog("Binding data socket (localhost:7245)...")
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     sock.bind(("localhost", 7245))
@@ -150,6 +172,8 @@ else:
     ]
 
     fortune = random.choice(splashes)
+    if VERBOSE:
+        renderElog("Initializing window...")
     rl.init_window(screensize[0], screensize[1], f"{random.choice(names)} - {fortune}")
 
     camera = rl.Camera3D(
@@ -192,6 +216,8 @@ else:
     runrsc = patches.runrsc
 
     def sockethandle():
+        if VERBOSE:
+            renderElog("Socket handler initialized!")
         sock.listen()
         while True:
             conn, addr = sock.accept()
@@ -295,8 +321,10 @@ else:
 
     tth = th.Thread(target=sockethandle, daemon=True)
     tth.start()
+    if VERBOSE:
+        renderElog("Socket handler thread started.")
 
-    prodloader = pm._ProdLoader()
+    #prodloader = pm._ProdLoader()
 
     def fsplash():
         l = Layer()
@@ -550,8 +578,10 @@ else:
         RenderControl.setLayer("Foreground", l, 0, 0)
 
     #producttest()
-    RenderControl.queueCommand(ActivateLayerCmd("Foreground"), time.time()+1)
+    #RenderControl.queueCommand(ActivateLayerCmd("Foreground"), time.time()+1)
 
+    if VERBOSE:
+        renderElog("Generating debug images...")
     whiteimg = rl.gen_image_color(1, 1, rl.WHITE)
     white = rl.load_texture_from_image(whiteimg)
     redimg = rl.gen_image_color(1, 1, rl.RED)
@@ -635,6 +665,8 @@ else:
 
     setposition_absolute = (twc.personalityCode > 2)
 
+    if VERBOSE:
+        renderElog("Creating transformation matrices...")
     ident = rl.matrix_identity()
     r90 = rl.matrix_rotate_xyz((math.radians(90), 0, math.radians(0)))
     xyt = rl.matrix_translate(-xxx, -yyy, 0)
@@ -825,6 +857,8 @@ else:
     }
     """
 
+    if VERBOSE:
+        renderElog("Loading shaders...")
     lclipshader = rl.load_shader_from_memory(ps, lclipfs)
     defaultshader = rl.load_shader_from_memory(ps, fs)
 
@@ -847,6 +881,9 @@ else:
     renh = rl.get_shader_location(lclipshader, "renderh")
 
     disablelc = rl.get_shader_location(lclipshader, "disablelayerclip")
+
+    if VERBOSE:
+        renderElog("Setting shader defaults...")
 
     rl.set_shader_value(lclipshader, bloc5, rl.ffi.new('float *', float(0)), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
     rl.set_shader_value(lclipshader, bloc6, rl.ffi.new('float *', float(0)), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
@@ -1774,7 +1811,11 @@ else:
             pass
             #print("drawing unrecognized type: ", type(item))
 
+    if VERBOSE:
+        renderElog("Initializing playman...")
     import playmaninit
+    if VERBOSE:
+        renderElog("Playman initialized!...")
 
     vimg = rl.gen_image_checked(*screensize, 40, 40, rl.BLACK, rl.WHITE)
     vtex = rl.load_texture_from_image(vimg)
@@ -1796,13 +1837,13 @@ else:
 
     MUTE = False
 
-    print("init mixer")
-
     if sdi:
-        print("Waiting for SDI...")
+        renderElog("Waiting for SDI...")
         sdih = tscard.Handler(tscard.SDI_URL)
 
     if twc.personality == "WxScan":
+        if VERBOSE:
+            renderElog("Initializing WxScan ticker...")
         import wxscanpy.plugin.playman.playCmd.rsload as pmrs
         def wxsloadthread():
             #sendSignal('playman', 'playCmd.backgroundMusic.load', ""),
@@ -1832,12 +1873,14 @@ else:
                     time.sleep(0.1)
 
     if music_player:
+        if VERBOSE:
+            renderElog("Starting music player...")
         th.Thread(target=musicplayer).start()
-
-    import pygame
     
     select_layer = -1
     SELECT_ENABLE = False
+    if VERBOSE:
+        renderElog("Starting main loop!")
     while not rl.window_should_close():
         ft = 0
         pmbl.idle()
