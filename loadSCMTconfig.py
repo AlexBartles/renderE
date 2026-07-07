@@ -7,11 +7,7 @@ import os, sys
 import patches
 import rendereglobals as rg
 import twc
-if twc.personality == "WxScan":
-    import wxscanpy.plugin.playman.playCmd.bulletin as bulletin
-else:
-    import domesticpy.plugin.playman.playCmd.bulletin as bulletin
-bulletin.forceInactive = True
+twc.forceInactive = True
 import playmaninit
 import twccommon.Log
 import twc.dsmarshal
@@ -22,9 +18,7 @@ ds = twc.DataStoreInterface
 dsm = twc.dsmarshal
 wxdata = domestic.wxdata
 
-def execfile(filename, globa=None, loca=None):
-    with open(filename, "r", encoding="windows-1252") as f:
-        exec(f.read(), globa, loca)
+
 
 def do_absolutely_nothing(*args, **kwargs):
     print("abort:")

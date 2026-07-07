@@ -3,7 +3,7 @@
 # Decompiled from: Python 3.13.7 (main, Aug 14 2025, 11:12:11) [Clang 17.0.0 (clang-1700.0.13.3)]
 # Embedded file name: bulletin.py
 # Compiled at: 2007-01-12 11:33:37
-import domestic, domestic.dataUtil, domestic.BulletinInfo, os, time, twc.dsmarshal, twc.DataStoreInterface, twccommon, twccommon.Log
+import domestic, domestic.dataUtil, domestic.BulletinInfo, os, time, twc, twc.dsmarshal, twc.DataStoreInterface, twccommon, twccommon.Log
 from functools import cmp_to_key
 ds = twc.DataStoreInterface
 dsm = twc.dsmarshal
@@ -19,7 +19,6 @@ _lastRotation = None
 _rotation = None
 _crawlActive = 0
 _firstLoad = 1
-forceInactive = 0
 
 def init(config):
     global _config
@@ -30,7 +29,7 @@ def init(config):
     Log.info('initializing bulletin plugin')
     _params = twccommon.Data()
     active = dsm.defaultedGet(DSKEY_CRAWL_ACTIVE, 1)
-    if active and not forceInactive:
+    if active and not twc.forceInactive:
         _activate(1)
     setCountyInterestList(_interestlist)
     return
@@ -99,6 +98,8 @@ def getPlaylistName():
 
 import domesticpy.plugin.playman.playCmd.pm as pm
 def load():
+    if twc.forceInactive:
+        return
     global _crawlActive
     global _firstLoad
     id = BULLETIN_LAYER_ID
@@ -143,6 +144,8 @@ def load():
 
 
 def run(activate):
+    if twc.forceInactive:
+        return
     activate = int(activate)
     if activate == _crawlActive:
         if activate:

@@ -3,7 +3,7 @@
 # Decompiled from: Python 3.13.7 (main, Aug 14 2025, 11:12:11) [Clang 17.0.0 (clang-1700.0.13.3)]
 # Embedded file name: bulletin.py
 # Compiled at: 2007-05-14 11:20:55
-import wxscan, wxscan.dataUtil, wxscan.BulletinInfo as BulletinInfo, os, time, twc.dsmarshal as dsm, twc.DataStoreInterface as ds, twccommon, twccommon.Log as Log, twc.MiscCorbaInterface, wxscan.RunLog, rendereglobals as rg
+import wxscan, wxscan.dataUtil, wxscan.BulletinInfo as BulletinInfo, os, time, twc.dsmarshal as dsm, twc, twc.DataStoreInterface as ds, twccommon, twccommon.Log as Log, twc.MiscCorbaInterface, wxscan.RunLog, rendereglobals as rg
 from functools import cmp_to_key
 
 DSKEY_ILIST_COUNTY = 'interestlist.county'
@@ -88,6 +88,8 @@ def cancelList(l):
 
 
 def load():
+    if twc.forceInactive:
+        return
     dstName = wxscan.buildPresentationScript(_params.bulletinDir, _config.tempDir, 'Misc', 0, 'SevereWeatherCrawl', 0, _params)
     rg.runrsfunction(dstName)
     return

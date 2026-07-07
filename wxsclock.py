@@ -319,10 +319,6 @@ def run():
     return
 
 
-def execfile(filename, globa, loca):
-    with open(filename, "r", encoding="windows-1252") as f:
-        exec(compile(f.read(), filename, 'exec'), globa, loca)
-
 import clockConfig
 def main():
     global _config

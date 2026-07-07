@@ -23,6 +23,8 @@ def init(config):
 
 
 def load(id, duration, expire, schedules, params, runlogEvents=None):
+    if twc.forceInactive:
+        return
     global _bkgImage
     try:
         if twc.personalityCode > 2:
@@ -59,6 +61,8 @@ def load(id, duration, expire, schedules, params, runlogEvents=None):
 
 
 def run(id, startTime, startFrame, params=None):
+    if twc.forceInactive:
+        return
     argData = _presentations[id]
     del _presentations[id]
     argData.startTime = startTime

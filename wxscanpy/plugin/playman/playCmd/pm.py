@@ -23,6 +23,8 @@ def init(config):
 
 
 def load(playlist, startTime, newClock):
+    if twc.forceInactive:
+        return
     global _lastPlaylist
     if newClock:
         _lastPlaylist = None

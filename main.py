@@ -635,6 +635,9 @@ else:
 
     setposition_absolute = (twc.personalityCode > 2)
 
+    ident = rl.matrix_identity()
+    r90 = rl.matrix_rotate_xyz((math.radians(90), 0, math.radians(0)))
+    xyt = rl.matrix_translate(-xxx, -yyy, 0)
     def calceffects(quad):
         qqx, qqy = quad._position
         effects = quad.effects
@@ -647,7 +650,7 @@ else:
         xw = quad._size[0]/screensize[0]*(xxx*2)
         yw = quad._size[1]/screensize[1]*(yyy*2)
         
-        mat = rl.matrix_rotate_xyz((math.radians(90), 0, math.radians(0)))
+        mat = r90
         mat = rl.matrix_multiply(mat, rl.matrix_scale(xw, yw, 1))
         fader = 1
         visible = not not quad.visible
@@ -714,7 +717,7 @@ else:
         # yyw = (-qy-quad._size[1]/2)/480*(yyy*2)
         xxw = -round(qx)/screensize[0]*(xxx*2)
         yyw = -round(qy)/screensize[1]*(yyy*2)
-        mat = rl.matrix_multiply(mat, rl.matrix_translate(-xxx, -yyy, 0))
+        mat = rl.matrix_multiply(mat, xyt)
         if drawlevel == 0:
             xxw -= ((activedrawlayer[6]+activedrawlayer[12])/screensize[0]*(xxx*2))*activedrawlayer[10]
             yyw -= ((activedrawlayer[7]+activedrawlayer[13])/screensize[1]*(yyy*2))*activedrawlayer[11]
@@ -931,7 +934,7 @@ else:
         
         
         
-        mat = rl.matrix_identity()
+        mat = ident
         fader = 1
         visible = quad.visible*1
         total_angle_x = 0
@@ -1057,11 +1060,11 @@ else:
             xw *= activedrawlayer[10]
             yw *= activedrawlayer[11]
         mat = rl.matrix_multiply(rl.matrix_scale(xw, yw, 1), mat)
-        mat = rl.matrix_multiply(rl.matrix_rotate_xyz((math.radians(90), 0, math.radians(0))), mat)
+        mat = rl.matrix_multiply(r90, mat)
         
         if total_angle_x % 360 != 0 or total_angle_y % 360 != 0 or total_angle_z % 360 != 0:
             forcebilinear = True
-        mat = rl.matrix_multiply(mat, rl.matrix_translate(-xxx, -yyy, 0))
+        mat = rl.matrix_multiply(mat, xyt)
         if drawlevel == 0:
             xxw = (-qx-(q_width/2*activedrawlayer[10])-activedrawlayer[6]-activedrawlayer[12])/screensize[0]*(xxx*2)
             yyw = (-qy-(q_height/2*activedrawlayer[11])-activedrawlayer[7]-activedrawlayer[13])/screensize[1]*(yyy*2)

@@ -715,8 +715,10 @@ def build_glyph_list(x, y, s, col, font : TTFont, top=False):
         under = font.get_char("_", col)
         yo = under.image.height - under.bearing + 4
         for g in glist:
+            if g not in char_to_glyph:
+                continue
             for c in char_to_glyph[g]:
-                c[2] = c[2] + yo
+                c[1] = c[1] + yo
     return glist, clist, char_to_glyph
 
 class Text(GraphicRenderable):

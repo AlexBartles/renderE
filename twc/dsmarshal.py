@@ -3,7 +3,7 @@
 # Decompiled from: Python 3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]
 # Embedded file name: dsmarshal.py
 # Compiled at: 2007-01-12 11:17:30
-import sys, twc, twc.DataStoreInterface, twccommon, json, socket, pickle
+import sys, twc.DataStoreInterface, twccommon, json, socket, pickle
 from io import BytesIO
 import nethandler as nh
 ds = twc.DataStoreInterface
@@ -61,9 +61,9 @@ def set(key, data, expiration, update=0, session=0):
         #todo: what
         if (not hasattr(t1, "__dict__")) or (not hasattr(t2, "__dict__")):
             raise RuntimeError('cannot update non-instance type')
-        userData = twc.Data()
+        userData = twccommon.Data()
         userData.__dict__.update(data.__dict__)
-        temp = twc.Data()
+        temp = twccommon.Data()
         temp.__dict__.update(oldData.__dict__)
         temp.__dict__.update(data.__dict__)
         data = temp
@@ -155,7 +155,7 @@ def multiGet(keys, cachingEnabled=None, session=0):
         formatKey = '%s._dsmarshal' % key
         dsKeys.append(key)
         dsKeys.append(formatKey)
-        d = twc.Data()
+        d = twccommon.Data()
         d.formatKey = formatKey
         d.result = None
         d.maker = None
