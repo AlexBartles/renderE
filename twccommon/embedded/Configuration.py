@@ -22,7 +22,7 @@ class Config:
         return
 
     def _finalize(self):
-        rendereglobals.configs[self,]
+        #rendereglobals.configs[self,]
         return
 
     def setPidFileDir(self, dir):

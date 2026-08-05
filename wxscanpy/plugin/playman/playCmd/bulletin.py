@@ -3,7 +3,9 @@
 # Decompiled from: Python 3.13.7 (main, Aug 14 2025, 11:12:11) [Clang 17.0.0 (clang-1700.0.13.3)]
 # Embedded file name: bulletin.py
 # Compiled at: 2007-05-14 11:20:55
-import wxscan, wxscan.dataUtil, wxscan.BulletinInfo as BulletinInfo, os, time, twc.dsmarshal as dsm, twc.DataStoreInterface as ds, twccommon, twccommon.Log as Log, twc.MiscCorbaInterface, wxscan.RunLog
+import wxscan, wxscan.dataUtil, wxscan.BulletinInfo as BulletinInfo, os, time, twc.dsmarshal as dsm, twc, twc.DataStoreInterface as ds, twccommon, twccommon.Log as Log, twc.MiscCorbaInterface, wxscan.RunLog, rendereglobals as rg
+from functools import cmp_to_key
+
 DSKEY_ILIST_COUNTY = 'interestlist.county'
 KEY_SVRMODE = 'SevereMode'
 KEY_SVRMODE_PILS = 'Config.' + dsm.getConfigVersion() + '.severeMode.pilList'
@@ -22,10 +24,10 @@ def init(config):
     _config = twccommon.Data()
     _config.__dict__.update(config.__dict__)
     _params = twc.Data()
-    _params.bulletinDir = '%s/ext/bulletin' % (_config.productRoot,)
+    _params.bulletinDir = '/usr/twc/domestic/products/ext/bulletin'
     _params.layerName = 'Bulletin'
     _params.layerDepth = 90
-    _params.tempDir = '%s/ext/bulletin' % (_config.tempDir,)
+    _params.tempDir = 'temp/ext/bulletin'
     _params.shareDir = ['%s' % (_params.bulletinDir,)]
     wxscan.RunLog.init(_config.runlog)
     setCountyInterestList(_interestlist)
@@ -34,11 +36,12 @@ def init(config):
 
 def idle():
     global _idleCnt
-    if _idleCnt == 10:
+    if _idleCnt >= 10:
         _idleCnt = 0
         now = time.time()
         changed = 0
-        for bulletin in _bulletins.values():
+        bc = _bulletins.copy() #prevent issues caused by expiring
+        for bulletin in bc.values():
             if now >= bulletin.dispExpiration:
                 changed += 1
                 Log.info('bulletin expired %s-%s-%s' % (bulletin.pil, bulletin.pilExt, bulletin.county))
@@ -85,8 +88,10 @@ def cancelList(l):
 
 
 def load():
+    if twc.forceInactive:
+        return
     dstName = wxscan.buildPresentationScript(_params.bulletinDir, _config.tempDir, 'Misc', 0, 'SevereWeatherCrawl', 0, _params)
-    twc.MiscCorbaInterface.runRenderScript(dstName)
+    rg.runrsfunction(dstName)
     return
 
 
@@ -160,11 +165,11 @@ def _selectBulletinRotation(bulletins, windowSize):
     if not bulletins:
         return []
     data = _split(bulletins.values(), (lambda e: e.category))
-    categories = data.keys()
+    categories = list(data.keys())
     categories.sort()
     categories.reverse()
-    bull = data[categories[0]]
-    bull.sort(_compareBulletin)
+    bull = list(data[categories[0]])
+    bull.sort(key=cmp_to_key(_compareBulletin))
     return _debigulate(bull, windowSize)
     return
 
@@ -218,12 +223,12 @@ def _logRotation(rotation, rotationChanged):
 def _setMode(rotation):
     global _lastSvrMode
     spl = dsm.defaultedGet(KEY_SVRMODE_PILS)
-    svrMode = len(filter((lambda e: e.pil in spl), rotation))
+    svrMode = len(list(filter((lambda e: e.pil in spl), rotation)))
     if svrMode != _lastSvrMode:
         _lastSvrMode = svrMode
         dsm.set(KEY_SVRMODE, svrMode, 0)
         ds.commit()
-        twc.MiscCorbaInterface.signalEvent(CHANNEL_NAME, KEY_SVRMODE, str(svrMode))
+        #twc.MiscCorbaInterface.signalEvent(CHANNEL_NAME, KEY_SVRMODE, str(svrMode))
     return
 
 

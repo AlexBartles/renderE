@@ -6,9 +6,9 @@
 import os, sys
 import patches
 import rendereglobals as rg
-import playmaninit
-#import playmaninit
 import twc
+twc.forceInactive = True
+import playmaninit
 import twccommon.Log
 import twc.dsmarshal
 import twc.DataStoreInterface
@@ -18,12 +18,11 @@ ds = twc.DataStoreInterface
 dsm = twc.dsmarshal
 wxdata = domestic.wxdata
 
-def execfile(filename, globa=None, loca=None):
-    with open(filename, "r", encoding="windows-1252") as f:
-        exec(compile(f.read(), filename, 'exec'), globa, loca)
+
 
 def do_absolutely_nothing(*args, **kwargs):
-    return
+    print("abort:")
+    print(args, kwargs)
 
 def main():
     try:
@@ -45,11 +44,7 @@ def main():
     print('Loading configuration: %s' % sys.argv[1])
     twccommon.Log.setIdent('loadSCMTconfig')
     twccommon.Log.info('Loading new configuration %s' % sys.argv[1])  
-    try:
-        execfile(sys.argv[1], {"abortMsg": do_absolutely_nothing, "Log": Log, "ds": ds, "dsm": dsm, "wxdata": wxdata, "twc": twc, "twccommon": twccommon})
-    except SyntaxError:
-        twccommon.Log.info('scmt configuration failed with a SyntaxError')
-        raise
+    execfile(sys.argv[1], {"abortMsg": do_absolutely_nothing, "Log": Log, "ds": ds, "dsm": dsm, "wxdata": wxdata, "twc": twc, "twccommon": twccommon})
 
     ds.commit()
     print('Configuration Complete.')

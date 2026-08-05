@@ -7,36 +7,16 @@ from . import _renderd
 from .RenderScript import *
 import rendereglobals as rg
 
-def unloadLayer(l): #i'd deprecate this but it may still have some sort of value
-    return
-    if isinstance(l, Layer):
-        for page in l.pages:
-            unloadLayer(page)
-    elif isinstance(l, Page):
-        for item in l.elements:
-            unloadLayer(item)
-    elif isinstance(l, CompositeRenderable):
-        for item in l.items:
-            unloadLayer(item)
-        if l.rtex:
-            rg.rl.unload_render_texture(l.rtex)
-        if l.ftex:
-            rg.rl.unload_render_texture(l.ftex)
-    elif isinstance(l, AudioSequencer):
-        for item in l.audio:
-            unloadLayer(item)
-    elif isinstance(l, Text):
-        if l.cachedtex:
-            rg.rl.unload_texture(l.cachedtex)
-    elif isinstance(l, Image):
-        if l.im2:
-            rg.rl.unload_image(l.im2)
-            l.im2 = None
-        if l.texture:
-            rg.rl.unload_texture(l.texture)
-            l.texture = None
+def unloadLayer(l):
+    if l is not None:
+        l.pages = [] #yea they'll PROBABLY get garbage collected
 
+rct = 0
+rctb = 0
+rctf = 0
+import time as t
 def actuallyRunAQueuedCommand(cmd):
+    global rct, rctb, rctf
     print(f"processing command: {type(cmd).__name__}")
     if type(cmd) in (SetLayer, SetLayerCmd):
         ix = -1
@@ -133,6 +113,7 @@ def actuallyRunAQueuedCommand(cmd):
                 ix = i+0
                 break
         if ix > -1:
+            unloadLayer(rg.layers[ix][1])
             rg.layers[ix][1] = cmd.layer
     elif type(cmd) in (ActivateLayer, ActivateLayerCmd):
         ix = -1
@@ -151,7 +132,10 @@ def actuallyRunAQueuedCommand(cmd):
         if ix > -1:
             rg.layers[ix][14] = False
     elif type(cmd) in (LoadPresentation, LoadPresentationCmd):
-        rg.runrscfunction(cmd.fileName)
+        try:
+            rg.runrscfunction(cmd.fileName.replace("\t", "\\t"))
+        except:
+            pass
     print(f"queued command has been processed! new queue length: {len(rg.queuedcommands)}")
 
 def queueCommand(cmd, time=0, frameOffset=0, estimatedCmd=0):
@@ -174,7 +158,7 @@ def modifyNamedLayer(name, newName, depth, repeat, autoDestroy, time=0, frameOff
     cmd = ModifyNamedLayerCmd(name, newName, depth, repeat, autoDestroy)
     return queueCommand(cmd, time, frameOffset)
     return
-
+import time as _time
 
 def setLayer(name, layer, time=0, frameOffset=0):
     cmd = SetLayerCmd(name, layer)

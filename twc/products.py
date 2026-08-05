@@ -5,7 +5,7 @@
 # Compiled at: 2007-01-12 11:17:30
 import lxml.etree, string, twc.DataStoreInterface as ds, twc.dsmarshal as dsm, twc.psp, twccommon, xml.dom.minidom
 from functools import reduce
-import loadtools
+import loadhelpers
 import os
 class Product:
 
@@ -17,10 +17,16 @@ class Product:
         self.__params = params
         self.__data = twc.Data()
         self.__testData = twc.Data()
+        self.__label = []
+        self._data = self.__data
         return
 
     def getName(self):
         return self.__params.product
+        return
+    
+    def getProdInstance(self):
+        return self.__params.prodInst
         return
 
     def getShortName(self):
@@ -84,6 +90,19 @@ class Product:
     def setPageDurations(self, durations):
         self.__pageDurations = durations
         return
+    
+    def getLabel(self):
+        return self.__label
+        return
+
+    def setLabel(self, label):
+        self.__label = label
+        return
+
+    def addLabel(self, label, duration, image=None):
+        d = twc.Data(label=label, duration=duration, image=image)
+        self.__label.append(d)
+        return
 
     def active(self):
         return 1
@@ -110,7 +129,11 @@ class Product:
             reppaths = [e.replace("/usr/twc/domestic", os.environ["RENDEREDOMESTIC"]) for e in inclpaths]
 
             print(reppaths)
-            rsc = twc.psp.evalPage(self.__rs, ns, reppaths+inclpaths)
+            try:
+                rsc = twc.psp.evalPage(self.__rs, ns, reppaths+inclpaths)
+            except:
+                renderElog("ERROR IN GRS", self.getName(), self.getShortName())
+                raise
             return rsc
         elif self.__pres:
             return twc.presToRenderScript(self.__pres, layerName, **ns)
@@ -183,7 +206,12 @@ class ProductLoader:
     def _parseProductDoc(self, doc):
         dom = None
         try:
-            dom = xml.dom.minidom.parseString(doc)
+            try:
+                dom = xml.dom.minidom.parseString(doc)
+            except Exception as e:
+                with open("doc_crash.txt", "w") as f:
+                    f.write(doc)
+                raise e
             impls = dom.documentElement.getElementsByTagName('impl')
             prodClass = _processImpls(impls)
             rss = dom.documentElement.getElementsByTagName('rs')
@@ -202,8 +230,12 @@ class ProductLoader:
 
     def _loadProductFile(self, fname):
         f = None
+        fn2 = nethandler.requestNetAssetExt(fname)
+        #print("Loading Product:", os.path.basename(fname))
+        if fn2 is None:
+            fn2 = fname
         try:
-            f = open(fname)
+            f = open(fn2)
             doc = f.read()
             return self._parseProductDoc(doc)
         finally:
@@ -233,6 +265,10 @@ implid = 0
 def filterfixer9000(fun, it):
     return list(filter(fun, it))
 
+from patches import unprint
+import traceback
+import sys
+
 def _processImpls(impls):
     global implid
     if len(impls) == 0:
@@ -243,7 +279,11 @@ def _processImpls(impls):
     ns["reduce"] = reduce
     ns["functools"] = functools
     ns["filterfixer9000"] = filterfixer9000
-    code = loadtools.fixsort(py).replace("os.access", "newaccess").replace("os.stat", "newstat").replace("filter", "filterfixer9000")
+    try:
+        code = loadhelpers.fixsort(unprint(py)).replace("os.access", "newaccess").replace("os.stat", "newstat").replace("os.path.exists", "newexists").replace("filter", "filterfixer9000").replace("os.path.join", "newjoin").replace("    \t", "        ").replace("\t", "        ")
+    except:
+        print(traceback.format_exc(), file=sys.stderr)
+        raise
     implid += 1
     exec(code, ns, ns)
     prodClass = ns['Product']

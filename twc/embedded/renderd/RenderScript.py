@@ -8,6 +8,25 @@ import rendereglobals as rg
 from . import _renderd
 import os
 
+rg.__dict__["box_thing"] = None
+
+load_stuff = {}
+
+def fix_font_text(surf, ascent, descent, ref=None):
+    #pygame sometimes renders text with blank space on the bottom idk why, but it messes with baseline-based text drawing
+    #this is notable for making the flat rock LF ldl look really bad
+    if ref is None:
+        ref = surf
+    diff = (ascent-descent) - ref.height
+    #renderElog("diff", diff)
+    if diff == 0:
+        return surf
+    elif diff < 0:
+        return surf.subsurface(rg.pg.Rect(0, 0, surf.width, surf.height+diff)).copy()
+    else:
+        newsurf = rg.pg.Surface((surf.width, surf.height+diff))
+        newsurf.blit(surf, (0, 0))
+
 class ObjectWrapper:
 
     def __init__(self):
@@ -16,12 +35,25 @@ class ObjectWrapper:
     def __del__(self):
         pass
 
+    def add_loaded(self):
+        cname = type(self).__name__
+        if cname not in load_stuff:
+            load_stuff[cname] = 1
+        else:
+            load_stuff[cname] += 1
+    
+    def remove_loaded(self):
+        cname = self.__class__.__name__
+        if cname not in load_stuff:
+            load_stuff[cname] = 0
+        else:
+            load_stuff[cname] -= 1
 
 class Layer(ObjectWrapper):
 
     def __init__(self):
         self.pages = []
-        self.timer = 0
+        self.timer = -1
         self.totals = []
         self.pa = 0
         return
@@ -32,6 +64,9 @@ class Layer(ObjectWrapper):
             self.totals.append(page.duration())
         else:
             self.totals.append(page.duration()+self.totals[-1])
+    
+    def __del__(self):
+        self.pages = []
 
 
 class Page(ObjectWrapper):
@@ -48,6 +83,9 @@ class Page(ObjectWrapper):
         self._onEndCommands = []
 
     def addItem(self, item):
+        item.added = True
+        if type(item) is EffectSequencer:
+            item.timer = (not getattr(item.target, "added", True))-1
         if isinstance(item, PageCommand):
             frame = item.activeFrame()
             if frame == 0:
@@ -91,7 +129,10 @@ class Page(ObjectWrapper):
     def duration(self):
         return self._duration
 
-    def __del__(self):
+    def unload(self):
+        self.__del__(True)
+
+    def __del__(self, manual=False):
         for i in self._elements:
             rg.unloadqueue.append(i)
 
@@ -107,7 +148,7 @@ class Font(ObjectWrapper):
         return 0
 
     def leading(self):
-        return self.font.get_linesize()
+        return 0
 
     def stringSize(self, str):
         bn = self.font.size(str)
@@ -121,6 +162,66 @@ class Font(ObjectWrapper):
         (w, h) = self.stringSize(str)
         return h
 
+from PIL import Image as Img
+import freetype
+import numpy as np
+
+class Character:
+    def __init__(self, font, color, char):
+        tfont : freetype.Face = font.font
+        tfont.load_char(char, freetype.FT_LOAD_RENDER | freetype.FT_LOAD_TARGET_LIGHT)
+        self.char = char
+    
+        slot = tfont.glyph
+        bitmap = slot.bitmap
+        width = bitmap.width
+        rows = bitmap.rows
+        
+        self.bearing = slot.bitmap_top
+        self.hbearing = slot.bitmap_left
+        self.advance = slot.metrics.horiAdvance / 64.0
+        
+        self.empty = (width == 0 or rows == 0)
+        if self.empty:
+            return
+        
+        shadow = font.shadow
+        alpha = Img.frombytes("L", (width, rows), bytes(bitmap.buffer))
+        
+        if shadow:
+            mainimage = Img.new("RGB", alpha.size, color)
+            shadowimage = Img.new("RGB", alpha.size, tuple([round(i*255) for i in font.scol]))
+            mainimage.putalpha(alpha)
+            shadowimage.putalpha(alpha)
+            pilimage = Img.new("RGBA", (alpha.size[0]+font.sx, alpha.size[1]+font.sy))
+            pilimage.paste(shadowimage, (font.sx, font.sy), shadowimage)
+            pilimage.alpha_composite(mainimage, (0, 0))
+        else:
+            pilimage = Img.new("RGB", alpha.size, color)
+            pilimage.putalpha(alpha)
+        
+        buf = BytesIO()
+        pilimage.save(buf, "BMP")
+        bv = buf.getvalue()
+        self.image = rg.rl.load_image_from_memory(".bmp", bv, len(bv))
+        rg.rl.image_alpha_premultiply(self.image)
+        self.texture = None
+        
+    def load(self):
+        if self.empty:
+            return
+        if self.texture is None:
+            self.texture = rg.rl.load_texture_from_image(self.image)
+    
+    def unload(self):
+        if self.empty:
+            return
+        if self.texture is not None:
+            rg.rl.unload_texture(self.texture)
+            self.texture = None
+        if self.image is not None:
+            rg.rl.unload_texture(self.image)
+            self.image = None
 
 class TTFont(Font):
 
@@ -129,11 +230,35 @@ class TTFont(Font):
         self.scol = (sr, sg, sb, sa)
         self.sx = sx*1
         self.sy = sy*1
+        self.chars = {}
+        self.t = t
+        self.name = None
         Font.__init__(self, pointSize)
         if l == None:
             l = pointSize
         _renderd.createTTFont(self, name, pointSize, shadow, sr, sg, sb, sa, sx, sy, t / 2, l, evict)
 
+    def get_char(self, char, color):
+        if self.shadow:
+            ckey = (char, self.name, color, self.pointSize(), self.sx, self.sy, self.scol)
+        else:
+            ckey = (char, self.name, color, self.pointSize())
+        if ckey not in builtins.__dict__["rg_font_cache"]:
+            character = Character(self, color, char)
+            builtins.__dict__["rg_font_cache"][ckey] = character
+        else:
+            character = builtins.__dict__["rg_font_cache"][ckey]
+        
+        return character
+
+    def stringSize(self, str):
+        return get_text_size(str, (235, 235, 235), self)
+
+    def tracking(self):
+        return self.t
+
+    def leading(self):
+        return self.l
 
 class TTOutlineFont(Font):
 
@@ -194,6 +319,8 @@ class SetLayer(PageCommand):
         self.lname = lname
         self.layer = layer
 
+    def unload(self):
+        self.layer = None
 
 class AppendLayer(PageCommand):
 
@@ -201,6 +328,9 @@ class AppendLayer(PageCommand):
         PageCommand.__init__(self, activeFrame)
         self.lname = lname
         self.layer = layer
+    
+    def unload(self):
+        self.layer = None
 
 
 class RemoveLayer(PageCommand):
@@ -209,13 +339,15 @@ class RemoveLayer(PageCommand):
         PageCommand.__init__(self, activeFrame)
         self.lname = lname
 
+    def unload(self):
+        self.layer = None
 
 class ActivateLayer(PageCommand):
 
     def __init__(self, activeFrame, lname):
         PageCommand.__init__(self, activeFrame)
         self.lname = lname
-
+    
 
 class DeactivateLayer(PageCommand):
 
@@ -223,6 +355,8 @@ class DeactivateLayer(PageCommand):
         PageCommand.__init__(self, activeFrame)
         self.lname = lname
 
+    def unload(self):
+        self.layer = None
 
 class SelectInputSource(PageCommand):
 
@@ -288,6 +422,8 @@ class SetLayerCmd(RenderCommand):
         self.lname = lname
         self.layer = layer
 
+    def unload(self):
+        self.layer = None
 
 class AppendLayerCmd(RenderCommand):
 
@@ -295,6 +431,8 @@ class AppendLayerCmd(RenderCommand):
         self.lname = lname
         self.layer = layer
 
+    def unload(self):
+        self.layer = None
 
 class RemoveLayerCmd(RenderCommand):
 
@@ -375,11 +513,14 @@ class GraphicRenderable(Renderable):
         self._position = (0, 0)
         self._size = (0, 0)
         self.effects = []
-        self.sequencer = None
         self.visible = True
         self.setTransitionable(1)
-        
+        self.seq_start_after = False
         self._color = (1, 1, 1, 1)
+        self.unloaded = False
+        self.added = False
+        self.dynamicfilter = None
+        self.add_loaded()
     
     def size(self):
         return self._size
@@ -422,15 +563,23 @@ class GraphicRenderable(Renderable):
         return self._color
         return
 
+    def addDynamicFilter(self, filter):
+        self.dynamicfilter = filter
+    
+    def __del__(self):
+        self.remove_loaded()
+        return super().__del__()
 
 class Box(GraphicRenderable):
 
     def __init__(self):
+        #if not rg.__dict__["box_thing"]:
+        #    rg.__dict__["box_thing"] = self
         super().__init__()
         return
         
 
-
+import dateutil as dut
 class Clock(GraphicRenderable):
     LEFT = 0
     RIGHT = 1
@@ -449,18 +598,31 @@ class Clock(GraphicRenderable):
         self.justification = justification
         self.timezone = timezone
         self.timezoneDisplay = timezoneDisplay
-        self.s = ''
+        self.s = '10:09'
         self.lasts = ''
         self.cachedtex = None
         self.cachedimg = None
-        self._textsize = (1, 1)
         self.cimg = None
         self.fnt = font
-        self.ascent = self.fnt.font.get_ascent()
-        self.descent = self.fnt.font.get_descent()
-        #_renderd.createClock(self, font, format, lcase_ampm, justification, timezone, timezoneDisplay)
+        self.glist = None
+        self.ksize = None
+        if timezone == "":
+            self.tz = None
+        else:
+            self.tz = dut.tz.gettz(timezone)
         
+        self._lastcol = tuple(list(self._color))
+        #self._textsize = self.textbase.size
+        #self._size = self.textbase.size
+        
+        #self.basesize = self.textbase.get_size()
+        #_renderd.createClock(self, font, format, lcase_ampm, justification, timezone, timezoneDisplay)
 
+    def size(self):
+        return self.ksize or get_text_size(self.s, tuple([round(c*255) for c in self._color]), self.fnt, self)
+
+    def unload(self):
+        pass
 
 class TimeCode(GraphicRenderable):
 
@@ -470,42 +632,111 @@ class TimeCode(GraphicRenderable):
 
 from io import BytesIO
 import builtins
+
+def crop_text(surf: rg.pg.Surface):
+    final_left = 0
+    found_left = False
+    for x in range(surf.get_width()):
+        for y in range(surf.get_height()):
+            c = surf.get_at((x, y))
+            if c.a != 0:
+                found_left = True
+                break
+        if found_left:
+            break
+        final_left += 1
+    return surf.subsurface(rg.pg.Rect(final_left, 0, surf.get_width()-final_left, surf.get_height()))
+
+
+tracking = True
+def get_text_size(s, col, font : TTFont, store=None):
+    width = 0
+    lines = 0
+    for line in s.split("\n"):
+        lines += 1
+        lwidth = 0
+        i = 1
+        for c in line:
+            last_char = (i == len(line))
+            char = font.get_char(c, col)
+            lwidth += char.advance
+            if tracking:
+                lwidth += (font.tracking() * font.pointSize() / 2000)
+            if font.font.has_kerning and not last_char:
+                if not s[i] == "\n":
+                    kern = font.font.get_kerning(ord(c), ord(s[i]), mode=0).x / 64.0
+                    lwidth += kern
+            i += 1
+        if tracking:
+            lwidth -= (font.tracking() * font.pointSize() / 2000)
+        if lwidth > width:
+            width = lwidth+0
+    
+    out = (round(width), font.leading()*lines)
+    if store:
+        store.ksize = out
+    return out
+
+def build_glyph_list(x, y, s, col, font : TTFont, top=False):
+    """
+    Outputs a list of coordinates and textures for drawing text.
+    This should make the new text system a BIT less horrible to work with.
+    """
+    xx = x+0
+    yy = y+0
+    
+    char_to_glyph = {}
+    glist = set()
+    clist = {}
+    i = 1
+    for char in s:
+        glist.add(char)
+        last_char = (i == len(s))
+        if char == "\n":
+            xx = x+0
+            yy -= font.leading()
+        else:
+            character = font.get_char(char, col)
+            if not character.empty:
+                offset = -character.image.height+character.bearing
+                if char not in char_to_glyph:
+                    char_to_glyph[char] = []
+                    clist[char] = character
+                char_to_glyph[char].append([int(xx)+character.hbearing, yy+offset])
+            xx += character.advance
+            if font.font.has_kerning and not last_char:
+                if not s[i] == "\n":
+                    kern = font.font.get_kerning(ord(char), ord(s[i]), mode=0).x / 64.0
+                    xx += kern
+            if tracking:
+                xx += (font.tracking() * font.pointSize() / 2000)
+        i += 1
+    if top:
+        under = font.get_char("_", col)
+        yo = under.image.height - under.bearing + 4
+        for g in glist:
+            if g not in char_to_glyph:
+                continue
+            for c in char_to_glyph[g]:
+                c[1] = c[1] + yo
+    return glist, clist, char_to_glyph
+
 class Text(GraphicRenderable):
 
-    def __init__(self, font : TTFont, str):
+    def __init__(self, font : TTFont, str, debug=False):
         GraphicRenderable.__init__(self)
         self.fnt = font
         self.s = builtins.str(str)
         self.lasts = builtins.str(self.s)
         self.bounds = None
-        self.cachedimg = None
-        self.cachedtex = None
         self.buf = BytesIO()
-        self.ascent = self.fnt.font.get_ascent()
-        self.descent = self.fnt.font.get_descent()
+        self.glist = None
         self.cimg = None
-        #sz = self.fnt.font.size(self.s)
-        #text = rg.pg.Surface((sz[0], sz[1]))
-        
-        
-        self.textbase : rg.pg.Surface = self.fnt.font.render(builtins.str(self.s), True, (255, 255, 255))
-        self.textbase = rg.pg.transform.smoothscale_by(self.textbase, (1, 0.95))
-        
-        self.basesize = self.textbase.get_size()
-        self._lastcol = tuple(list(self._color))
-        self._textsize = self.textbase.size
-        self._size = self.textbase.size
-
+        self.debug = debug
+        self.ksize = None
+    
     def unload(self):
-        if self.cimg:
-            rg.rl.unload_image(self.cimg)
-            self.cimg = None
-        if self.cachedimg:
-            rg.rl.unload_image(self.cachedimg)
-            self.cachedimg = None
-        if self.cachedtex:
-            rg.rl.unload_texture(self.cachedtex)
-            self.cachedtex = None
+        pass
 
     def font(self):
         return self.fnt
@@ -516,49 +747,83 @@ class Text(GraphicRenderable):
         return
 
     def size(self):
-        return self.basesize
+        return self.bounds or self.ksize or get_text_size(self.s, tuple([round(c*255) for c in self._color]), self.fnt, self)
 
     def setBoundingBoxSize(self, w, h):
         self.bounds = (w, h)
+    
+    def setColor(self, r=0, g=0, b=0, a=1):
+        super().setColor(r, g, b, a)
+        return
         
 
 
 class Marquee(Text):
 
     def __init__(self, font, str, step=2, repeat=1):
-        GraphicRenderable.__init__(self)
-        #_renderd.createMarquee(self, font, str, step, repeat)
-        self.fnt = font
-        self.s = str
+        Text.__init__(self, font, str)
+        
+        self.step = step
+        self.repeat = repeat
+        self.pos = 0
         return
 
     def setSpeed(self, step):
-        return _renderd.Marquee_setSpeed(self, step)
+        #return _renderd.Marquee_setSpeed(self, step)
+        self.step = step
         return
-
+    
+    
 
 class QTMovie(GraphicRenderable):
 
     def __init__(self, name, evict=0):
+        self.loop = 0
+        self.idx = -1
         GraphicRenderable.__init__(self)
+        self.images = []
         _renderd.createQTMovie(self, name, evict)
         return
 
     def getNumFrames(self):
-        return _renderd.QTMovie_getNumFrames(self)
+        return len(self.images)
         return
 
     def setLooping(self, looping):
-        return _renderd.QTMovie_setLooping(self, looping)
+        self.loop = looping
         return
+
+    def unload(self):
+        if self.images is not None:
+            for im in self.images:
+                if im is not None:
+                    rg.rl.unload_image(im)
+                im = None
+        self.images = []
+        if self.textures is not None:
+            for tx in self.textures:
+                if tx is not None:
+                    rg.rl.unload_texture(tx)
+                tx = None
+        self.textures = []
 
 class Icon(GraphicRenderable):
 
-    def __init__(self, name, evict=0):
+    def __init__(self, name:str, evict=0, loop=1, delayAnim=0):
         GraphicRenderable.__init__(self)
+        if name.startswith("/rsrc/icons_s/"):
+            name = name.replace("/rsrc/icons_s/", "/media/icons/small/", 1)
+        
+        if name.startswith("/rsrc/icons_m/"):
+            name = name.replace("/rsrc/icons_m/", "/media/icons/medium/", 1)
+        
+        if name.startswith("/rsrc/icons_l/"):
+            name = name.replace("/rsrc/icons_l/", "/media/icons/large/", 1)
         self.name = name
         self.evict = evict
         self.unloaded = False
+        self.loop = loop
+        self.delayAnim = delayAnim
         _renderd.createIcon(self, name, evict)
         return
     
@@ -567,7 +832,7 @@ class Icon(GraphicRenderable):
             return
         if self.textures:
             for i, tx in enumerate(self.textures):
-                if tx:
+                if tx is not None:
                     print(f"unloading texture {i}")
                     rg.rl.unload_texture(tx)
                 tx = None
@@ -575,16 +840,19 @@ class Icon(GraphicRenderable):
             print(self._ims)
             print(self.name)
             for i, im in enumerate(self._ims):
-                if im:
+                if im is not None:
                     print(f"unloading image {i}")
                     rg.rl.unload_image(im)
                 self._ims[i] = None
         self.unloaded = True
 
+class DynamicImage(GraphicRenderable):
+    def __init__(self, target, filter, evict=0):
+        GraphicRenderable.__init__(self)
+        target.addDynamicFilter(filter)
 
 class Image(GraphicRenderable):
     pass
-
 
 class JPEG_Image(Image):
 
@@ -617,7 +885,6 @@ class TIFF_Image(Image):
             if rg.rl.is_image_valid(self.im2):
                 rg.rl.unload_image(self.im2)
                 self.im2 = None
-
 class CompositedImage(Image):
 
     def __init__(self, debug=False):
@@ -637,6 +904,9 @@ class CompositedImage(Image):
             rg.rl.unload_render_texture(self.ftex)
             self.ftex = None
 
+    def bounds(self):
+        return None
+
     def addItem(self, child):
         self.items.append(child)
         return
@@ -649,16 +919,40 @@ class ClipboardImage(Image):
         #_renderd.createClipboardImage(self)
         return
 
-
+import json
 class VectorImage(GraphicRenderable):
     """A image made up of points, lines, and curves."""
 
     def __init__(self, name, lineThickness=1, evict=0):
         GraphicRenderable.__init__(self)
+        self.polys = []
+        self.lineThickness = lineThickness
+        self.im = None
+        self.tx = None
+        if os.path.exists(name + ".vg"):
+            with open(name + ".vg", "r") as f:
+                fl = json.loads(f.read())
+            self._size = (fl[0], fl[1])
+            self.polys = fl[2]
+            buf = BytesIO()
+            tempsurf = rg.pg.Surface((fl[0], fl[1]), rg.pg.SRCALPHA)
+            
+            for pol in self.polys:
+                rg.pg.draw.lines(tempsurf, (255, 255, 255), False, pol, self.lineThickness)
+            rg.pg.image.save(tempsurf, buf, ".bmp")
+            bv = buf.getvalue()
+            self.im = rg.rl.load_image_from_memory(".bmp", bv, len(bv))
+    
+    def unload(self):
+        if self.tx:
+            rg.rl.unload_texture(self.tx)
+            self.tx = None
+        if self.im:
+            rg.rl.unload_image(self.im)
+            self.im = None
         #_renderd.createVectorImage(self, name, lineThickness, evict)
-        return
 
-
+import nethandler as nh
 class CompositeRenderable(GraphicRenderable):
 
     def __init__(self, debug=False):
@@ -679,12 +973,17 @@ class CompositeRenderable(GraphicRenderable):
             self.ftex = None
 
     def addItem(self, child):
+        child.added = True
         self.items.append(child)
         return
 
-    def size(self):
+    def bounds(self):
         top = None
         right = None
+        left = 0
+        bottom = 0
+        tleft = None
+        tbottom = None
         for child in self.items:
             pos = child.position()
             size = child.size()
@@ -696,7 +995,43 @@ class CompositeRenderable(GraphicRenderable):
                 top = pos[1]+size[1]
             else:
                 top = max(top, pos[1]+size[1])
-        return (abs(right), abs(top))
+            #keep track of left and bottom, might be useful?
+            if not tleft:
+                tleft = pos[0]
+            else:
+                tleft = min(tleft, pos[0])
+            if not tbottom:
+                tbottom = pos[1]
+            else:
+                tbottom = min(tbottom, pos[1])
+            left = min(pos[0], left)
+            bottom = min(pos[1], bottom)
+        if not top:
+            top = 0
+        if not right:
+            right = 0
+        
+        return (left, bottom, right, top, tleft, tbottom)
+        #return (abs(right-left), abs(top-bottom))
+    
+    def size(self):
+        b = self.bounds()
+        return (abs(b[2]), abs(b[3]))
+    
+    def bsize(self):
+        xx, yy = self.position()
+        
+        rell = 0
+        relb = 0
+        
+        for child in self.items:
+            rx, ry = child.position()
+            rx -= xx
+            ry -= yy
+            rell = min(rell, rx)
+            relb = min(relb, ry)
+        
+        return rell, relb
 
 class ScrollingCompositeRenderable(CompositeRenderable):
 
@@ -780,7 +1115,7 @@ class RichText(CompositeRenderable):
             (r, g, b, a) = color
             gr = Text(font, strText)
             gr.setColor(r, g, b, a)
-            gr.setPosition(w, 0)
+            gr.setPosition(w, font.sy)
             (wgr, hgr) = gr.size()
             tempList.append(gr)
             w += wgr
@@ -913,9 +1248,13 @@ class Clipper(GraphicEffect):
         self.bottom = bottom
         if target != None:
             self.setTarget(target)
+        self.planeclipper = False
+        self.planes = []
         return
 
     def clip(self, plane, pos, step=0.0):
+        self.planes.append([plane, pos, step])
+        self.planeclipper = True
         #_renderd.Clipper_clip(self, plane, pos, step)
         return
 
@@ -994,6 +1333,7 @@ class SetPosition(PropertyEffect):
     def __init__(self, target=None, x=0, y=0):
         self.x = x
         self.y = y
+        self.fired = False
         if target != None:
             self.setTarget(target)
         return
@@ -1025,6 +1365,8 @@ class SetVisibility(Effect):
         self.fired = False
         self.frame = 0
         self.frozen = False
+        
+        self.fader = None
         if target != None:
             self.setTarget(target)
         return
@@ -1056,6 +1398,7 @@ class AudioRenderable(Renderable):
         if hasattr(self, "file"):
             if self.file:
                 self.file.stop()
+                del self.file
 
 class Audio(AudioRenderable):
 
@@ -1125,25 +1468,42 @@ class AudioEffect(Effect):
     def setTarget(self, target):
         target.addAudioEffect(self)
 
-
+import random
 class EffectSequencer(Renderable):
 
     def __init__(self, target, repeat=0, loopLimit=0):
         self.effects = []
         self.activeeffects = []
-        self.timer = -1 #first frame is time 0 but 1 gets added first
+        self.timer = (not getattr(target, "added", True))-1 #+target.seq_start_after #first frame is time 0 but 1 gets added first
+        self.timerdefault = (not getattr(target, "added", True))-1
+        
         self.total = 0
         self.repeat = repeat
         self.loopLimit = loopLimit
-        self.skipped = False
+        self.skipped = 0
+        
+        self.target = target
+        
         target.addEffectSequencer(self, repeat, loopLimit)
         return
 
-    def addEffect(self, effect, duration):
-        self.effects.append((effect, duration))
+    def _eval_fader(self):
+        if len(self.effects) > 1:
+            for i in range(len(self.effects)-1):
+                if (type(self.effects[i][0]) == SetVisibility) and (type(self.effects[i+1][0]) == Fader):
+                    self.effects[i][0].fader = self.effects[i+1][0].startAlpha
+                elif (type(self.effects[i][0]) == SetVisibility):
+                    self.effects[i][0].fader = None
+    
+    def addEffect(self, effect, duration, confirm=False):
+        self.effects.append((effect, duration or 9999999999999999999999)) #band-aid fixes ftw
         self.total += duration
+        self._eval_fader()
         return
 
+    def unload(self):
+        self.effects = []
+        self.activeeffects = []
 
 class ImageSequencer(Renderable):
 
@@ -1166,6 +1526,8 @@ class AudioSequencer(AudioRenderable):
         self.repeat = repeat
         self.audio = []
         self.effects = []
+        self.level = 1
+        self.mix = 1
         return
 
     def addItem(self, child):
@@ -1173,7 +1535,7 @@ class AudioSequencer(AudioRenderable):
         return
 
     def duration(self):
-        return sum([e.duration() for e in self.audio])
+        return sum([e.duration() for e in self.audio])-len(self.audio)
         return
 
     def size(self):
@@ -1222,4 +1584,72 @@ class AudioNullEffect(AudioEffect):
             self.setTarget(target)
         return
 
+class ImageFilter(Renderable):
+    pass
 
+class BlendImageFilter(ImageFilter):
+    MODE_SOFT_LIGHT = 0
+    def __init__(self, mask, mode, useMaskAlpha=1, x=0, y=0, w=720, h=480):
+        self.mask = mask
+        self.mode = mode
+        self.useMaskAlpha = useMaskAlpha
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+
+class GaussianBlurImageFilter(ImageFilter):
+    def __init__(self, x=0, y=0, w=720, h=480):
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
+
+class LineRenderer(GraphicRenderable):
+    def __init__(self, thickness=1):
+        GraphicRenderable.__init__(self)
+        self.vertices = []
+        self.leftmost = 0
+        self.rightmost = 0
+        self.topmost = 0
+        self.bottommost = 0
+        self.thickness = round(thickness)
+        self.rgba = (1, 1, 1, 1)
+        self.cached = None
+        return
+
+    def drawLines(self):
+        if self._size == (0, 0):
+            return
+        tempsurf = rg.pg.Surface(self._size, rg.pg.SRCALPHA)
+        
+        buf = BytesIO()
+        if self.thickness == 1:
+            rg.pg.draw.aalines(tempsurf, (255, 255, 255), False, [(v[0]+self.leftmost, self._size[1] - v[1] + self.bottommost) for v in self.vertices])
+        else:
+            rg.pg.draw.lines(tempsurf, (255, 255, 255), False, [(v[0]+self.leftmost, self._size[1] - v[1] + self.bottommost) for v in self.vertices], self.thickness)
+        rg.pg.image.save(tempsurf, buf, ".bmp")
+        bv = buf.getvalue()
+        self.cached = rg.rl.load_image_from_memory(".bmp", bv, len(bv))
+
+    def addVertex(self, x, y, r=1, g=1, b=1, a=1):
+        self.vertices.append((x, y, r, g, b, a))
+        self.rgba = (r, g, b, a)
+        if x < self.leftmost:
+            self.leftmost = x
+        if y > self.topmost:
+            self.topmost = y
+        if x > self.rightmost:
+            self.rightmost = x
+        if y < self.bottommost:
+            self.bottommost = y
+        self._size = (abs(self.rightmost-self.leftmost), abs(self.topmost-self.bottommost))
+        return
+    
+    def unload(self):
+        if self.tx:
+            rg.rl.unload_texture(self.tx)
+            self.tx = None
+        if self.cached:
+            rg.rl.unload_image(self.cached)
+            self.cached = None

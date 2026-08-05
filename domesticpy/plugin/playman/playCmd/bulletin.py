@@ -3,7 +3,7 @@
 # Decompiled from: Python 3.13.7 (main, Aug 14 2025, 11:12:11) [Clang 17.0.0 (clang-1700.0.13.3)]
 # Embedded file name: bulletin.py
 # Compiled at: 2007-01-12 11:33:37
-import domestic, domestic.dataUtil, domestic.BulletinInfo, os, time, twc.dsmarshal, twc.DataStoreInterface, twccommon, twccommon.Log
+import domestic, domestic.dataUtil, domestic.BulletinInfo, os, time, twc, twc.dsmarshal, twc.DataStoreInterface, twccommon, twccommon.Log
 from functools import cmp_to_key
 ds = twc.DataStoreInterface
 dsm = twc.dsmarshal
@@ -29,7 +29,7 @@ def init(config):
     Log.info('initializing bulletin plugin')
     _params = twccommon.Data()
     active = dsm.defaultedGet(DSKEY_CRAWL_ACTIVE, 1)
-    if active:
+    if active and not twc.forceInactive:
         _activate(1)
     setCountyInterestList(_interestlist)
     return
@@ -41,7 +41,8 @@ def idle():
         _idleCnt = 0
         now = int(time.time())
         changed = 0
-        for bulletin in _bulletins.values():
+        bc = _bulletins.copy() #prevent issues caused by expiring
+        for bulletin in bc.values():
             if now >= bulletin.dispExpiration:
                 changed += 1
                 Log.info('bulletin expired %s-%s-%s' % (bulletin.pil, bulletin.pilExt, bulletin.county))
@@ -97,6 +98,8 @@ def getPlaylistName():
 
 import domesticpy.plugin.playman.playCmd.pm as pm
 def load():
+    if twc.forceInactive:
+        return
     global _crawlActive
     global _firstLoad
     id = BULLETIN_LAYER_ID
@@ -114,6 +117,8 @@ def load():
     params = twccommon.Data()
     params.bulletinCrawl = bulletinCrawl
     params.immediateReplacement = _params.immediateReplacement
+    if twc.personality == "Watt":
+        params.changeType = _params.changeType
     params.activate = _crawlActive
     params.firstLoad = _firstLoad
     params.bulletinActive = 0
@@ -139,6 +144,8 @@ def load():
 
 
 def run(activate):
+    if twc.forceInactive:
+        return
     activate = int(activate)
     if activate == _crawlActive:
         if activate:
@@ -322,7 +329,15 @@ def _setMode(rotation):
 
 def _updatePresentation(lastRotation, rotation):
     immediate = 1
-    _params.immediateReplacement = immediate
+    try:
+        _params.immediateReplacement = immediate
+    except NameError:
+        return
+    if twc.personality == "Watt":
+        if lastRotation:
+            _params.changeType = 'update'
+        else:
+            _params.changeType = 'create'
     now = time.time()
     _params.bulletins = []
     i = 1

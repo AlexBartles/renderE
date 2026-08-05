@@ -5,9 +5,14 @@
 # Compiled at: 2007-01-12 11:17:30
 import glob, os, os.path, twccommon, twccommon.Log as Log, twc.dsmarshal as dsm, twc.psp, urllib, lxml.etree
 from . import SkyConditionCodes
+from . import products
 import nethandler
 Data = twccommon.Data
 DefaultedData = twccommon.DefaultedData
+
+forceInactive = False
+personality = nethandler.personality
+personalityCode = ["Perris", "Texarkana", "WxScan", "FlatRock", "Watt"].index(personality)
 
 def getAttribList(keys, default=None):
     """Get a merged together list of attributes specified
@@ -97,6 +102,8 @@ def buildPyNamespace(default=None, **namespace):
     ns = {}
     ns["newaccess"] = rg.newaccess
     ns["newstat"] = rg.newstat
+    ns["newexists"] = rg.newexists
+    ns["newjoin"] = rg.newjoin
     if default != None:
         ns.update(default)
     ns.update(namespace)
@@ -122,10 +129,14 @@ def presToRenderScript(pres, layerName, **ns):
     return
 
 
-def findRsrc(rsrc, ext, req=1, language=None):
-    rsrcRoot = [os.environ["RENDEREMEDIA"], os.environ["RENDERERSRC"]]
+def findRsrc(rsrc, ext="tif", req=1, language=None):
+    if rsrc.startswith("net/backgrounds"):
+        rsrc = rsrc.replace("net/backgrounds", "net/media/backgrounds", 1)
+    rsrcRoot = [os.environ["RENDEREMEDIA"], os.environ["RENDERERSRC"], "net/rsrc", "net/media"]
     for path in rsrcRoot:
         searchFile = '%s%s' % (path, rsrc)
+        if "backgroun" in rsrc:
+            print("SEARCH RSRC", searchFile)
         if language:
             splitSearchFile = os.path.split(searchFile)
             languageSearchFile = '%s/%s/%s' % (splitSearchFile[0], language, splitSearchFile[1])

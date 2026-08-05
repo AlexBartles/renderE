@@ -17,7 +17,7 @@ def checkRadarPrecip(RadarProductName, location='us', imageList=None):
        ConfigSet. This method assumes that the imageList passed in only
        contains valid images and is already sorted from OLDEST to NEWEST."""
     radarReturns = 0
-    imageRoot = '/twc/data/volatile/images/radar/%s.cuts/' % location
+    imageRoot = os.path.join(os.environ["RENDEREROOT"], 'radar/%s.cuts/' % location)
     productString = 'Config.' + dsm.getConfigVersion() + '.' + RadarProductName
     if imageList == None:
         imageList = dataUtil.getValidFileList(dataPath=imageRoot, prefix=productString, suffix='*[0-9].tif', startTimeNdx=3, endTimeNdx=4, sortIndex=3)
@@ -126,7 +126,7 @@ def getAttribs(params, default=None):
     attrs = _getAttribList(keys, default)
     return attrs
     return
-
+import nethandler
 
 def buildPresentationScript(srcDir, dstDir, pkgName, pkgInst, prod, prodInst, extraParams=None):
     ns = {}
@@ -139,7 +139,7 @@ def buildPresentationScript(srcDir, dstDir, pkgName, pkgInst, prod, prodInst, ex
     params.product = prod
     params.productInst = prodInst
     srcName = srcDir + '/' + prod + '.rs'
-    f = open(srcName, 'r')
+    f = open(nethandler.requestNetAssetExt(srcName), 'r')
     page = f.read()
     f.close()
     page = twc.psp.evalRenderScript(page, ns, getattr(params, 'shareDir', []))
@@ -169,7 +169,7 @@ def writePid(pidFileName):
 
 _ID = 0
 _pkgKeyTemplates = ['default', '%(package)s', '%(package)s.%(packageInst)s']
-_prodKeyTemplates = [16, 17, 18, 19, 20]
+_prodKeyTemplates = ['%(product)s', '%(product)s.%(productInst)s', '%(package)s.%(product)s', '%(package)s.%(packageInst)s.%(product)s', '%(package)s.%(packageInst)s.%(product)s.%(productInst)s']
 
 def _fmtAttribKeys(keys, **kw):
     skeys = []

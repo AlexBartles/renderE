@@ -5,28 +5,39 @@
 # Compiled at: 2007-01-12 11:33:37
 import domestic, os, stat, sys, time, twc, twc.DataStoreInterface as ds, twc.dsmarshal as dsm, twc.playlist, twc.products, twc.DataEventLog as DataEventLog, twcWx.mapping, twccommon, twccommon.Log as Log, twccommon.PluginManager as PluginManager
 from functools import reduce
+import rendereglobals as rg
 
-tempdir = os.path.join(os.environ["RENDEREROOT"], "temp")
+tempdir = rg.newjoin(os.environ["RENDEREROOT"], "temp")
 
 def init(config):
     global _config
     global _pluginMgr
     global _runlog
+    global _bkgImage
     _config = twccommon.Data()
     _config.__dict__.update(config.__dict__)
     _pluginMgr = PluginManager.PluginManager(config.playlistPluginRoot)
-    _runlog = twc.EventLog.EventLog(os.path.join(tempdir, "runlog"), 3600)
+    _runlog = twc.EventLog.EventLog(rg.newjoin(tempdir, "runlog"), 3600)
+    _bkgImage = None
     return
 
 
 def load(id, duration, expire, schedules, params, runlogEvents=None):
+    if twc.forceInactive:
+        return
+    global _bkgImage
     try:
+        if twc.personalityCode > 2:
+            fname = '%s/playlistload' % tempdir
+            open(fname, 'w').close()
         if duration == 0:
             Log.error('request to load presentation %s with 0 duration ignored' % id)
             return
         #_pl._rmOldLocalModules(['%s/lib' % _ROOT])
         if runlogEvents == None:
             runlogEvents = []
+        if twc.personalityCode == 1 and hasattr(params, "bkgImage"):
+            _bkgImage = params.bkgImage
         argData = twccommon.Data(id=id, duration=duration, expire=expire, schedules=schedules, params=params, expireTime=time.time() + expire / 30, runlogEvents=runlogEvents)
         _presentations[id] = argData
         Log.info('attempting to build presentation (id=%s, schedule=%s)...' % (id, schedules))
@@ -35,6 +46,9 @@ def load(id, duration, expire, schedules, params, runlogEvents=None):
         if presentations == None:
             Log.error("couldn't generate a presentation")
             return
+        if twc.personalityCode == 3:
+            fname = '%s/playlistgenerate' % tempdir
+            open(fname, 'w').close()
         argData.presentations = presentations
         rsFiles = []
         for vpPres in argData.presentations:
@@ -47,6 +61,8 @@ def load(id, duration, expire, schedules, params, runlogEvents=None):
 
 
 def run(id, startTime, startFrame, params=None):
+    if twc.forceInactive:
+        return
     argData = _presentations[id]
     del _presentations[id]
     argData.startTime = startTime
@@ -71,9 +87,21 @@ def run(id, startTime, startFrame, params=None):
 
     try:
         _runRenderScriptFiles(rsFiles)
+        if twc.personalityCode > 2:
+            fname = '%s/playlistrun' % tempdir
+            open(fname, 'w').close()
     except Exception:
         Log.logCurrentException('error running presentation')
 
+    # if twc.personalityCode == 3:
+    #     if hasattr(pparams, 'sidChannel'):
+    #         irdChannelSidTable = dsm.defaultedConfigGet('irdChannelSidTable.%s' % pparams.sidChannel)
+    #         if irdChannelSidTable == None:
+    #             irdChannelSidTable = dsm.defaultedConfigGet('irdChannelSidTable.default')
+    #             if irdChannelSidTable == None:
+    #                 irdChannelSidTable = ('100', 9001, 'OA')
+    #         (irdChan, sid, sidSum) = irdChannelSidTable
+    #         _runUpdateSID(sid, sidSum)
     _buildTestLog(argData)
     _buildRunLog(argData)
     _refreshMedia()
@@ -196,9 +224,13 @@ class _ProdLoader(twc.products.ProductLoader):
         return
 
     def loadProduct(self, prodType, prodName, prodInst):
-        Log.info('loading product %s_%s...' % (prodType, prodName))
+        global _bkgImage
+        print('loading product %s_%s...' % (prodType, prodName))
         params = self.getDefaultParams()
-        pparams = getAttribs('%s_%s' % (prodType, prodName), params)
+        if twc.personalityCode < 2:
+            pparams = getAttribs('%s_%s' % (prodType, prodName), params)
+        else:
+            pparams = getAttribs('%s_%s' % (prodType, prodName), prodInst, params)
         params = twccommon.mergeStructs([params, pparams])
         (prodFile, searchPath) = _findFile(prodType, '%s.prod' % prodName)
         libPath = list(map((lambda e: '%s/lib' % e), searchPath))
@@ -211,6 +243,8 @@ class _ProdLoader(twc.products.ProductLoader):
         params.prodName = prodName
         params.prodInst = prodInst
         params.product = '%s_%s' % (prodType, prodName)
+        if _bkgImage is not None:
+            params.bkgImage = (_bkgImage, None)
         tmp = sys.path[:]
         try:
             print(libPath, sys.path)
@@ -261,20 +295,50 @@ class _ProdLoader(twc.products.ProductLoader):
         return
 
 
-def getAttribs(product, params=None):
-    cfgVersion = int(dsm.getConfigVersion())
-    kl = ['Config', 'Config.%d' % cfgVersion, 'Config.%d.%s' % (cfgVersion, product), 'Config.%d.Override' % cfgVersion]
-    fullParams = twc.getAttribList(kl)
-    if params:
-        fullParams = twccommon.mergeStructs([params, fullParams])
-    return fullParams
-    return
+if twc.personalityCode < 2:
+    def getAttribs(product, params=None):
+        cfgVersion = int(dsm.getConfigVersion())
+        kl = ['Config', 'Config.%d' % cfgVersion, 'Config.%d.%s' % (cfgVersion, product), 'Config.%d.Override' % cfgVersion]
+        fullParams = twc.getAttribList(kl)
+        if params:
+            fullParams = twccommon.mergeStructs([params, fullParams])
+        return fullParams
+        return
+elif twc.personalityCode == 4:
+    def getAttribs(product, prodInst, params=None):
+        cfgVersion = int(dsm.getConfigVersion())
+        try:
+            kl = ['Config', 'Config.%d' % cfgVersion, 'Config.%d.%s' % (cfgVersion, product), 'Config.%d.%s.%d' % (cfgVersion, product, prodInst), 'Config.%d.Override' % cfgVersion]
+            #kl = ['Config', 'Config.%d' % cfgVersion, 'Config.%d.%s' % (cfgVersion, product), 'Config.%d.Override' % cfgVersion]
+            
+        except:
+            print("EEEEE!")
+            print(product, prodInst, params, cfgVersion)
+            raise
+        fullParams = twc.getAttribList(kl)
+        if params:
+            fullParams = twccommon.mergeStructs([params, fullParams])
+        return fullParams
+else:
+    def getAttribs(product, prodInst, params=None):
+        cfgVersion = int(dsm.getConfigVersion())
+        kl = ['Config', 'Config.%d' % cfgVersion, 'Config.%d.%s' % (cfgVersion, product), 'Config.%d.%s.%d' % (cfgVersion, product, prodInst), 'Config.%d.Override' % cfgVersion]
+        #kl = ['Config', 'Config.%d' % cfgVersion, 'Config.%d.%s' % (cfgVersion, product), 'Config.%d.Override' % cfgVersion]
+        fullParams = twc.getAttribList(kl)
+        if params:
+            fullParams = twccommon.mergeStructs([params, fullParams])
+        return fullParams
 
 import nethandler
 def _findFile(prodType, fname):
-    paths = ['%s/%s' % (_ROOT, prodType), _ROOT]
+    paths1_5 = ['net%s/%s' % (_NETROOT, prodType), _NETROOT]
+    paths = ['%s/%s' % (_ROOT, prodType), _ROOT] + paths1_5
     paths2 = ['%s/%s' % (_NETROOT, prodType), _NETROOT]
     paths3 = ['%s/%s' % (_NETROOT, prodType), _NETROOT]
+    print("FINDFILE PATHS")
+    print(paths)
+    print(paths2)
+    print(paths3)
     pathsSearched = paths
     while len(paths) > 0:
         fullname = paths[0] + '/%s' % fname
@@ -286,13 +350,11 @@ def _findFile(prodType, fname):
         nt = nethandler.requestNetAssetExt(fullname, check=True)
         if nt:
             return (nt, paths2)
-        paths2 = paths2[1:]
-    while len(paths3) > 0:
-        fullname = paths3[0] + '/%s' % fname
+        fullname = paths2[0] + '/%s' % fname
         nt = nethandler.requestNetAssetExt(fullname)
         if nt:
             return (nt, paths3)
-        paths3 = paths3[1:]
+        paths2 = paths2[1:]
 
     raise Exception("couldn't locate file %s in %s" % (fname, pathsSearched))
     return
@@ -333,9 +395,28 @@ def _buildBestSchedPresentations(argData, schedLoaders):
     for schedLoader in schedLoaders:
         try:
             Log.info('building schedule %s...' % schedLoader)
+            renderElog('building schedule %s...' % schedLoader)
             params = argData.params.clone()
             _pl.setDefaultParams(params)
             schedule = schedLoader.getSchedule(argData.duration)
+            if twc.personalityCode == 3:
+                for (prodType, playlist) in schedule.items():
+                    print("Setting Playlist Schedule", prodType, playlist)
+                    prodLabels = []
+                    for prod in playlist:
+                        labels = prod.getLabel()
+                        print("ProdLabel", labels)
+                        for labelData in labels:
+                            if labelData.label == '*':
+                                continue
+
+                        prodLabels.append(labels)
+
+                    key = '%s.playlistSchedule' % prodType
+                    Log.info('Setting playlist schedule for %s' % key)
+                    dsm.set(key, prodLabels, 0)
+                    ds.commit()
+            
             return _buildSchedPresentations(argData, schedule)
         except Exception:
             Log.logCurrentException('error building schedule %s:' % schedLoader)
@@ -360,16 +441,22 @@ def _buildViewportPresentation(argData, prodType, playlist):
     vpPres.prodType = prodType
     vpPres.prodPresentations = []
     vpPres.layerProps = dsm.configGet('viewport.%s' % prodType)
+    print("LPROPS", vpPres.layerProps, 'viewport.%s' % prodType)
     vpPres.layerProps.name = '%s_%s' % (prodType, argData.id)
     vpPres.layerProps.expire = argData.expire
-    vpPres.prodSchedule = list(map((lambda e: (e.getName(), e.getDuration())), playlist))
+    if twc.personalityCode < 2:
+        vpPres.prodSchedule = list(map((lambda e: (e.getName(), e.getDuration())), playlist))
+    else:
+        vpPres.prodSchedule = list(map((lambda e: (e.getName(), e.getDuration(), e.getProdInstance())), playlist))
     startTime = 0
     startFrameOffset = 0
+    prodCount = 0
     for prod in playlist:
         Log.info('building presentation for product %s (duration=%s)...' % (prod.getName(), prod.getDuration()))
-        prod.updateParams(startTime=startTime, startFrameOffset=startFrameOffset, prodType=prodType, layerProps=vpPres.layerProps, prodSchedule=vpPres.prodSchedule)
+        prod.updateParams(startTime=startTime, startFrameOffset=startFrameOffset, prodType=prodType, layerProps=vpPres.layerProps, prodSchedule=vpPres.prodSchedule, prodCount=prodCount)
         pres = _buildProductPresentation(argData, vpPres, prod)
         startFrameOffset += pres.prod.getDuration()
+        prodCount += 1
         vpPres.prodPresentations.append(pres)
 
     params = argData.params.clone()
@@ -401,8 +488,15 @@ def _buildPresFile(prodType, prod, inclpaths, **ns):
     (fname, f) = domestic.tmpFile(tempdir, prod.getName(), 'rsc')
     prod.updateParams(fname=fname)
     rs = prod.genRenderScript(prodType, inclpaths, **ns)
-    f.write(rs)
-    f.close()
+    try:
+        f.write(rs)
+    except Exception as e:
+        print("Error writing pres file! Dumped using forced utf-8")
+        with open("rs_write_dump.txt", "w", encoding="utf-8") as f:
+            f.write(rs)
+        raise e
+    finally:
+        f.close()
     return fname
     return
 
@@ -495,9 +589,9 @@ def _cull():
     return
 
 
-_ROOT = os.path.join(os.environ["RENDEREDOMESTIC"], "products", "pm")
+_ROOT = rg.newjoin(os.environ["RENDEREDOMESTIC"], "products", "pm")
 _NETROOT = '/usr/twc/domestic/products/pm'
-_LOG_ROOT = os.path.join(os.environ["RENDEREROOT"], "temp", "logs")
+_LOG_ROOT = rg.newjoin(os.environ["RENDEREROOT"], "temp", "logs")
 os.makedirs(_LOG_ROOT, exist_ok=True)
 _pl = _ProdLoader()
 _pluginMgr = None

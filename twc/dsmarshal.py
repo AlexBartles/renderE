@@ -3,7 +3,7 @@
 # Decompiled from: Python 3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]
 # Embedded file name: dsmarshal.py
 # Compiled at: 2007-01-12 11:17:30
-import sys, twc, twc.DataStoreInterface, twccommon, json, socket, pickle
+import sys, twc.DataStoreInterface, twccommon, json, socket, pickle
 from io import BytesIO
 import nethandler as nh
 ds = twc.DataStoreInterface
@@ -44,6 +44,7 @@ def datatojson(dt):
     return jsond
 
 def set(key, data, expiration, update=0, session=0):
+    print(f"setting {key}")
     if isinstance(data, str):
         ds.set([(key, data, expiration)], session)
         return ''
@@ -58,11 +59,11 @@ def set(key, data, expiration, update=0, session=0):
         t1 = type(data)
         t2 = type(oldData)
         #todo: what
-        # if t1 != types.InstanceType or t2 != types.InstanceType:
-        #     raise RuntimeError('cannot update non-instance type')
-        userData = twc.Data()
+        if (not hasattr(t1, "__dict__")) or (not hasattr(t2, "__dict__")):
+            raise RuntimeError('cannot update non-instance type')
+        userData = twccommon.Data()
         userData.__dict__.update(data.__dict__)
-        temp = twc.Data()
+        temp = twccommon.Data()
         temp.__dict__.update(oldData.__dict__)
         temp.__dict__.update(data.__dict__)
         data = temp
@@ -70,7 +71,7 @@ def set(key, data, expiration, update=0, session=0):
     if update:
         (tmp, marshaledEntries) = _set(key, userData, expiration, marshalStr=1)
         marshaledEntries.append(('%s._dsmarshal' % key, formatStr, expiration))
-    ds.set(marshaledEntries)
+    ds.set(marshaledEntries, session)
     return formatStr
     return
 
@@ -89,7 +90,7 @@ def rset(key, data, expiration, update=0):
         res.extend(dat)
     sock.close()
     return res.decode()
-
+import traceback
 def defaultedGet(key, default=None, cachingEnabled=None):
     """Get the object referenced by key, else, return default obj if u cant 
 find it"""
@@ -154,7 +155,7 @@ def multiGet(keys, cachingEnabled=None, session=0):
         formatKey = '%s._dsmarshal' % key
         dsKeys.append(key)
         dsKeys.append(formatKey)
-        d = twc.Data()
+        d = twccommon.Data()
         d.formatKey = formatKey
         d.result = None
         d.maker = None
@@ -216,18 +217,18 @@ def getConfigVersion():
     return
 
 
-def remove(key):
+def remove(key, session=0):
     fields = []
     try:
         formatKey = '%s._dsmarshal' % key
-        (rc, data) = ds.get([formatKey], cachingEnabled=0)
+        (rc, data) = ds.get([formatKey], cachingEnabled=0, session=session)
         tokens = data[formatKey].split(' ')
         maker = _parse(key, tokens, fields)
         fields.append(formatKey)
     except KeyError:
         fields = [key]
 
-    rc = ds.remove(fields)
+    rc = ds.remove(fields, session)
     return
 
 
@@ -435,5 +436,5 @@ def _makeInst(field, data, moduleName, className, makers):
 def rcommit():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect(("localhost", 7245))
-    sock.sendall(b"rcommit")
+    nh._socksend(sock, b"rcommit")
     sock.close()

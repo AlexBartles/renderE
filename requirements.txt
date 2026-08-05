@@ -3,3 +3,9 @@ raylib
 pillow
 lxml
 requests
+av
+numpy
+miniaudio
+python-dateutil
+audioop-lts; python_version >= "3.13"
+freetype-py

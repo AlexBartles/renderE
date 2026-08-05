@@ -21,8 +21,8 @@ class TextFcstMappingHandler(xmlUtil.LookupSubHandler):
             self._dataDict[key] = data
         return
 
-
-filePath = os.path.join(os.environ["RENDEREMEDIA"], '/mappings/textForecast/')
+import rendereglobals as rg
+filePath = rg.newjoin(os.environ["RENDEREMEDIA"], '/mappings/textForecast/')
 
 class TextFcstMapping(mapping.Map):
 

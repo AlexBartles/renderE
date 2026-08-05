@@ -92,6 +92,12 @@ def loadValidateBulletin(bulletin, primaryCounty, county):
         bulletin.dispExpiration = min(now + maxDispTime, bulletin.dispExpiration)
     if getattr(bulletin, 'crawlGroup', None) == None:
         bulletin.crawlGroup = None
+    try:
+        bulletin.ldl = getattr(bulletinInfo, "ldl", 1)
+    except:
+        print("BEANSKDDAS")
+        print(bulletinInfo)
+        exit(1)
     return bulletin
     return
 

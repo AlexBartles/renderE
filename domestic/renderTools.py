@@ -15,6 +15,10 @@ from twc.embedded.renderd.RenderScript import SetVisibility
 from twc.embedded.renderd.RenderScript import SetPosition
 from twc.embedded.renderd.RenderScript import Text
 from twc.embedded.renderd.RenderScript import TTFont
+from twc.embedded.renderd.RenderScript import TIFF_Image
+from twc.embedded.renderd.RenderScript import Clipper
+import twc
+import twc.dsmarshal as dsm
 from functools import reduce
 
 def apply(func, args, kwargs=None):
@@ -59,46 +63,187 @@ def sequenceOnPage(page, grSet, delayList, repeat=0):
     return
 
 
-def dataNotAvailable(page, xPos=None, yPos=None, text='Data Not Available', noDataBar=0, fadeDuration=5, displayDuration=0):
-    (r, g, b, a) = rgbaConvert(212, 212, 50, 255)
-    font = TTFont('/rsrc/fonts/Interstate-Bold', 30, t=30)
-    gr = Text(font, text)
-    gr.setColor(r, g, b, a)
-    print(gr.size())
-    if xPos is None:
-        xPos = (720 - gr.size()[0]) / 2
-    if yPos is None:
-        yPos = (480 - gr.size()[1]) / 2
-    gr.setPosition(xPos, yPos)
-    renderObj = gr
-    if noDataBar:
-        cr = CompositeRenderable()
-        bb = Box()
-        bb.setSize(720, 31)
-        bb.setPosition(0, yPos - 6)
-        (r, g, b, a) = rgbaConvert(20, 20, 20, 255)
-        bb.setColor(r, g, b, a)
-        cr.addItem(bb)
-        cr.addItem(gr)
-        renderObj = cr
-    if displayDuration > 0:
-        page.addItem(renderObj)
-        totalDelay = 2 * fadeDuration + 20
-        dur = displayDuration - totalDelay
-        ef = EffectSequencer(renderObj)
-        ef.addEffect(SetVisibility(None, 0), 1)
-        ef.addEffect(Fader(None, 1, 0, 1), 1)
-        ef.addEffect(SetVisibility(None, 1), 1)
-        ef.addEffect(NullEffect(None), 7)
-        ef.addEffect(Fader(None, 0, 1, fadeDuration), fadeDuration)
-        ef.addEffect(NullEffect(None), dur)
-        ef.addEffect(Fader(None, 1, 0, fadeDuration), fadeDuration)
-        page.addItem(ef)
-    return renderObj
-    return
+def dataNotAvailable(page, xPos=None, yPos=None, text='Data Not Available', noDataBar=0, fadeDuration=5, displayDuration=0, rgba=None):
+    print("DNA", f"_{twc.personality}_")
+    if twc.personalityCode == 3:
+        print("FlatrockDNA")
+        if rgba:
+            (r, g, b, a) = rgbaConvert(*rgba)
+        else:
+            (r, g, b, a) = rgbaConvert(25, 25, 25, 255)
+        font = TTFont('/rsrc/fonts/Interstate-Bold', 30, t=30, shadow=0)
+        gr = Text(font, text)
+        gr.setColor(r, g, b, a)
+        if xPos is None:
+            xPos = (720 - gr.size()[0]) / 2
+        if yPos is None:
+            yPos = (480 - gr.size()[1]) / 2
+        gr.setPosition(xPos, yPos)
+        renderObj = gr
+        if noDataBar:
+            cr = CompositeRenderable()
+            bb = Box()
+            bb.setSize(720, 31)
+            bb.setPosition(0, yPos - 6)
+            (r, g, b, a) = rgbaConvert(20, 20, 20, 255)
+            bb.setColor(r, g, b, a)
+            cr.addItem(bb)
+            cr.addItem(gr)
+            renderObj = cr
+        if displayDuration > 0:
+            page.addItem(renderObj)
+            totalDelay = 2 * fadeDuration + 20
+            dur = displayDuration - totalDelay
+            ef = EffectSequencer(renderObj)
+            ef.addEffect(SetVisibility(None, 0), 1)
+            ef.addEffect(Fader(None, 1, 0, 1), 1)
+            ef.addEffect(SetVisibility(None, 1), 1)
+            ef.addEffect(NullEffect(None), 7)
+            ef.addEffect(Fader(None, 0, 1, fadeDuration), fadeDuration)
+            ef.addEffect(NullEffect(None), dur)
+            ef.addEffect(Fader(None, 1, 0, fadeDuration), fadeDuration)
+            page.addItem(ef)
+        return renderObj
+    elif twc.personalityCode < 3:
+        (r, g, b, a) = rgbaConvert(212, 212, 50, 255)
+        font = TTFont('/rsrc/fonts/Interstate-Bold', 30, t=30)
+        gr = Text(font, text)
+        gr.setColor(r, g, b, a)
+        print(gr.size())
+        if xPos is None:
+            xPos = (720 - gr.size()[0]) / 2
+        if yPos is None:
+            yPos = (480 - gr.size()[1]) / 2
+        gr.setPosition(xPos, yPos)
+        renderObj = gr
+        if noDataBar:
+            cr = CompositeRenderable()
+            bb = Box()
+            bb.setSize(720, 31)
+            bb.setPosition(0, yPos - 6)
+            (r, g, b, a) = rgbaConvert(20, 20, 20, 255)
+            bb.setColor(r, g, b, a)
+            cr.addItem(bb)
+            cr.addItem(gr)
+            renderObj = cr
+        if displayDuration > 0:
+            page.addItem(renderObj)
+            totalDelay = 2 * fadeDuration + 20
+            dur = displayDuration - totalDelay
+            ef = EffectSequencer(renderObj)
+            ef.addEffect(SetVisibility(None, 0), 1)
+            ef.addEffect(Fader(None, 1, 0, 1), 1)
+            ef.addEffect(SetVisibility(None, 1), 1)
+            ef.addEffect(NullEffect(None), 7)
+            ef.addEffect(Fader(None, 0, 1, fadeDuration), fadeDuration)
+            ef.addEffect(NullEffect(None), dur)
+            ef.addEffect(Fader(None, 1, 0, fadeDuration), fadeDuration)
+            page.addItem(ef)
+        return renderObj
 
+modern = (twc.personality == "Texarkana")
+
+def createTitleBarModern(string1, string2):
+    vBevSize = 3
+    hBevSize = 3
+    padV = 14
+    padH = 12
+    bg1X = vBevSize - 3
+    bg1Y = hBevSize
+    bg1W = 0
+    tr1X = bg1X + padH
+    tr1Y = bg1Y + padV
+    titleFont1 = TTFont('/rsrc/fonts/Interstate-Bold', 36, 0)
+    titleFont2 = TTFont('/rsrc/fonts/Interstate-Bold', 30 + 6, 0)
+    crTitleTxt = CompositeRenderable()
+    crTitleTxt2 = CompositeRenderable()
+    crTitleBev = CompositeRenderable()
+    crTitleBev2 = CompositeRenderable()
+    
+    bgSide = 10
+    bgSide2 = 8
+    bgInset = 3
+    bg1H = 50
+    #bg2H = 40
+    bg2H = 50
+    bg2O = 10
+    
+    bg2V = 5
+    bg2TV = 2
+    
+    bg2V = 0
+    bg2TV = 0
+    
+    severe = dsm.defaultedGet("SevereMode", 0)
+    
+    if string1:
+        tr1 = Text(titleFont1, string1)
+        tr1w, tr1h = tr1.size()
+        if string2:
+            tr2 = Text(titleFont2, string2)
+            tr2w, tr2h = tr2.size()
+            pp = Polygon()
+            (r, g, b, a) = rgbaConvert(20, 20, 20, 255)
+            pp.addVertex(bgSide, 0, r, g, b, a)
+            pp.addVertex(0, bgSide, r, g, b, a)
+            pp.addVertex(0, bg2H, r, g, b, a)
+            pp.addVertex(tr2w+padH*2-bgSide+bg2O, bg2H, r, g, b, a)
+            pp.addVertex(tr2w+padH*2+bg2O, bg2H-bgSide, r, g, b, a)
+            pp.addVertex(tr2w+padH*2+bg2O, 0, r, g, b, a)
+            pp.setPosition(bg1X+tr1w, bg1Y+bg2V)
+
+            crTitleBev2.addItem(pp)
+            
+            pp = Polygon()
+            (r, g, b, a) = rgbaConvert(235, 235, 235, 255)
+            (r2, g2, b2, a2) = rgbaConvert(235, 235, 235, 127)
+            pp.addVertex(bgSide2, 0, r2, g2, b2, a2)
+            pp.addVertex(0, bgSide2, r2, g2, b2, a2)
+            pp.addVertex(0, bg2H-bgInset*2, r, g, b, a)
+            pp.addVertex(tr2w+padH*2-bgSide2-bgInset*2+bg2O, bg2H-bgInset*2, r, g, b, a)
+            pp.addVertex(tr2w+padH*2-bgInset*2+bg2O, bg2H-bgSide2-bgInset*2, r, g, b, a)
+            pp.addVertex(tr2w+padH*2-bgInset*2+bg2O, 0, r2, g2, b2, a2)
+            pp.setPosition(bg1X+bgInset+tr1w, bg1Y+bgInset+bg2V)
+            
+            crTitleBev2.addItem(pp)
+            
+            tr2.setPosition(tr1X+tr1w+bgInset+bg2O, tr1Y+bg2TV)
+            (r, g, b, a) = rgbaConvert(20, 20, 20, 255)
+            tr2.setColor(r, g, b, a)
+            crTitleTxt2.addItem(tr2)
+        pp = Polygon()
+        (r, g, b, a) = (rgbaConvert(80, 139, 200, 255) if not severe else rgbaConvert(200, 0, 0, 255))
+        (r2, g2, b2, a2) = (rgbaConvert(82, 121, 161, 255) if not severe else rgbaConvert(161, 0, 0, 255))
+        pp.addVertex(bgSide, 0, r2, g2, b2, a2)
+        pp.addVertex(0, bgSide, r2, g2, b2, a2)
+        pp.addVertex(0, bg1H, r, g, b, a)
+        pp.addVertex(tr1w+padH*2, bg1H, r, g, b, a)
+        pp.addVertex(tr1w+padH*2, 0, r2, g2, b2, a2)
+        pp.setPosition(bg1X, bg1Y)
+
+        crTitleBev.addItem(pp)
+        
+        pp = Polygon()
+        (r, g, b, a) = rgbaConvert(20, 20, 20, 255)
+        (r2, g2, b2, a2) = rgbaConvert(20, 20, 20, 192)
+        pp.addVertex(bgSide2, 0, r2, g2, b2, a2)
+        pp.addVertex(0, bgSide2, r2, g2, b2, a2)
+        pp.addVertex(0, bg1H-bgInset*2, r, g, b, a)
+        pp.addVertex(tr1w+padH*2-bgInset*2, bg1H-bgInset*2, r, g, b, a)
+        pp.addVertex(tr1w+padH*2-bgInset*2, 0, r2, g2, b2, a2)
+        pp.setPosition(bg1X+bgInset, bg1Y+bgInset)
+        
+        crTitleBev.addItem(pp)
+        
+        tr1.setPosition(tr1X, tr1Y)
+        (r, g, b, a) = rgbaConvert(235, 235, 235, 255)
+        tr1.setColor(r, g, b, a)
+        crTitleTxt.addItem(tr1)
+    return (crTitleBev, crTitleBev2, crTitleTxt, crTitleTxt2)
 
 def createTitleBar(string1, string2, s1BkgColor, s2BkgColor, s1TxtColor, s2TxtColor, s1ShdColor, s2ShdColor):
+    if modern:
+        return createTitleBarModern(string1, string2)
     (R, G, B, A) = s1ShdColor
     (r, g, b, a) = rgbaConvert(R, G, B, A)
     titleFont1 = TTFont('/rsrc/fonts/Interstate-Bold', 36, t=20, sr=r, sb=b, sg=g, sa=a)
@@ -263,6 +408,23 @@ def createTitleBar(string1, string2, s1BkgColor, s2BkgColor, s1TxtColor, s2TxtCo
     return (crTitleBev, crTitleTxt)
     return
 
+def createSDRefreshTitleBar(titleString, txtColor, background=None):
+    (R, G, B, A) = txtColor
+    (r, g, b, a) = rgbaConvert(R, G, B, A)
+    crTitleTxt = CompositeRenderable()
+    if background:
+        bkgdFile = twc.findRsrc('/backgrounds/%s' % background, 'tif', 0)
+        bkgdImage = TIFF_Image(bkgdFile)
+        crTitleTxt.addItem(bkgdImage)
+        bkgdImage.setPosition(0, 0)
+    titleFont = TTFont('/rsrc/fonts/Interstate-Bold', 36, t=20, sr=r, sb=b, sg=g, sa=a, shadow=0)
+    trTextTitle = Text(titleFont, titleString)
+    trTextTitle.setColor(r, g, b, a)
+    tr1X = tr1Y = 0
+    crTitleTxt.addItem(trTextTitle)
+    trTextTitle.setPosition(11, 11)
+    return crTitleTxt
+    return
 
 def drawMapBanner(page):
     """Draw black map banner."""
@@ -329,4 +491,33 @@ def ldlWatchSlide(p, grList, duration):
 
     return
 
+def slide(p, gr, time, dur, dest):
+    #pass
+    sx, sy = gr.position()
+    es = EffectSequencer(gr)
+    es.addEffect(NullEffect(None), int(time))
+    es.addEffect(Slider(None, (dest[0]-sx)/dur, (dest[1]-sy)/dur), int(dur))
+    #p.addItem(gr)
+    p.addItem(es)
 
+def clipObj(p, gr, left=0, right=720, top=720, bottom=0):
+    c = Clipper(gr)
+    c.clip(Clipper.CP_LEFT, left, 0)
+    c.clip(Clipper.CP_RIGHT, right, 0)
+    c.clip(Clipper.CP_TOP, top, 0)
+    c.clip(Clipper.CP_BOTTOM, bottom, 0)
+
+def createBox(p, pos, size, color):
+    gr = Box()
+    gr.setSize(*size)
+    gr.setPosition(*pos)
+    r,g,b,a = color
+    gr.setColor(r,g,b,a)
+    return gr
+
+def createText(p, text, font, color, pos):
+    t = Text(font, text)
+    r,g,b,a = color
+    t.setColor(r,g,b,a)
+    t.setPosition(*pos)
+    return t

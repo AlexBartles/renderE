@@ -4,7 +4,12 @@
 # Embedded file name: wxdata.py
 # Compiled at: 2007-01-12 11:33:26
 import re, time, types, shutil, twc.dsmarshal, twc.DataStoreInterface, twc.InterestList, twc.MiscCorbaInterface, twccommon, twccommon.Log, domestic.BulletinInfo, os, glob
-import domesticpy.plugin.playman.playCmd.pm as pcpm
+if twc.personality == "WxScan":
+    import wxscanpy.plugin.playman.playCmd.pm as pcpm
+else:
+    import domesticpy.plugin.playman.playCmd.pm as pcpm
+from xml.sax import make_parser, handler
+import nethandler as nh
 ds = twc.DataStoreInterface
 dsm = twc.dsmarshal
 BulletinInfo = domestic.BulletinInfo
@@ -12,6 +17,62 @@ CHANNEL_NAME = 'SystemEventChannel'
 MAP_ACTIVE_KEY = 'mapcuts.active'
 MAP_PENDING_KEY = 'mapcuts.pending'
 MAP_FORCE_KEY = 'mapcuts.force'
+
+class IconParserHandler(handler.ContentHandler):
+
+    def __init__(self):
+        self._data = {}
+        return
+
+    def startElement(self, name, attrs):
+        if name == 'record':
+            self._data[(str(attrs.get('wxId')), str(attrs.get('night', '0')))] = (str(attrs.get('wxId')), str(attrs.get('movie')), str(attrs.get('sfx_name')), str(attrs.get('night', '0')))
+        return
+
+
+def getTextFcstMultimedia(audioCode):
+    sCodeRe = re.compile('S([0-9]{4})([0-9])')
+    for audioElement in audioCode.split(':'):
+        sCodeMatch = sCodeRe.match(audioElement)
+        if sCodeMatch:
+            sCode = sCodeMatch.groups()[0]
+            sDayPart = sCodeMatch.groups()[1]
+            if sDayPart in ['2', '4']:
+                sDayPart = '1'
+            else:
+                sDayPart = '0'
+            try:
+                sCode = str(int(sCode))
+            except ValueError:
+                pass
+            else:
+                break
+    else:
+        return (None, None)
+
+    parser = make_parser()
+    iconHandler = IconParserHandler()
+    parser.setContentHandler(iconHandler)
+    fname = '/media/mappings/textForecast/AnimatedIcons.xml'
+    if not os.path.exists(fname):
+        fname = nh.requestNetAssetExt('/media/mappings/textForecast/AnimatedIcons.xml')
+    parser.parse(fname)
+    data = iconHandler._data
+    try:
+        mapping_element = data[(sCode, sDayPart)]
+    except KeyError:
+        if sDayPart == '1':
+            try:
+                mapping_element = data[(sCode, '0')]
+            except KeyError:
+                mapping_element = (None, None, None, None)
+
+        else:
+            mapping_element = (None, None, None, None)
+
+    return (mapping_element[1], mapping_element[2])
+    return
+
 
 def getBulletinInterestList(ugc):
     cl = getUGCInterestList(ugc, 'county')
@@ -174,15 +235,14 @@ def setImageData(type, fname):
     twccommon.Log.info('set %s image: %s' % (type, fname))
     return
 
-
+import mapcut
 def setMapCut(type):
-    _signalRPC('execd.map.process', (type,))
+    mapcut.process(type)
     twccommon.Log.info('set map cut: %s' % type)
     return
 
 
 def setMapData(key, data, expiration, update=0):
-    return #todo
     mapForceKey = MAP_FORCE_KEY
     try:
         mapCutRequired = dsm.get(mapForceKey)
@@ -213,8 +273,8 @@ def setMapData(key, data, expiration, update=0):
                 dsm.set(pendingKey, mapPendingList, 0)
                 ds.commit()
             twccommon.Log.info('set %s' % (mapDataKey,))
-            _setData(mapDataKey, data, expiration, update)
-            setMapCut(key)
+            _setData(mapDataKey.replace("Config.0", "Config.1"), data, expiration, update)
+            setMapCut(key.replace("Config.0", "Config.1"))
     return
 
 
@@ -299,24 +359,55 @@ def loadClock():
     return
 
 
-def loadData(prodType, argData):
-    if prodType == 'tag':
-        id = 'tag-%s' % argData.id
-        duration = argData.duration * 30 + argData.durationFrames
-        scheds = "[DynamicSchedule('Tag')]"
-        params = twccommon.Data(mediaNum=argData.mediaNum)
-        _pmLoad(id, duration, argData.expire, scheds, params)
-    elif prodType == 'localAvail':
-        id = 'localAvail-%s' % argData.id
-        duration = 68
-        durationFrames = 0
-        duration = duration * 30 + durationFrames
-        scheds = "[DynamicSchedule('LocalAvail')]"
-        params = twccommon.Data()
-        _pmLoad(id, duration, argData.expire, scheds, params)
-    else:
-        _runPlayCmd(prodType, 'load', argData)
-    return
+
+if twc.personalityCode < 2:
+    def loadData(prodType, argData):
+        if prodType == 'tag':
+            id = 'tag-%s' % argData.id
+            duration = argData.duration * 30 + argData.durationFrames
+            scheds = "[DynamicSchedule('Tag')]"
+            params = twccommon.Data(mediaNum=argData.mediaNum)
+            _pmLoad(id, duration, argData.expire, scheds, params)
+        elif prodType == 'localAvail':
+            id = 'localAvail-%s' % argData.id
+            duration = 68
+            durationFrames = 0
+            duration = duration * 30 + durationFrames
+            scheds = "[DynamicSchedule('LocalAvail')]"
+            params = twccommon.Data()
+            _pmLoad(id, duration, argData.expire, scheds, params)
+        else:
+            _runPlayCmd(prodType, 'load', argData)
+        return
+else:
+    def loadData(prodType, argData):
+        global _ldlIdList
+        if prodType == 'tag':
+            id = 'tag-%s' % argData.id
+            duration = argData.duration * 30 + argData.durationFrames
+            scheds = "[DynamicSchedule('Tag')]"
+            params = twccommon.Data(mediaNum=argData.mediaNum)
+            _pmLoad(id, duration, argData.expire, scheds, params)
+        elif prodType == 'localAvail':
+            id = 'localAvail-%s' % argData.id
+            duration = 68
+            durationFrames = 0
+            duration = duration * 30 + durationFrames
+            scheds = "[DynamicSchedule('LocalAvail')]"
+            params = twccommon.Data()
+            _pmLoad(id, duration, argData.expire, scheds, params)
+        elif prodType == 'SNUP':
+            if len(argData.media1) > 0:
+                displayMode = argData.media1
+            else:
+                displayMode = None
+            _ldlIdList.append(argData.id)
+            _runPlayCmd('ldl', 'load', argData.id, 1, displayMode)
+        elif prodType == 'SNDN':
+            pass
+        elif prodType == 'local':
+            _runPlayCmd(prodType, 'load', argData)
+        return
 
 
 def runData(prodType, argData):
@@ -384,9 +475,9 @@ def system(cmd):
     return
 
 
-def toggleNationalLDL(activate):
+def toggleNationalLDL(activate, displayMode=None):
     id = 0
-    _runPlayCmd('ldl', 'toggleNationalLDL', id, activate)
+    _runPlayCmd('ldl', 'toggleNationalLDL', id, activate, displayMode)
     return
 
 
@@ -399,6 +490,10 @@ def _setData(key, data, expiration, update):
     ds.commit()
     return
 
+def _rsetData(key, data, expiration, update):
+    dsm.rset(key, data, expiration, update)
+    ds.rcommit()
+    return
 
 def _signalEvent(type, value):
     twc.MiscCorbaInterface.signalEvent(CHANNEL_NAME, type, value)
@@ -407,7 +502,7 @@ def _signalEvent(type, value):
 
 def _signalRPC(rpcName, args):
     #twc.MiscCorbaInterface.signalEvent(CHANNEL_NAME, rpcName, repr(args))
-    fullname = "domesticpy.plugin."+rpcName
+    fullname = ("wxscanpy" if twc.personality == "WxScan" else "domesticpy") + ".plugin."+rpcName
     #this is the single unholiest function i have ever written.
     fn = fullname.split(".")[-1]
     di = __import__(".".join(fullname.split(".")[:-1]), fromlist=[fn])
@@ -479,4 +574,5 @@ def _runPlayCmd(prodType, playCmd, *params):
     _signalRPC(fnName, params)
     return
 
-
+def isAFullScreenSuppressedFlavor(flavor):
+    return False

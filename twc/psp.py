@@ -3,9 +3,10 @@
 # Decompiled from: Python 3.13.2 (main, Feb  4 2025, 14:51:09) [Clang 16.0.0 (clang-1600.0.26.6)]
 # Embedded file name: psp.py
 # Compiled at: 2007-01-12 11:17:30
-import os.path, string, types, twc.dsmarshal, twc.rsutil as rsutil, rsfix
+import os.path, rsfix
 import nethandler
-from twc import DataStoreInterface
+import patches
+
 _includePath = ['.']
 
 def setIncludePath(path=[]):
@@ -17,6 +18,7 @@ import rendereglobals as rg
 newstat = rg.newstat
 newaccess = rg.newaccess
 from functools import reduce
+
 def evalPage(page, namespace={}, includePath=None):
     """Parses text looking for tags in the spirit of ASP tags and evaluates
     them.  The contexts of the tags are passed to the Python interpreter.
@@ -35,6 +37,9 @@ def evalPage(page, namespace={}, includePath=None):
     namespace["reduce"] = reduce
     page = page.replace("os.stat", "newstat")
     page = page.replace("os.newaccess", "newaccess")
+    page = page.replace("os.path.exists", "newexists")
+    page = page.replace("os.path.join", "newjoin")
+    page = page.replace("time.strftime", "newstrftime")
     if includePath == None:
         includePath = _includePath
     p1 = page.find('<%')
@@ -58,19 +63,27 @@ def evalPage(page, namespace={}, includePath=None):
             if val == None:
                 continue
             val = str(val)
-            val.replace("/usr/twc/domestic", os.environ["RENDEREDOMESTIC"])
+            val2 = str(val)
+            val2.replace("/usr/twc/domestic", os.environ["RENDEREDOMESTIC"])
             fname = None
-            if val[0] == '/':
-                if os.path.exists(val):
+            if val2[0] == '/' or val2[1] == ":"  or val2.startswith("C:"):
+                if os.path.exists(val2):
                     fname = val
-                elif nethandler.requestNetAssetExt(val):
-                    fname = nethandler.requestNetAssetExt(val)
+                elif nethandler.requestNetAssetExt(val2):
+                    fname = nethandler.requestNetAssetExt(val2)
             
             for path in includePath:
                 temp = '%s/%s' % (path, val)
                 if os.path.exists(temp):
                     fname = temp
                     break
+            if not fname:
+                if os.path.exists(val):
+                    fname = val
+            if not fname:
+                vr = val.replace(os.environ["TWCPERSDIR"]+"/products", "net/twc/products", 1)
+                if os.path.exists(vr):
+                    fname = vr
             if not fname:
                 for path in includePath:
                     temp = '%s/%s' % (path, val)
@@ -87,8 +100,8 @@ def evalPage(page, namespace={}, includePath=None):
                         break
             print(fname, " found!")
             if not fname:
-                includePath = ["/usr/twc/domestic/products/pm/incl/"]
-                for path in includePath:
+                includePath2 = [p.replace("net/", "") for p in includePath]
+                for path in includePath2:
                     temp = '%s/%s' % (path, val)
                     fn = nethandler.requestNetAssetExt(temp)
                     if fn is not None:
@@ -96,7 +109,7 @@ def evalPage(page, namespace={}, includePath=None):
                         break
 
             if fname == None:
-                raise RuntimeError('file %s in PSP include tag not found' % sub2)
+                raise RuntimeError(f'file {sub2} in PSP include tag not found (searching for {values} in paths {includePath})')
             f = open(fname, 'r')
             sub2 = f.read()
             f.close()
@@ -114,8 +127,12 @@ def evalPage(page, namespace={}, includePath=None):
     elif cmd == '!':
         #print(sub2[:100])
         try:
-            exec(rsfix.fix_if(sub2).replace("os.stat", "newstat").replace("os.newaccess", "newaccess"), namespace)
+            fixed = rsfix.fix_if(sub2).replace("os.stat", "newstat").replace("os.newaccess", "newaccess").replace("os.path.exists", "newexists").replace("os.path.join", "newjoin")
+            fc = compile(fixed, "<string>", "exec")
+            exec(fc, namespace)
         except Exception as e:
+            with open("explode.txt", "w") as f:
+                f.write(sub2)
             raise e
         return sub1 + evalPage(sub3, namespace, includePath)
     elif cmd == '=':
@@ -132,6 +149,9 @@ def evalRenderScript(page, namespace={}, includePath=None):
     that will be common to render script evaluation.  As an example,
     a get function will be added that retrieves data from the DataStore.
     """
+    from twc import DataStoreInterface
+    import twc.dsmarshal
+    import twc.rsutil as rsutil
     namespace['rsutil'] = rsutil
     namespace['ds'] = DataStoreInterface
     namespace['dsm'] = twc.dsmarshal

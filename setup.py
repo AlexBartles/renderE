@@ -7,6 +7,8 @@ import sys
 import json
 import subprocess as sp
 
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
 root = tk.Tk()
 root.withdraw()
 root.configure(takefocus=False)
@@ -14,7 +16,7 @@ root.configure(takefocus=False)
 mypath = os.path.dirname(os.path.abspath(__file__))
 
 pg.mixer.init()
-bgm = pg.mixer.Sound(os.path.join(mypath, "setup", "setup.ogg"))
+bgm = pg.mixer.Sound(os.path.join(mypath, "setup", "funk.ogg"))
 
 pg.display.init()
 pg.font.init()
@@ -250,16 +252,16 @@ def buildconfigmap():
         }
 
 def serverchange(sv):
-    servers = [["PerrisLive"], ["PerrisFixes", "PerrisLive"], ["FlatRockLive"], ["WxScanLive"], ["PerrisBGs", "PerrisLive"]]
-    brands = ["Perris", "Perris", "FlatRock", "WxScan", "Perris"]
+    servers = [["PerrisLive"], ["FlatRockLive"], ["WxScanLive"]]
+    brands = ["Perris", "FlatRock", "WxScan"]
     serversel = [f"https://archive.lewolfyt.cc/{i}/" for i in servers[sv]]
     with open(os.path.join(mypath, "servers.json"), "w") as f:
         f.write(json.dumps([brands[sv]]+serversel, indent=4))
 
-serveropts = [pg.image.load(os.path.join(mypath, "setup", f"server{i+1}.png")) for i in range(4)]
+serveropts = [pg.image.load(os.path.join(mypath, "setup", f"server{i+1}.png")) for i in range(3)]
 serveracts = []
 i = 0
-for _ in range(4):
+for _ in range(3):
     j = i*1
     serveracts.append({"type": "multi", "actions": [{"type": "func", "func": serverchange, "args": [int(i*1)]}, {"type": "page", "destination": "main"}]})
     i += 1
@@ -277,6 +279,152 @@ def clearna():
         os.mkdir(os.path.join(mypath, "net"))
     except:
         pass
+
+custom_playlists = []
+
+def load_play():
+    global custom_playlists
+    try:
+        with open(os.path.join(mypath, "custom_playlists.json"), "r") as f:
+            custom_playlists = json.loads(f.read())
+    except:
+        custom_playlists = []
+    #so that i don't forget, the normal playlist format is this:
+    #prodName, prodInst, opt, max, min, step, pri, exclusive, cPlysts
+    
+    #prodName: you get it
+    #prodInst: not a clue always zeero
+    #opt: optimal time
+    #max: max time
+    #min: min time
+    #step: step time interval
+    #pri: priority
+    #exclusive: if another product has the same value, it becomes an either/or
+    #cPlysts: idk what, usually it's ["tag1", "bkgMusic1", "ldl1"]
+    
+    pagemap["pedit_menu"] = {
+        "type": "textpage",
+        "title": "Playlist Editor",
+        "desc": "Choose a playlist you would like to edit, or create a new one!",
+        "options": (["Back"] + [c[0] for c in custom_playlists] + ["Create New"]),
+        "actions": ([{"type": "page", "destination": "main"}, []])
+    }
+
+crawls = []
+
+
+def add_crawl():
+    global crawls
+    crawls.append((0, 9999999999, [(0, 23)], page_vars["newcrawl"]))
+    #crawls.append((page_vars["newcrawlt1"], page_vars["newcrawlt2"], page_vars["newcrawlrange"], page_vars["newcrawl"]))
+
+def modify_crawl():
+    global crawls
+    crawls[page_vars["mcrawl"]][3] = page_vars["newcrawl"]
+
+def delete_crawl():
+    global crawls
+    crawls.pop(page_vars["mcrawl"])
+
+def remove_mcrawl():
+    page["options"][0][1] = page["options"][0][0]
+
+def save_crawls():
+    global crawls
+    global crawldata
+    import twc.dsmarshal as dsm
+    crawldata.crawls = crawls
+    dsm.set("Config.0.Ldl_LASCrawl", crawldata, 0)
+
+def load_crawls(reload=False):
+    global crawls
+    global crawldata
+    if not reload:
+        import twc.dsmarshal as dsm
+        crawldata = dsm.defaultedConfigGet("Ldl_LASCrawl", [])
+        crawls = [list(c) for c in crawldata.crawls]
+    pagemap["crawl"] = {
+        "type": "textpage",
+        "title": "RCMT Crawl Editor",
+        "desc": "Choose the crawl you would like to modify",
+        "options": ["Back"] + [c[3] for c in crawls] + ["Create New", "Save"],
+        "actions": [{"type": "page", "destination": "rcmt"}] + [{"type": "page", "destination": f"crawl{i}"} for i in range(len(crawls))] + [{"type": "page", "destination": "newcrawl"}, {"type": "func", "func": save_crawls}]
+    }
+    for i, c in enumerate(crawls):
+        pagemap[f"crawl{i}"] = {
+            "type": "richpage",
+            "title": "RCMT Crawl Editor",
+            "desc": "Type in a new crawl in the textbox",
+            "options": [
+                [c[3], c[3]],
+                "Delete",
+                "Save",
+                "Back"
+            ],
+            "optiontypes": [
+                "text",
+                "button",
+                "button",
+                "button"
+            ],
+            "actions":[
+                "newcrawl",
+                {"type": "multi", "actions": [
+                    {"type": "var", "key": "mcrawl", "val": i},
+                    {"type": "func", "func": delete_crawl},
+                    {"type": "func", "func": reload_crawls},
+                    {"type": "page", "destination": "crawl"}
+                ]},
+                {"type": "multi", "actions": [
+                    {"type": "var", "key": "mcrawl", "val": i},
+                    {"type": "func", "func": modify_crawl},
+                    {"type": "func", "func": reload_crawls},
+                    {"type": "page", "destination": "crawl"}
+                ]},
+                {"type": "multi", "actions": [
+                    {"type": "func", "func": remove_mcrawl},
+                    {"type": "page", "destination": "crawl"}
+                ]}
+            ]
+        }
+
+def reload_crawls():
+    load_crawls(True)
+
+def check_essential_data():
+    with open(os.path.join(mypath, "servers.json"), "r") as f:
+        data = json.load(f)
+    efurl = os.path.join(data[1], "essentialFiles.txt")
+    page_vars["hasEF"] = efurl if r.head(efurl).ok else False
+    if bool(page_vars["hasEF"]):
+        pagemap["dessential_confirm"] = {
+            "type": "textpage",
+            "title": "Download Essential Data",
+            "desc": f"Would you like to download essential data for {data[0]}? This may fix bugs, but it may overwrite modifications you have made!",
+            "options": [
+                "Yes",
+                "No"
+            ],
+            "actions": [
+                {"type": "page", "destination": "dessential"},
+                {"type": "page", "destination": "main"}
+            ]
+        }
+
+def download_essential_data():
+    efurl = page_vars["hasEF"]
+    url_base = os.path.dirname(efurl)
+    for file in r.get(efurl).text.strip().split("\n"):
+        try:
+            out_name = os.path.join(mypath, "net", file)
+            out_dir = os.path.dirname(out_name)
+            os.makedirs(out_dir, exist_ok=True)
+            data = r.get(os.path.join(url_base, file)).content
+            if data:
+                with open(out_name, "wb") as f:
+                    f.write(data)
+        except Exception as e:
+            print(f"Error downloading {file}: {e}")
 
 pagemap = {
     "init": {
@@ -346,7 +494,7 @@ pagemap = {
     "setup3A_alt": {
         "type": "textpage",
         "title": "Datastore Setup",
-        "desc": "Choose which initial i1 datastore to use. Please note that Perris is the only full package currently supported by RenderE, so other datastores may cause issues!",
+        "desc": "Choose which initial i1 datastore to use. Perris support is currently the best! Weatherscan requires additional outside setup, along with Flat Rock.",
         "options": [
             "Perris",
             "Flat Rock",
@@ -444,15 +592,17 @@ pagemap = {
     "setup4": {
         "type": "textpage",
         "title": "Configuration Setup",
-        "desc": "In this section of setup, you can determine the location configuration. Would you like to browse our configuration repository, or load a configuration from a file?",
+        "desc": "Here, you can determine the location of your i1. Would you like to browse our configuration repository, or load a configuration from a file?\nIf you skip this step, you can come back to it in the main menu.",
         "options": [
             "Browse Repository",
             "Load from file",
+            "Skip",
             "Quit"
         ],
         "actions": [
             {"type": "page", "destination": "setup4Aload"},
             {"type": "page", "destination": "setup4Bwarn"},
+            {"type": "page", "destination": "setup4skip"},
             {"type": "quit"}
         ]
     },
@@ -486,7 +636,7 @@ pagemap = {
         "desc": "Running configuration scripts...",
         "actions": [
             {"type": "func", "func": (lambda : downloadconfig(page_vars["setpath"]))},
-            {"type": "cond", "key": "cfgsuccess", "true": {"type": "page", "destination": "setup4S"}, "false": {"type": "page", "destination": "setup4Afail"}}
+            {"type": "cond", "key": "cfgsuccess", "true": {"type": "alt", "setup": "setup4S", "main": "setup4S_alt"}, "false": {"type": "page", "destination": "setup4Afail"}}
         ]
     },
     "setup4Bwarn": {
@@ -513,7 +663,7 @@ pagemap = {
         ],
         "actions": [
             {"type": "page", "destination": "setup4A"},
-            {"type": "page", "destination": {"type": "alt", "setup": "setup4", "main": "setup4_alt"}},
+            {"type": "alt", "setup": "setup4", "main": "setup4_alt"},
             {"type": "multi", "actions": [{"type": "var", "key": "alreadysetup", "val": True}, {"type": "page", "destination": "main"}]}
         ]
     },
@@ -540,7 +690,7 @@ pagemap = {
         ],
         "actions": [
             {"type": "page", "destination": "setup4B"},
-            {"type": "page", "destination": {"type": "alt", "setup": "setup4", "main": "setup4_alt"}},
+            {"type": "alt", "setup": "setup4", "main": "setup4_alt"},
             {"type": "multi", "actions": [{"type": "var", "key": "alreadysetup", "val": True}, {"type": "page", "destination": "main"}]}
         ]
     },
@@ -548,6 +698,19 @@ pagemap = {
         "type": "textpage",
         "title": "Configuration Setup",
         "desc": "Your configuration has loaded successfully. Initial setup has been completed! You can now use the other included setup tools.",
+        "options": [
+            "Main menu",
+            "Quit"
+        ],
+        "actions": [
+            {"type": "multi", "actions": [{"type": "var", "key": "alreadysetup", "val": True}, {"type": "page", "destination": "main"}]},
+            {"type": "quit"}
+        ]
+    },
+    "setup4skip": {
+        "type": "textpage",
+        "title": "Configuration Setup",
+        "desc": "Initial setup has been completed! You can now use the other included setup tools.",
         "options": [
             "Main menu",
             "Quit"
@@ -576,6 +739,8 @@ pagemap = {
             "Reset Datastore",
             "Load Configuration",
             "Change data server",
+            "Download Essential Data",
+            "RCMT",
             #"Playlist editor",
             "Clear temporary files",
             "Quit"
@@ -584,9 +749,86 @@ pagemap = {
             {"type": "page", "destination": "setup2_alt"},
             {"type": "page", "destination": "setup4_alt"},
             {"type": "page", "destination": "dataservers"},
-            #{"type": "page", "destination": "pedit"},
+            {"type": "page", "destination": "checkessential"},
+            {"type": "page", "destination": "rcmt"},
+            #{"type": "page", "destination": "pedit_load"},
             {"type": "page", "destination": "cleartemp"},
             {"type": "quit"}
+        ]
+    },
+    "checkessential": {
+        "type": "autopage",
+        "title": "Download Essential Data",
+        "desc": "Loading...",
+        "actions": [
+            {"type": "func", "func": check_essential_data},
+            {"type": "cond", "key": "hasEF", "true": {"type": "page", "destination": "dessential_confirm"}, "false": {"type": "page", "destination": "noessential"}}
+        ]
+    },
+    "noessential": {
+        "type": "textpage",
+        "title": "Download Essential Data",
+        "desc": "There is no essential data defined for the current data server.",
+        "options": [
+            "Back"
+        ],
+        "actions": [
+            {"type": "page", "destination": "main"},
+        ]
+    },
+    "dessential": {
+        "type": "autopage",
+        "title": "Download Essential Data",
+        "desc": "Downloading files...",
+        "actions": [
+            {"type": "func", "func": download_essential_data},
+            {"type": "page", "destination": "main"}
+        ]
+    },
+    "rcmt": {
+        "type": "textpage",
+        "title": "RenderE Configuration/Management",
+        "desc": "Tools for configuring your STAR",
+        "options": [
+            "Back",
+            "Crawl Editor"
+        ],
+        "actions": [
+            {"type": "page", "destination": "main"},
+            {"type": "page", "destination": "crawl_load"}
+        ]
+    },
+    "crawl_load": {
+        "type": "autopage",
+        "title": "RCMT Crawl Editor",
+        "desc": "Loading...",
+        "actions": [
+            {"type": "func", "func": load_crawls},
+            {"type": "page", "destination": "crawl"}
+        ]
+    },
+    "newcrawl": {
+        "type": "richpage",
+        "title": "RCMT Crawl Editor",
+        "desc": "Type in a new crawl in the textbox",
+        "options": [
+            ["Example Text", "Example Text"],
+            "Add",
+            "Back"
+        ],
+        "optiontypes": [
+            "text",
+            "button",
+            "button"
+        ],
+        "actions":[
+            "newcrawl",
+            {"type": "multi", "actions": [
+                {"type": "func", "func": add_crawl},
+                {"type": "func", "func": reload_crawls},
+                {"type": "page", "destination": "crawl"}
+            ]},
+            {"type": "page", "destination": "crawl"}
         ]
     },
     "dataservers": {
@@ -595,6 +837,15 @@ pagemap = {
         "desc": "This will affect the graphics package used, products, and more.",
         "options": serveropts,
         "actions": serveracts
+    },
+    "pedit_load": {
+        "type": "autopage",
+        "title": "Custom Playlists",
+        "desc": "Loading...",
+        "actions": [
+            {"type": "func", "func": load_play},
+            {"type": "page", "destination": "pedit_menu"}
+        ]
     },
     "cleartemp": {
         "type": "textpage",
@@ -681,6 +932,62 @@ def draw_textpage(title, options, selected, desc):
         buf.blit(fn.render(optx, True, (0, 0, 0)), (12, i*40+72+yy-shifty))
         buf.blit(fn.render(optx, True, (255, 255, 255) if not (i == selected) else (255, 255, 0)), (10, i*40+70+yy-shifty))
 
+def draw_richpage(title, options, selected, desc, types, actions):
+    global shifty, sel
+    
+    shifty = max(min(shifty, (len(options)-6)*40), 0)
+    
+    if input_mode == "keyboard":
+        if sel > 5:
+            shifty = shifty*0.9+0.1*(sel-5)*40
+        else:
+            shifty = shifty*0.9
+    
+    bl = tfn.render(title, True, (0, 0, 0))
+    yl = tfn.render(title, True, (255, 255, 0))
+    buf.blit(bl, (12+2*cool_title_effect, 12-shifty))
+    buf.blit(yl, (10+2*cool_title_effect, 10-shifty))
+    
+    if cool_title_effect:
+        pg.draw.line(buf, (0, 0, 0), (10, 12-shifty), (10, 53-shifty), 3)
+        pg.draw.line(buf, (0, 0, 0), (12, 52-shifty), (12+bl.get_width(), 52-shifty), 3)
+        pg.draw.line(buf, (255, 255, 0), (8, 10-shifty), (8, 51-shifty), 3)
+        pg.draw.line(buf, (255, 255, 0), (10, 50-shifty), (10+bl.get_width(), 50-shifty), 3)
+    yy = 0
+    if desc:
+        d1 = fn.render(desc, True, (0, 0, 0), wraplength=700)
+        d2 = fn.render(desc, True, (255, 255, 255), wraplength=700)
+        yy = d1.height+40
+        buf.blit(d1, (12, 72-shifty))
+        buf.blit(d2, (10, 70-shifty))
+    
+    
+    mx, my = pg.mouse.get_pos()
+    if input_mode == "mouse":
+        for i, opt in enumerate(options):
+            yyy = i*40+70+yy-shifty
+            if yyy-5 < my < yyy+35:
+                sel = i
+    for i, opt in enumerate(options):
+        opt_type = types[i]
+        if opt_type == "button":
+            optx = "> "*(i==selected)+opt
+            buf.blit(fn.render(optx, True, (0, 0, 0)), (12, i*40+72+yy-shifty))
+            buf.blit(fn.render(optx, True, (255, 255, 255) if not (i == selected) else (255, 255, 0)), (10, i*40+70+yy-shifty))
+        elif opt_type == "text":
+            opti = fn.render(opt[1], True, (0, 0, 0))
+            textxx = min(720-10-opti.width, 10) if (i == selected) else 10
+            buf.blit(opti, (textxx+2, i*40+72+yy-shifty))
+            col = (255, 255, 255) if not (i == selected) else (255, 255, 0)
+            buf.blit(fn.render(opt[1], True, col), (textxx, i*40+70+yy-shifty))
+            yo = 26
+            pg.draw.line(buf, (0, 0, 0), (14, i*40+72+yy-shifty+2+yo), (722-12, i*40+72+yy-shifty+2+yo), 2)
+            pg.draw.line(buf, col, (12, i*40+72+yy-shifty+yo), (720-12, i*40+72+yy-shifty+yo), 2)
+            
+            pg.draw.line(buf, (0, 0, 0), (textxx+opti.width+2, i*40+72+yy-shifty+2), (textxx+opti.width+2, i*40+72+yy-shifty+2+yo-4), 2)
+            pg.draw.line(buf, col, (textxx+opti.width, i*40+72+yy-shifty), (textxx+opti.width, i*40+72+yy-shifty+2+yo-6), 2)
+            page_vars[actions[i]] = opt[1]
+
 def draw_impage(title, options, selected, desc):
     global shifty, sel
     
@@ -730,6 +1037,8 @@ running = True
 
 def doaction(action):
     global apage, page_vars, running
+    if isinstance(action, str):
+        return
     if action["type"] == "page":
         apage = action["destination"]
     elif action["type"] == "multi":
@@ -780,12 +1089,19 @@ while running:
             if transitioning:
                 continue
             if event.key in [pg.K_UP, pg.K_DOWN]:
-                if page["type"] in ["textpage", "imagepage"]:
+                if page["type"] in ["textpage", "imagepage", "richpage"]:
                     sel = (sel + (1 if event.key == pg.K_DOWN else -1)) % len(page["options"])
-                    while page["options"][sel] == "":
-                        sel = (sel + (1 if event.key == pg.K_DOWN else -1)) % len(page["options"])
+                    if page["type"] in ["textpage", "imagepage"]:
+                        while page["options"][sel] == "":
+                            sel = (sel + (1 if event.key == pg.K_DOWN else -1)) % len(page["options"])
+                    else:
+                        while page["options"][sel] == "" and page["optiontypes"][sel] == "button":
+                            sel = (sel + (1 if event.key == pg.K_DOWN else -1)) % len(page["options"])
             elif event.key in [pg.K_SPACE, pg.K_RETURN]:
-                if page["type"] in ["textpage", "imagepage"]:
+                if event.key == pg.K_SPACE and page["type"] == "richpage" and page["optiontypes"][sel] == "text":
+                    page["options"][sel][1] += " "
+                    continue
+                if page["type"] in ["textpage", "imagepage", "richpage"]:
                     doaction(page["actions"][sel])
                     if page["actions"][sel]["type"] != "quit":
                         invert_transition = (page["options"][sel] == "Back")
@@ -795,12 +1111,20 @@ while running:
                         transition_in = False
                         transition_time = 10
                         snapshot = buf.copy()
+            elif event.key in [pg.K_BACKSPACE, pg.K_DELETE]:
+                if page["type"] == "richpage" and page["optiontypes"][sel] == "text":
+                    if len(page["options"][sel][1]) > 0:
+                        page["options"][sel][1] = page["options"][sel][1][:-1]
+            else:
+                if page["type"] == "richpage" and page["optiontypes"][sel] == "text":
+                    if event.unicode.isprintable():
+                        page["options"][sel][1] += event.unicode
         elif event.type == pg.MOUSEBUTTONDOWN:
             input_mode = "mouse"
             if transitioning:
                 continue
             if event.button == pg.BUTTON_LEFT:
-                if page["type"] in ["textpage", "imagepage"]:
+                if page["type"] in ["textpage", "imagepage", "richpage"]:
                     doaction(page["actions"][sel])
                     if page["actions"][sel]["type"] != "quit":
                         invert_transition = (page["options"][sel] == "Back")
@@ -815,6 +1139,8 @@ while running:
             if transitioning:
                 continue
             shifty = max(shifty+(event.y*2)*(int(event.flipped)*2-1), 0)
+        elif event.type == pg.MOUSEMOTION:
+            input_mode = "mouse"
     if not running:
         break
     page = pagemap[apage]
@@ -836,6 +1162,8 @@ while running:
     else:
         if page["type"] == "textpage":
             draw_textpage(page["title"], page["options"], sel, page["desc"])
+        elif page["type"] == "richpage":
+            draw_richpage(page["title"], page["options"], sel, page["desc"], page["optiontypes"], page["actions"])
         elif page["type"] == "imagepage":
             draw_impage(page["title"], page["options"], sel, page["desc"])
         elif page["type"] == "autopage":

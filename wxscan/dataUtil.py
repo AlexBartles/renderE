@@ -328,7 +328,8 @@ def formatApparentTemp(windChill, heatIndex):
 
 def formatValue(val, rangeList, default=None):
     for (min, max, displayStr) in rangeList:
-        if val >= min and val <= max:
+        val2 = val or (min/2+max/2)
+        if val2 >= min and val2 <= max:
             return displayStr
 
     if default == None:
@@ -476,4 +477,12 @@ _windDirectionTableSpanish[14] = 'ONO'
 _windDirectionTableSpanish[15] = 'NO'
 _windDirectionTableSpanish[16] = 'NNO'
 _windDirectionTableSpanish[17] = 'Variable'
-_week = [73, 74, 75, 76, 77, 78, 79]
+_week = [
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday',
+    'Sunday'
+]

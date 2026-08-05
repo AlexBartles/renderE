@@ -47,10 +47,6 @@ def runpyc(fname):
     mylocals.clear()
     if haderror == 1:
         raise RuntimeError('Encountered exception during embedded script')
-    
-def execfile(filename, globa, loca):
-    with open(filename, "r", encoding="windows-1252") as f:
-        exec(compile(f.read(), filename, 'exec'), globa, loca)
 
 def runpy(fname):
     '''Runs a python script in its own namespace.  The namespace will 

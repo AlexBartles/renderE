@@ -109,9 +109,7 @@ class DynamicPlaylist(Playlist):
             else:
                 (curDuration, schedule, runlist) = self._underHeuristic.grow(curDuration, schedule, runlist, self._duration, self)
             loop += 1
-            print("Heuristic Thingy:")
-            print(curDuration)
-            print(self._duration)
+            renderElog("Heuristic Thingy:", curDuration, self._duration)
             if loop > 100:
                 raise Exception('abandoning playlist - heuristic loop > 100')
 
