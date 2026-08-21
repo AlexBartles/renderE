@@ -139,7 +139,7 @@ def processDS(watt=False):
         f.write(json.dumps(dsdict, indent=4))
     
     if watt:
-        pass
+        sp.call([sys.executable, "loadSCMTconfig.py", os.path.join(mypath, "domesticpy", "util", "defaultEnhancedPlaylist.py")])
 
 def downloadDS():
     dss = page_vars['dssource']
