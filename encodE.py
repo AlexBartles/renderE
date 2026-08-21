@@ -53,34 +53,35 @@ tomtom_key = "" #tomtom key
 expiretime = time.time()+30*60
 
 stationmap = { #maps closed stations onto not-closed stations
-    "KPFN": "KECP"
+    "KPFN": "KECP",
+    #"KNXX": "KLOM"
 }
 
 db = sql.connect("LFRecord.db")
 
-cver = dsm.rget("configVersion")
-obs = dsm.rget(f"Config.{cver}.interestlist.obsStation")
+cver = dsm.get("configVersion")
+obs = dsm.get(f"Config.{cver}.interestlist.obsStation")
 
 obstype = [o.startswith("T") for o in obs]
 
 tecci = [o for o in obs if o.startswith("T")]
 
-coopid = set(dsm.rget(f"Config.{cver}.interestlist.coopId"))
-counties = dsm.rget(f"Config.{cver}.interestlist.county")
-aqis = dsm.rget(f"Config.{cver}.interestlist.aq")
-primarycoop = dsm.rget(f"primaryCoopId")
+coopid = set(dsm.get(f"Config.{cver}.interestlist.coopId"))
+counties = dsm.get(f"Config.{cver}.interestlist.county")
+aqis = dsm.get(f"Config.{cver}.interestlist.aq")
+primarycoop = dsm.get(f"primaryCoopId")
 
 if not wxs:
-    textfcstcoop = dsm.rget(f"Config.{cver}.Local_TextForecast").coopId
-    daypartcoop = dsm.rget(f"Config.{cver}.Local_DaypartForecast").coopId[0]
-    sevendaycoop = dsm.rget(f"Config.{cver}.Local_7DayForecast").coopId
-    headlinecounty = dsm.rget(f"Config.{cver}.Local_NWSHeadlines").zone
-    getawaycoop = dsm.rget(f"Config.{cver}.Local_GetawayForecast").coopId
-    uvcoop = dsm.rget(f"Config.{cver}.Ldl_UVForecast").coopId
-    trafficrep = dsm.rget(f"Config.{cver}.Local_TrafficReport")
+    textfcstcoop = dsm.get(f"Config.{cver}.Local_TextForecast").coopId
+    daypartcoop = dsm.get(f"Config.{cver}.Local_DaypartForecast").coopId[0]
+    sevendaycoop = dsm.get(f"Config.{cver}.Local_7DayForecast").coopId
+    headlinecounty = dsm.get(f"Config.{cver}.Local_NWSHeadlines").zone
+    getawaycoop = dsm.get(f"Config.{cver}.Local_GetawayForecast").coopId
+    uvcoop = dsm.get(f"Config.{cver}.Ldl_UVForecast").coopId
+    trafficrep = dsm.get(f"Config.{cver}.Local_TrafficReport")
 
-    metrofcstcoop = [v[0] for v in dsm.rget(f"Config.{cver}.Local_MetroForecastMap").fcstValue[0][1]]
-    regfcstcoop = [v[0] for v in dsm.rget(f"Config.{cver}.Local_RegionalForecastMap").fcstValue[0][1]]
+    metrofcstcoop = [v[0] for v in dsm.get(f"Config.{cver}.Local_MetroForecastMap").fcstValue[0][1]]
+    regfcstcoop = [v[0] for v in dsm.get(f"Config.{cver}.Local_RegionalForecastMap").fcstValue[0][1]]
 
     coopid.add(textfcstcoop)
     coopid.add(daypartcoop)
@@ -154,7 +155,7 @@ if (not doonly or only == "sensor") and not nosensor:
         data.ceiling = dat["current"]["conditions"]["cloudCeiling"]
         #wxdata.setData(f"obs", stat, data, dat["current"]["info"]["expires"])
         #dat["current"]["info"]["expires"]
-        dsm.rset(f"obs.SENSOR", data, expiretime)
+        dsm.set(f"obs.SENSOR", data, expiretime)
 
 if not doonly or only == "obs":
     def getobs(i, stat):
@@ -183,11 +184,11 @@ if not doonly or only == "obs":
             data.ceiling = dat["current"]["conditions"]["cloudCeiling"]
             #wxdata.setData(f"obs", stat, data, dat["current"]["info"]["expires"])
             #dat["current"]["info"]["expires"]
-            dsm.rset(f"obs.{stat}", data, expiretime)
+            dsm.set(f"obs.{stat}", data, expiretime)
             rdata = twccommon.Data()
             rdata.tempMax = dat["historical"][1]["tempMax"]
             rdata.tempMin = dat["historical"][1]["tempMin"]
-            dsm.rset(f"recObs.{stat}", rdata, expiretime)
+            dsm.set(f"recObs.{stat}", rdata, expiretime)
         except:
             print(traceback.print_exc())
             print(f"obs failure for {stat}")
@@ -196,6 +197,7 @@ curr_time = time.time()
 y, m, d, H, M, S, wd, day, dst = time.localtime(curr_time)
 
 times = []
+times2 = []
 
 #i'm just gonna... lie!
 def fixac(ac):
@@ -270,7 +272,9 @@ if not doonly or only == "text":
                         break
                     ix += 1
             for fcst, tm, ex in zip(fcsts, times, expiry):
-                dsm.rset(f"textFcst.{override if override else textfcstcoop}.{round(tm)}", fcst, expiretime)
+                dsm.set(f"textFcst.{override if override else textfcstcoop}.{round(tm)}", fcst, expiretime)
+            #for fcst, tm in zip(fcsts, times2):
+            #    dsm.set(f"textFcst.{override if override else textfcstcoop}.{round(tm)}", fcst, expiretime)
         except:
             traceback.print_exc()
             print("TextForecast generation failed!")
@@ -292,7 +296,7 @@ if not doonly or only == "hourly":
                 data.windChill = round(hr["windChill"])
                 #hr["expires"]
                 print("hourly data for", hr["valid"])
-                dsm.rset(f"hourlyFcst.{coop}.{hr['valid']}", data, expiretime)
+                dsm.set(f"hourlyFcst.{coop}.{hr['valid']}", data, expiretime)
         except:
             print(traceback.print_exc())
             print(f"daypart failure for {coop}")
@@ -340,7 +344,7 @@ if not doonly or only == "fcst":
                     data.eveningRelHumidity = forecast_next["night"]["rh"]
                     data.lowTemp = forecast_next["night"]["temp"]
                 
-                dsm.rset(f"dailyFcst.{ci}.{int(ktime)}", data, expiretime)
+                dsm.set(f"dailyFcst.{ci}.{int(ktime)}", data, expiretime)
         except:
             print(traceback.print_exc())
             print(f"fcst failure for {ci}")
@@ -368,7 +372,7 @@ if (not doonly or only == "uvf") or only == "tag":
             else:
                 start = tomStart
             # set data
-            dsm.rset('uvDailyFcst.%s.%d' % (override if  override else uvcoop, start), twccommon.Data(index=dat["extended"]["daypart"][0]["uvIndex"]), expiretime)
+            dsm.set('uvDailyFcst.%s.%d' % (override if  override else uvcoop, start), twccommon.Data(index=dat["extended"]["daypart"][0]["uvIndex"]), expiretime)
         except:
             print(traceback.print_exc())
             print(f"uvf failure for {uvcoop}")
@@ -398,49 +402,49 @@ if (not doonly or only == "aqi") or only == "tag":
                     valid = dat["validTimeGmt"][i]
                     pollutants = sorted([(p.replace("O3", "OZONE"), pd["categoryIndex"][i]) for p, pd in dat["pollutants"].items()], key=lambda d: d[1], reverse=True)
                     print("setting", 'airQuality.%s.%d' % (aqi, valid))
-                    dsm.rset('airQuality.%s.%d' % (aqi, tomStart if valid == tomStart else todayStart), twccommon.Data(pollutants=pollutants, actionDay=int(pollutants[0][1] > 1)), expiretime)
+                    dsm.set('airQuality.%s.%d' % (aqi, tomStart if valid == tomStart else todayStart), twccommon.Data(pollutants=pollutants, actionDay=int(pollutants[0][1] > 1)), expiretime)
             except:
                 print(traceback.print_exc())
                 print(f"aqi failure for {aqi}")
 
 if only == "tag":
     def gettag():
-        idx = dsm.rget("primaryIndexId")
-        primpollen = dsm.rget("primaryPollenStation")
+        idx = dsm.get("primaryIndexId")
+        primpollen = dsm.get("primaryPollenStation")
         print(f"starting tag data!")
         y,m,d,H,M,S,wd,day,dst = time.localtime(time.time())
         IdxDate = int(time.mktime((y, m, d, 0, 0, 0, 0, 0, -1)))
         IdxDate2 = int(time.mktime((y, m, d+1, 0, 0, 0, 0, 0, -1)))
         mosquito = r.get(f"https://api.weather.com/v2/indices/mosquito/daily/15day?geocode={','.join(cidmap[primarycoop])}&language=en-US&format=json&apiKey=e1f10a1e78da46f5b10a1e78da96f525").json()["mosquitoIndex24hour"]["eveningMosquitoIndex"]
-        dsm.rset(f"evening_mosquito.{idx}.{IdxDate}", twccommon.Data(dayIndex=mosquito[0]), expiretime)
-        dsm.rset(f"evening_mosquito.{idx}.{IdxDate2}", twccommon.Data(dayIndex=mosquito[1]), expiretime)
+        dsm.set(f"evening_mosquito.{idx}.{IdxDate}", twccommon.Data(dayIndex=mosquito[0]), expiretime)
+        dsm.set(f"evening_mosquito.{idx}.{IdxDate2}", twccommon.Data(dayIndex=mosquito[1]), expiretime)
         
         grillby_s = r.get(f"https://api.weather.com/v2/indices/travel/daypart/15day?geocode={','.join(cidmap[primarycoop])}&language=en-US&format=json&apiKey=e1f10a1e78da46f5b10a1e78da96f525").json()["travelIndex12hour"]
         second_day = (1 if grillby_s["dayInd"][0]=="N" else 2)
-        dsm.rset(f"sight_seeing.{idx}.{IdxDate}", twccommon.Data(dayIndex=grillby_s["leisureTravelIndex"][0]), expiretime)
-        dsm.rset(f"sight_seeing.{idx}.{IdxDate2}", twccommon.Data(dayIndex=grillby_s["leisureTravelIndex"][second_day]), expiretime)
+        dsm.set(f"sight_seeing.{idx}.{IdxDate}", twccommon.Data(dayIndex=grillby_s["leisureTravelIndex"][0]), expiretime)
+        dsm.set(f"sight_seeing.{idx}.{IdxDate2}", twccommon.Data(dayIndex=grillby_s["leisureTravelIndex"][second_day]), expiretime)
         
         bonehurtingjuice = r.get(f"https://api.weather.com/v2/indices/achePain/daypart/15day?geocode={','.join(cidmap[primarycoop])}&language=en-US&format=json&apiKey=e1f10a1e78da46f5b10a1e78da96f525").json()["achesPainsIndex12hour"]
         second_day = (1 if bonehurtingjuice["dayInd"][0]=="N" else 2)
-        dsm.rset(f"achesAndPain.{idx}.{IdxDate}", twccommon.Data(dayIndex=bonehurtingjuice["achesPainsIndex"][0]), expiretime)
-        dsm.rset(f"achesAndPain.{idx}.{IdxDate2}", twccommon.Data(dayIndex=bonehurtingjuice["achesPainsIndex"][second_day]), expiretime)
+        dsm.set(f"achesAndPain.{idx}.{IdxDate}", twccommon.Data(dayIndex=bonehurtingjuice["achesPainsIndex"][0]), expiretime)
+        dsm.set(f"achesAndPain.{idx}.{IdxDate2}", twccommon.Data(dayIndex=bonehurtingjuice["achesPainsIndex"][second_day]), expiretime)
         
         peelingoffmyskin = r.get(f"https://api.weather.com/v2/indices/drySkin/daypart/15day?geocode={','.join(cidmap[primarycoop])}&language=en-US&format=json&apiKey=e1f10a1e78da46f5b10a1e78da96f525").json()["drySkinIndex12hour"]
         second_day = (1 if peelingoffmyskin["dayInd"][0]=="N" else 2)
-        dsm.rset(f"dry_skin.{idx}.{IdxDate}", twccommon.Data(dayIndex=peelingoffmyskin["drySkinIndex"][0]), expiretime)
-        dsm.rset(f"dry_skin.{idx}.{IdxDate2}", twccommon.Data(dayIndex=peelingoffmyskin["drySkinIndex"][second_day]), expiretime)
+        dsm.set(f"dry_skin.{idx}.{IdxDate}", twccommon.Data(dayIndex=peelingoffmyskin["drySkinIndex"][0]), expiretime)
+        dsm.set(f"dry_skin.{idx}.{IdxDate2}", twccommon.Data(dayIndex=peelingoffmyskin["drySkinIndex"][second_day]), expiretime)
         
         
         ow_my_lungs = r.get(f"https://api.weather.com/v2/indices/pollen/daypart/15day?geocode={','.join(cidmap[primarycoop])}&language=en-US&format=json&apiKey=e1f10a1e78da46f5b10a1e78da96f525").json()["pollenForecast12hour"]
         second_day = (1 if ow_my_lungs["dayInd"][0] == "N" else 2)
-        dsm.rset(f"pollen.{primpollen}", twccommon.Data(
+        dsm.set(f"pollen.{primpollen}", twccommon.Data(
             treePollen=ow_my_lungs["treePollenIndex"][0],
             grassPollen=ow_my_lungs["grassPollenIndex"][0],
             weedPollen=ow_my_lungs["ragweedPollenIndex"][0],
             moldCount=None,
             reportTime=ow_my_lungs["fcstValid"][0]
         ), expiretime)
-        dsm.rset(f"pollen.{primpollen}", twccommon.Data(
+        dsm.set(f"pollen.{primpollen}", twccommon.Data(
             treePollen=ow_my_lungs["treePollenIndex"][second_day],
             grassPollen=ow_my_lungs["grassPollenIndex"][second_day],
             weedPollen=ow_my_lungs["ragweedPollenIndex"][second_day],
@@ -732,7 +736,7 @@ if (not doonly or only == "bulletin") and only != "clearbulletin" and not nb:
                         bull.issueTime = int(datetime.fromisoformat(props["sent"]).timestamp())
                         bull.expiration = int(datetime.fromisoformat(props["expires"]).timestamp())
                         bull.dispExpiration = bull.expiration
-                        group = dsm.rget(f"Config.1.pil.{code}")
+                        group = dsm.get(f"Config.1.pil.{code}")
                         if pri != -1:
                             if group.priority > pri:
                                 headline_groups[group.group] = bull
@@ -750,7 +754,7 @@ if (not doonly or only == "bulletin") and only != "clearbulletin" and not nb:
                     sock.connect(("localhost", 7245))
                     nh._socksend(sock, ("setbulletin "+c+" "+json.dumps(headline_groups[g].__dict__)).encode())
                     sock.close()
-                    #dsm.rset("bulletin.%s.%d" % (c, int(g)), headline_groups[g], expiretime)
+                    #dsm.set("bulletin.%s.%d" % (c, int(g)), headline_groups[g], expiretime)
             except:
                 traceback.print_exc()
                 print(f"error on {c}!")
@@ -830,10 +834,10 @@ if (not doonly or only == "traffic") and tomtom_key and not wxs and not notraffi
             )
             ii += 1
             name = f"incident.{metroid}.0.{ii}"
-            dsm.rset(name, dat, expiretime)
+            dsm.set(name, dat, expiretime)
             print("processed incident", name)
             finalincidents += 1
-        dsm.rset(f"incidents.{metroid}", twccommon.Data(count=finalincidents, rev=0), expiretime)
+        dsm.set(f"incidents.{metroid}", twccommon.Data(count=finalincidents, rev=0), expiretime)
 
 if (not doonly or only == "headlines") and not (nb or wxs):
     def getheadlines():
@@ -865,7 +869,7 @@ if (not doonly or only == "headlines") and not (nb or wxs):
                     traceback.print_exc()
                     print("anywho,")
             print("expires", hexpiretime)
-            dsm.rset(f"hdln.{headlinecounty}", twccommon.Data(headlines=headlines, vocal=vocal), hexpiretime)
+            dsm.set(f"hdln.{headlinecounty}", twccommon.Data(headlines=headlines, vocal=vocal), hexpiretime)
         except:
             print("headline failure!")
 
@@ -908,12 +912,11 @@ def encode():
             times.append(time.mktime((y,m,d+1,12,0,0,0,0,-1)))
             times.append(time.mktime((y,m,d+2,0,0,0,0,0,-1)))
         
-        if not wxs:
-            threads.append(th.Thread(target=gettext))
-        else:
-            #i wish there was a better way to do this
-            for cid in coopid:
-                threads.append(th.Thread(target=gettext, args=(cid,)))
+        times2 = []
+        
+        
+        for cid in coopid:
+            threads.append(th.Thread(target=gettext, args=(cid,)))
     
     if not doonly or only == "hourly":
         for cop in list(hourlycoop):
@@ -944,7 +947,7 @@ def encode():
         headline_groups = [1, 2, 3, 4, 5]
         for c in counties:
             for g in headline_groups:
-                dsm.rset("bulletin.%s.%d" % (c, g), [], time.time())
+                dsm.set("bulletin.%s.%d" % (c, g), [], time.time())
     
     if (not doonly or only == "traffic") and tomtom_key and not wxs and not notraffic:
         threads.append(th.Thread(target=gettraffic))
@@ -962,7 +965,7 @@ def encode():
 
         for t in threads:
             t.join()
-    dsm.rcommit()
+    dsm.commit()
 
 if auto:
     encode()
@@ -976,7 +979,7 @@ if auto:
         else:
             if encoded:
                 encoded = False
-                dsm.rcommit()
+                dsm.commit()
                 print("------------------------------")
             time.sleep(1)
             print(f"Next encode in {9-(lt.tm_min % 5)} mins {59-(lt.tm_sec % 60)} secs".ljust(34), end="\r")
