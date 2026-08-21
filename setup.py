@@ -312,7 +312,7 @@ def move_pm():
     if os.path.exists(pp):
         sh.move(pp, page_vars["playman_dest"])
         
-        dt = r.get("https://archive.lewolfyt.cc/" + page_vars["newbrand"] + "/")
+        dt = r.get("https://archive.lewolfyt.cc/" + page_vars["newbrand"] + "/twc/domestic/conf/playman.py")
         if dt.ok:
             with open(pp, "w") as f:
                 f.write(dt.text)
