@@ -147,6 +147,7 @@ def downloadDS():
     watt = False
     if dss.endswith("#"):
         watt = True
+        dss = "WattLive"
         dss = dss[:-1]
     ds1l = f"https://archive.lewolfyt.cc/{dss}/twc/data/datastore/ds.dat"
     ds2l = f"https://archive.lewolfyt.cc/{dss}/twc/data/datastore/ds.stat"
