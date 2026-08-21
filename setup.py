@@ -287,6 +287,7 @@ def serverchange(sv):
         f.write(json.dumps([brands[sv]]+serversel, indent=4))
     
     page_vars["newbrand"] = brands[sv]
+    page_vars["newsvr"] = servers[sv][-1]
     
     page_vars["netalt"] = os.path.exists(os.path.join(mypath, "net"+brands[sv]))
     page_vars["net_dest"] = getUniquePath(os.path.join(mypath, "net"+last_brand))
@@ -312,7 +313,7 @@ def move_pm():
     if os.path.exists(pp):
         sh.move(pp, page_vars["playman_dest"])
         
-        dt = r.get("https://archive.lewolfyt.cc/" + page_vars["newbrand"] + "/twc/domestic/conf/playman.py")
+        dt = r.get(page_vars["newsvr"] + "twc/domestic/conf/playman.py")
         if dt.ok:
             with open(pp, "w") as f:
                 f.write(dt.text)
