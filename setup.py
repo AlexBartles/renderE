@@ -167,10 +167,10 @@ def downloadDS():
         success = False
     page_vars["dsosuccess"] = success
     with open("servers.json", "w") as f:
-        f.write([
+        f.write(json.dumps([
             brand,
             f"https://archive.lewolfyt.cc/{dss}/"
-        ])
+        ]))
     processDS(watt)
 
 def processDSF():
@@ -569,10 +569,10 @@ pagemap = {
             "Back"
         ],
         "actions": [
-            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "PerrisLive"}, {"type": "page", "destination": "setup3Aload"}]},
-            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "FlatRockLive"}, {"type": "page", "destination": "setup3Aload"}]},
-            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "WxScanLive"}, {"type": "page", "destination": "setup3Aload"}]},
-            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "WxScanLive#"}, {"type": "page", "destination": "setup3Aload"}]},
+            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "PerrisLive"}, {"type": "var", "key": "brand", "val": "Perris"}, {"type": "page", "destination": "setup3Aload"}]},
+            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "FlatRockLive"}, {"type": "var", "key": "brand", "val": "FlatRock"}, {"type": "page", "destination": "setup3Aload"}]},
+            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "WxScanLive"}, {"type": "var", "key": "brand", "val": "WxScan"}, {"type": "page", "destination": "setup3Aload"}]},
+            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "FlatRockLive#"}, {"type": "var", "key": "brand", "val": "Watt"}, {"type": "page", "destination": "setup3Aload"}]},
             {"type": "page", "destination": "setup2_alt"}
         ]
     },
