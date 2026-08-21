@@ -92,10 +92,8 @@ if twc.personalityCode < 4:
             pres.lasCrawlText = _getLasCrawlText()
             print('LAS CRAWL TEXT')
         pres.bkgAudioFilename = None
-        if not tscard.SDI_URL:
-            pres.bkgAudioFilename = _getBkgAudioFilename(pres.durationSeconds)
         #if pres.channelChangeRequest == 1 or pres.alternateFeedActive == 1:
-        #    pres.bkgAudioFilename = _getBkgAudioFilename()
+        pres.bkgAudioFilename = _getBkgAudioFilename()
         scheds = _selectSchedule(pres)
         if twc.personalityCode == 1:
             pres.bkgImage = _getBkgImage()
