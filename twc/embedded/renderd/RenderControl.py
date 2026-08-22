@@ -219,4 +219,7 @@ def deactivateGpiPin(pin, time=0, frameOffset=0):
     return queueCommand(cmd, time, frameOffset)
     return
 
-
+def setWatermarkSID(sid, sidSum, time=0, frameOffset=0):
+    #who the hell is this guy
+    cmd = SetWatermarkSIDCmd(sid, sidSum)
+    return queueCommand(cmd, time, frameOffset)

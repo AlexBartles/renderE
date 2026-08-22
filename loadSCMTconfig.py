@@ -46,7 +46,7 @@ def main():
     twccommon.Log.info('Loading new configuration %s' % sys.argv[1])  
     execfile(sys.argv[1], {"abortMsg": do_absolutely_nothing, "Log": Log, "ds": ds, "dsm": dsm, "wxdata": wxdata, "twc": twc, "twccommon": twccommon})
 
-    ds.commit()
+    dsm.commit()
     print('Configuration Complete.')
     ds.uninit()
     return 0

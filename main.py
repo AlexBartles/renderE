@@ -10,6 +10,7 @@ else:
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     renderElog("Importing rendereglobals...")
     import rendereglobals as rg
+    import pyray as rl
     renderElog("Importing receiverE...")
     import receivere
     renderElog("Importing loadhelpers...")
@@ -56,6 +57,7 @@ else:
     from datetime import datetime
     renderElog("Importing dsmarshal...")
     import twc.dsmarshal as dsm
+    dsm.server = True
     import pickle
     import argparse
     renderElog("Importing tscard...")
@@ -103,7 +105,6 @@ else:
     fov = 60
     screensize = (720, 480)
     zzz = 1
-    rl = rg.rl
 
     if VERBOSE:
         renderElog("Setting window config flags...")
@@ -176,9 +177,12 @@ else:
         renderElog("Initializing window...")
     rl.init_window(screensize[0], screensize[1], f"{random.choice(names)} - {fortune}")
 
+    camx = 0
+    camy = 0
+    zzz = screensize[1] / (2*math.tan(math.radians(fov/2)))
     camera = rl.Camera3D(
-        rl.Vector3(0, 0, 0),
-        rl.Vector3(0, 0, -10),
+        rl.Vector3(camx, camy, zzz),
+        rl.Vector3(camx, camy, 0),
         rl.Vector3(0, 1, 0),
         fov,
         rl.CameraProjection.CAMERA_PERSPECTIVE
@@ -192,10 +196,11 @@ else:
         width = height * aspect_ratio
         return width, height
 
-    zzz = rg.zzz
 
-    xxx, yyy = frustum_size_at_z(zzz, fov, screensize[0]/screensize[1])
-    print(xxx, yyy)
+    xxx = screensize[0]/2
+    yyy = screensize[1]/2
+    #xxx, yyy = frustum_size_at_z(zzz, fov, screensize[0]/screensize[1])
+    renderElog(xxx, yyy, zzz)
     # xxx = 2.6
     # yyy = 1.72
 
@@ -251,7 +256,10 @@ else:
                 elif data.split(b" ")[0].decode() == "rget":
                     args = data.split(b" ")
                     buf = BytesIO()
-                    dat = dsm.get(args[1].decode(), session=1)
+                    try:
+                        dat = dsm.get(args[1].decode(), session=1)
+                    except:
+                        dat = None
                     pickle.Pickler(buf).dump(dat)
                     conn.send(buf.getvalue())
                     conn.shutdown(socket.SHUT_WR)
@@ -412,173 +420,351 @@ else:
 
     def producttest():
         l = Layer()
-        p = Page()
+        p = Page(0)
         l.addPage(p)
-        pduration = 150
-        
-        bkg1 = twc.findRsrc("/backgrounds/%s" % ("domestic"), "tif", 1)
-        print(bkg1)
-        background = TIFF_Image(bkg1)
-        background.setTransitionable(0)
-        background.setSize(*screensize)
-        p.addItem(background)
         
         print("loadedbg")
 
+        ru = renderUtil
 
-        def center(areaStart, areaWidth, elemWidth):
-            return areaStart + areaWidth/2 - elemWidth/2
-
-        ru = renderUtil   # abbreviation
+        gr = TIFF_Image("/rsrc/backgrounds/domestic")
+        gr.setPosition(0, 0)
+        p.addItem(gr)
         
-        title = ("test", "product")
-        dur = pduration
-
-        titleX = 52
-        titleY = 479 - 74
+        scroll = -10
         
-        def resolveOverrides(name, defaultVal):
-            return defaultVal
-
-        text1Color       = resolveOverrides('text1Color', (212, 212, 212, 255))
-        text2Color       = resolveOverrides('text2Color', (20, 20, 20, 255))
-        text1ShadowColor = resolveOverrides('text1ShadowColor', (20, 20, 20, 255))
-        text2ShadowColor = resolveOverrides('text2ShadowColor', (212, 212, 212, 255))
-        text1BkgColor    = resolveOverrides('text1BkgColor', (0, 0, 0, 0))
-        text2BkgColor    = resolveOverrides('text2BkgColor', (212, 212, 212, 255))
-        fadeIn           = resolveOverrides('titleFadeInDuration', 5)
-        fadeOut          = resolveOverrides('titleFadeOutDuration', 5)
-
-
-        #Create the title bar elements
-        crBev, crTxt = renderTools.createTitleBar(
-            title[0],              title[1],
-            text1BkgColor,    text2BkgColor,
-            text1Color,       text2Color,
-            text1ShadowColor, text2ShadowColor)
-        print("title")
-        #First add the title bevel
-        crBev.setPosition(titleX, titleY)
-        p.addItem(crBev)
-
-        #Now add the title text (and background gradient)
-        crTxt.setPosition(titleX, titleY)
-        p.addItem(crTxt)
-
-        if ((fadeIn > 0) or ( fadeOut > 0)):
-            renderUtil.fadeInOut(p, crTxt, dur, fadeIn, fadeOut)
-        print("fio")
-        ww = 215
-        hh = 282
-        xpos =  52
-        ypos = 370
-        baseline = 89
-
-        locBox   = CompositeRenderable()
-        iconBox  = CompositeRenderable()
-        tabBox   = CompositeRenderable()
-        dataBox  = CompositeRenderable()
-            
-        # location name with bevel box    
-        wwbb = 616
-        locBox.addItem(ru.getBevelBox(wwbb, 30))
-            
+        c = Clipper(gr)
+        c.clip(Clipper.CP_TOP, 480, scroll)
+        
+        cr = CompositeRenderable()
         r,g,b,a = ru.rgbaConvert(212,212,50)
         ff = TTFont('/rsrc/fonts/Interstate-Bold', 24, t=50)
         tt = Text(ff, "WINNERS DON'T USE DRUGS")
-        tt.setPosition(11, 8)
+        tt.setPosition(50, 50)
         tt.setColor(r,g,b,a)
-        locBox.addItem(tt)
-            
-        # position the compsite renderable
-        locBox.setPosition(xpos, ypos)
-
-        # left and right bevel boxes with icon and temp data
-        bb = ru.getBevelBox(ww,hh)
-        bb.setPosition(0, 0)
-        iconBox.addItem(bb)
-
-        bb = ru.getBevelBox(wwbb-ww, hh)
-        bb.setPosition(0, 0)
-        tabBox.addItem(bb)
+        cr.addItem(tt)
+        tt = Text(ff, "i can feel teh epic duck power")
+        tt.setPosition(100, 75)
+        tt.setColor(r,g,b,a)
+        cr.addItem(tt)
+        p.addItem(cr)
         
-        iconBox.setPosition(52, baseline)
-        tabBox.setPosition(267, baseline)
-        dataBox.setPosition(453, baseline)
-            
-        # transitions
-        # add the locBox, iconBox, and tabBox into one Composite Renderable to slide off screen
-        slideCR = CompositeRenderable()
-        slideCR.setPosition(-720, 0)
-        slideCR.addItem(locBox)
-        slideCR.addItem(iconBox)
-        slideCR.addItem(tabBox)
-        p.addItem(slideCR)
-        p.addItem(dataBox)    
-
-        # begin loc box
-        es = EffectSequencer(slideCR)
-        es.addEffect(Slider(None, 72, 0), 10)
-        es.addEffect(NullEffect(None), pduration - 20)
-        es.addEffect(Slider(None, -72, 0), 10)
+        es = EffectSequencer(cr, repeat=1)
+        es.addEffect(Clipper(None, 10, 10, 10, 10), 1)
         p.addItem(es)
         
-        es = EffectSequencer(slideCR)
-        es.addEffect(Rotate(None, -36, zr=1), 10)
-        es.addEffect(NullEffect(None), pduration - 20)
-        es.addEffect(Rotate(None, 36, zr=1), 10)
-        p.addItem(es)
-
-        # begin right side data area
-        #TODO: Make Clipper work on text!    
-        # add clipper for 'reveal' effect    
-        #c = Clipper(None, bottom=100)
-        #c.clip(Clipper.CP_BOTTOM, pos=hh, step=-10)
-            
-        es = EffectSequencer(dataBox)
-        #es.addEffect(NullEffect(None), 5)
-        #es.addEffect(c, 60)
-        es.addEffect(NullEffect(None), pduration - 10)
-        es.addEffect(Slider(None, -72, 0), 10)
-        p.addItem(es)
-        
-        gr = renderUtil.getBevelBox(100, 100, debug=True)
-        gr.setPosition(0, 0)
-        p.addItem(gr)
-
-        renderTools.dataNotAvailable(page=p, displayDuration=pduration, text="renderE could be better with your help!", noDataBar=True)
-        
-        ac = []
-        
-        aFile = 'CC_INTRO%d' % 1
-        intro = '/rsrc/audio/vocalLocal/Intros_Curr_Cond/%s.wav' % aFile
-        ac.append(AudioClip(intro))
-        audioClipTemp = '/rsrc/audio/vocalLocal/Temps_Specific/%d.wav' % (random.randint(1, 135))
-        ac.append(AudioClip(audioClipTemp))
-        audioClipSky = '/rsrc/audio/vocalLocal/Wx_Phrases_Curr_Cond/%d.wav'% 3000
-        ac.append(AudioClip(audioClipSky))
-        
-        aseq = AudioSequencer()
-        for i in range(len(ac)):
-            ac[i].setBlendType(AudioRenderable.BLEND_MIX)
-            ac[i].setVolLevel(1.0)
-            aseq.addItem(ac[i])
-        p.addItem(aseq)
-        
-        testCR = CompositeRenderable()
-        testCR.setPosition(100, 100)
         gr = Box()
-        gr.setSize(200, 200)
-        gr.setPosition(-50, 0)
-        gr.setColor(1, 1, 1, 1)
-        testCR.addItem(gr)
-        p.addItem(testCR)
+        gr.setSize(*cr.size())
+        gr.setColor(1, 0, 0, 0.5)
+        gr.setPosition(50, 50)
+        p.addItem(gr)
+            
+        #new test pattern
+        
+        back = Box()
+        back.setSize(250, 250)
+        back.setColor(1, 0, 0, 1)
+        back.setPosition(50, 100)
+        p.addItem(back)
+        
+        ###
+        l2cr = CompositeRenderable()
+        mid1 = Box()
+        mid1.setColor(0, 1, 1, 1)
+        mid1.setSize(225, 225)
+        mid1.setPosition(25, 25)
+        Clipper(mid1, 0, 25, 0, 0)
+        mid2 = Box()
+        mid2.setColor(1, 1, 0, 0.5)
+        mid2.setSize(225, 225)
+        mid2.setPosition(0, 0)
+        Clipper(mid2, 0, 0, 0, 25)
+        l2cr.addItem(mid1)
+        l2cr.addItem(mid2)
+        l2cr.setPosition(50, 100)
+        Clipper(l2cr, 25, 0, 25, 0)
+        p.addItem(l2cr)
+        ###
+        
+        blue_template = Box()
+        blue_template.setColor(0, 0, 1, 0.5)
+        blue_template.setSize(150, 150)
+        blue_template.setPosition(100, 150)
+        p.addItem(blue_template)
+        
+        blue_template = Box()
+        blue_template.setColor(0, 0, 1, 0.25)
+        blue_template.setSize(175, 175)
+        blue_template.setPosition(75, 125)
+        p.addItem(blue_template)
+        
+        ######
+        l3_cont = CompositeRenderable()
+        l3_cont.setPosition(50, 100)
+        l3cr = CompositeRenderable()
+        l3cr.setPosition(25, 25)
+        blue = Box()
+        blue.setColor(0, 0, 1, 1)
+        blue.setSize(175, 175)
+        blue.setPosition(0, 0)
+        Clipper(l3cr, 25, 0, 0, 25)
+        l3cr.addItem(blue)
+        
+        fourth = CompositeRenderable()
+        fourth.setPosition(25, 25)
+        red = Box()
+        red.setSize(150, 150)
+        red.setPosition(0, 0)
+        red.setColor(1, 0, 0, 1)
+        Clipper(red, 75, 0, 0, 0)
+        
+        fourth.addItem(red)
+        l3cr.addItem(fourth)
+        
+        l3_cont.addItem(l3cr)
+        p.addItem(l3_cont)
+        ######
+        
+        ###
+        l2cr = CompositeRenderable()
+        mid1 = Box()
+        mid1.setColor(0, 1, 1, 1)
+        mid1.setSize(225, 225)
+        mid1.setPosition(25, 25)
+        Clipper(mid1, 0, 25, 0, 0)
+        mid2 = Box()
+        mid2.setColor(1, 1, 0, 0.5)
+        mid2.setSize(225, 225)
+        mid2.setPosition(0, 0)
+        Clipper(mid2, 0, 0, 0, 25)
+        l2cr.addItem(mid1)
+        l2cr.addItem(mid2)
+        l2cr.setPosition(450, 100)
+        Clipper(l2cr, 25, 0, 25, 0)
+        p.addItem(l2cr)
+        Clipper(l2cr).clip(Clipper.CP_TOP, 240)
+        ###
+        
+        ######
+        l3_cont = CompositeRenderable()
+        l3_cont.setPosition(450, 100)
+        l3cr = CompositeRenderable()
+        l3cr.setPosition(25, 25)
+        blue = Box()
+        blue.setColor(0, 0, 1, 1)
+        blue.setSize(150, 150)
+        l3cr.addItem(blue)
+        Clipper(blue).clip(Clipper.CP_TOP, 240)
+        
+        blue = Box()
+        blue.setColor(0, 0, 1, 1)
+        blue.setSize(150, 150)
+        blue.setPosition(50, 0)
+        l3cr.addItem(blue)
+        Clipper(blue).clip(Clipper.CP_TOP, 240)
+        l3_cont.addItem(l3cr)
+        p.addItem(l3_cont)
+        ######
+        
+        ic = Icon("/media/icons/medium/Ts")
+        ic.setPosition(300, 300)
+        ic.setColor(1, 1, 1, 1)
+        p.addItem(ic)
+        ic = Icon("/media/icons/medium/Ts")
+        ic.setPosition(350, 300)
+        ic.setColor(1, 1, 1, 0.5)
+        p.addItem(ic)
+        
+        #c = Clipper(testCR)
+        #c.clip(Clipper.CP_TOP, 480, scroll)
+        
+        c = Clipper(gr)
+        c.clip(Clipper.CP_TOP, 480, scroll)
+        
+        # es = EffectSequencer(testCR, repeat=1)
+        # es.addEffect(Clipper(None, 10, 10, 10, 10), 1)
+        # p.addItem(es)
+        
+        r,g,b,a = renderUtil.rgbaConvert(20, 20, 20)
+        darkLayer2 = Box()
+        darkLayer2.setColor(r,g,b,.1)
+        darkLayer2.setSize(620, 263)
+        darkLayer2.setPosition(50, 117)
+        p.addItem(darkLayer2)
+        
+        topBarPos = ( 50, 401 )
 
-        RenderControl.createNamedLayer("Foreground", 10)
-        RenderControl.setLayer("Foreground", l, 0, 0)
+        #logo = TIFF_Image(twc.findRsrc('/logos/TWC-LogoBlack', 'tif'))
+        logo = TIFF_Image(twc.findRsrc('/logos/TWC-LogoBlack', 'tif'))
+        logo.setPosition( *topBarPos )
+        topBarProds = CompositeRenderable()
+        topBarProds.addItem(logo)
+        p.addItem(topBarProds)
+        es = EffectSequencer(topBarProds, repeat=1)
+        es.addEffect(Clipper(None, topBarPos[0], 0, 0, 401), 1)
+        p.addItem(es)
+        
+        headlineFont = TTFont ('/rsrc/fonts/AkkoPro-Light', 25, shadow=1, sr=0.039, sg=0.039, sb=0.039, sa=0.5, sx=1, sy=1, t=-10)
+        headlinesCR = CompositeRenderable()
+        hl = "Test Headline"
+        headline = Text(headlineFont, hl)
+        r,g,b,a = renderUtil.rgbaConvert(235, 235, 235)
+        headline.setColor(r,g,b,a)
+        headline.setPosition(60, 356)
+        headlinesCR.addItem(headline)
+        es = EffectSequencer(headline, repeat=0)
+        es.addEffect(NullEffect(None), 120 - 16)
+        es.addEffect(Slider(None, 0, 2), 16)
+        p.addItem(es)
+        
+        nhl = "Next Headline"
+        nextHeadline = Text(headlineFont, nhl)
+        nextHeadline.setPosition(headline.position()[0], headline.position()[1] - 32)
+        nextHeadline.setColor(r,g,b,a)
+        headlinesCR.addItem(nextHeadline)
+
+        es = EffectSequencer(nextHeadline, repeat = 0)
+        es.addEffect(NullEffect(None), 120 - 16)
+        es.addEffect(Slider(None, 0, 2), 16)
+        p.addItem(es)
+        
+        p.addItem(headlinesCR)
+        tt = Text(ff, repr(headlinesCR.bounds()))
+        tt.setPosition(200, 400)
+        tt.setColor(r,g,b,a)
+        p.addItem(tt)
+        
+        b = Box()
+        b.setColor(0, 1, 0, 0.5)
+        b.setSize(*headlinesCR.size())
+        b.setPosition(60, 356)
+        p.addItem(b)
+        
+        es = EffectSequencer(headlinesCR, repeat=1)
+        es.addEffect(Clipper(None, 0, 0, 0, (headlinesCR.size()[1] - 32) + ((32 - headline.size()[1]) / 2.0)), 1)
+        p.addItem(es)
+        
+        def clipCR(cr, clipLeft=-2, clipRight=0, clipTop=0, clipBottom=0):
+            es = EffectSequencer(cr, repeat=1)
+            es.addEffect(Clipper(None, clipLeft, clipRight, clipTop, clipBottom), 1)
+            p.addItem(es)
+        
+        def slideOn(txt, timeOn):
+            if timeOn != None:
+                waitFrames = (timeOn - 3)
+                es = EffectSequencer(txt, repeat=1)
+                es.addEffect(SetPosition(None, txt.position()[0], txt.position()[1]), 2)
+                if waitFrames > 0:
+                    # Do we need to wait for a certain frame to begin animation?
+                    es.addEffect(NullEffect(None), timeOn - 3)
+                es.addEffect(Slider(None, 10, 0), 10)
+                es.addEffect(NullEffect(None), 120 - 2 + 3 - 10)
+                p.addItem(es)
+
+                timeOn += 2
+
+                Fader(txt, 0, 0, 1)
+                es = EffectSequencer(txt, repeat=1)
+                if waitFrames > 0:
+                    es.addEffect(NullEffect(None), timeOn - 2)
+                es.addEffect(Fader(None, 0, 1, 10), 10)
+                es.addEffect(NullEffect(None), 120 - 2 - 10)
+                p.addItem(es)
+            else:
+                #es = EffectSequencer(txt, repeat=1)
+                #es.addEffect(SetPosition(None, txt.position()[0] + 100, txt.position()[1]), 2)
+                #es.addEffect(NullEffect(None), <%-prod.getDuration()%> - 1)
+                #p.addItem(es)
+
+                es = EffectSequencer(txt, repeat=1)
+                es.addEffect(Fader(None, 1, 1, 1), 1)
+                es.addEffect(SetPosition(None, txt.position()[0] + 100, txt.position()[1]), 1)
+                es.addEffect(NullEffect(None), 120 - 2)
+                p.addItem(es)
+
+        def slideOff(txt, timeOff):
+            es = EffectSequencer(txt, repeat=1)
+            es.addEffect(NullEffect(None), timeOff - 2)
+            es.addEffect(SetPosition(None, txt.position()[0] + 100, txt.position()[1]), 1) 
+            es.addEffect(Slider(None, 10, 0), 120 - timeOff + 1)
+            p.addItem(es)
+
+            timeOff -=2
+
+            #Fader(txt, 0, 0, 1)
+            es = EffectSequencer(txt, repeat=1)
+            es.addEffect(NullEffect(None), timeOff - 1)
+            es.addEffect(Fader(None, 1, 0, 10), 10)
+            es.addEffect(NullEffect(None), 120 - timeOff + 1 - 10)
+            #es.addEffect(Fader(None, 0, 1, 1), 1)
+            p.addItem(es)
+        
+        def makeField(crList, xpos, font=None, txtTop=None, tTimeIn=None, tTimeOut=None,
+                txtBottom=None, bTimeIn=None, bTimeOut=None, other=None, oTimeIn=None, 
+                oTimeOut=None, yOther=None, alpha=None):
+            # Consider splitting this up - 14 parameters is quite a few, and this
+            # function definitely has more than one responsibility
+            newCR = CompositeRenderable()
+            
+            r,g,b,a = renderUtil.rgbaConvert(235, 235, 235)
+            
+            if txtTop is not None:    
+                txtTop = Text(font, txtTop)
+                txtTop.setPosition(0, 55)
+                txtTop.setColor(r, g, b, a)
+                newCR.addItem(txtTop)
+                
+            if txtBottom is not None:
+                txtBottom = Text(font, txtBottom)
+                txtBottom.setPosition(0, 38)
+                if alpha is None:
+                    a = 1.0
+                else:
+                    a = alpha
+                txtBottom.setColor(r,g,b,a)
+                newCR.addItem(txtBottom)
+                
+            if other is not None:
+                other.setPosition(0, yOther)
+                newCR.addItem(other)
+            
+            newCR.setPosition(xpos, 0)
+            if True:
+                if txtTop is not None:
+                    txtTop.setPosition(txtTop.position()[0] - 100, txtTop.position()[1])
+                    #slideFX(txtTop, tTimeIn, tTimeOut)
+                    slideOn(txtTop, tTimeIn)
+                    if tTimeOut is not None:
+                        slideOff(txtTop, tTimeOut)
+                
+                if txtBottom is not None:
+                    txtBottom.setPosition(txtBottom.position()[0] - 100, txtBottom.position()[1])
+                    #slideFX(txtBottom, bTimeIn, bTimeOut)
+                    slideOn(txtBottom, bTimeIn)
+                    if bTimeOut is not None:
+                        slideOff(txtBottom, bTimeOut)
+
+                if other is not None:
+                    other.setPosition(other.position()[0] - 100, other.position()[1])
+                    #slideFX(other, oTimeIn, oTimeOut)
+                    slideOn(other, oTimeIn)
+                    slideOff(other, oTimeOut)
+
+            clipCR(newCR)
+            crList.append(newCR)
+        
+        fieldList = []
+        tempFont = TTFont('/rsrc/fonts/AkkoPro-Light', 44, shadow=1, sr=0.039, sg=0.039, sb=0.039, sa=0.5, sx=1, sy=1)
+        makeField(fieldList, 289, tempFont, None, None, None, "420" + u'\xb0', 19, 290)
+        
+        while len(fieldList) > 0:
+            p.addItem(fieldList.pop())
+
+        RenderControl.createNamedLayer("Foreground2", 10)
+        RenderControl.setLayer("Foreground2", l, 0, 0)
 
     #producttest()
-    #RenderControl.queueCommand(ActivateLayerCmd("Foreground"), time.time()+1)
+    #RenderControl.queueCommand(ActivateLayerCmd("Foreground2"), 0)
 
     if VERBOSE:
         renderElog("Generating debug images...")
@@ -588,6 +774,8 @@ else:
     red = rl.load_texture_from_image(redimg)
     orangeimg = rl.gen_image_color(1, 1, rl.ORANGE)
     orange = rl.load_texture_from_image(orangeimg)
+    blueimg = rl.gen_image_color(1, 1, rl.Color(0, 20, 40, 40))
+    blue = rl.load_texture_from_image(blueimg)
     once = True
 
     def mod2(a, b=720):
@@ -679,8 +867,8 @@ else:
             qqx *= activedrawlayer[10]
             qqy *= activedrawlayer[11]
         qx, qy = qqx*1, qqy*1
-        xw = quad._size[0]/screensize[0]*(xxx*2)
-        yw = quad._size[1]/screensize[1]*(yyy*2)
+        xw = quad._size[0]
+        yw = quad._size[1]
         
         mat = r90
         mat = rl.matrix_multiply(mat, rl.matrix_scale(xw, yw, 1))
@@ -733,6 +921,11 @@ else:
                 visible = effect.visible
                 if effect.fader is not None:
                     fader = effect.fader
+            elif type(effect) == Clipper:
+                if effect.planeclipper:
+                    for i, p in enumerate(effect.planes):
+                        plane, pos, step = p
+                        effect.planes[i][1] += step
             # if hasattr(effect, "frame"):
             #     if not effect.frozen:
             #         effect.frame += 1
@@ -747,12 +940,12 @@ else:
         loopover(effects)
         # xxw = (-qx-quad._size[0]/2)/720*(xxx*2)
         # yyw = (-qy-quad._size[1]/2)/480*(yyy*2)
-        xxw = -round(qx)/screensize[0]*(xxx*2)
-        yyw = -round(qy)/screensize[1]*(yyy*2)
+        xxw = -round(qx)
+        yyw = -round(qy)
         mat = rl.matrix_multiply(mat, xyt)
         if drawlevel == 0:
-            xxw -= ((activedrawlayer[6]+activedrawlayer[12])/screensize[0]*(xxx*2))*activedrawlayer[10]
-            yyw -= ((activedrawlayer[7]+activedrawlayer[13])/screensize[1]*(yyy*2))*activedrawlayer[11]
+            xxw -= ((activedrawlayer[6]+activedrawlayer[12]))*activedrawlayer[10]
+            yyw -= ((activedrawlayer[7]+activedrawlayer[13]))*activedrawlayer[11]
         
         # if drawlevel == 0:
         #     xxw = (-qx-(quad._size[0]/2*activedrawlayer[10])-activedrawlayer[6]-activedrawlayer[12])/720*(xxx*2)
@@ -895,17 +1088,24 @@ else:
     rl.set_shader_value(lclipshader, blocT, rl.ffi.new('float *', float(screensize[0])), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
     rl.set_shader_value(lclipshader, blocR, rl.ffi.new('float *', float(screensize[1])), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
 
-    rl.set_shader_value(lclipshader, renw, rl.ffi.new('float *', rl.get_render_width()), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
-    rl.set_shader_value(lclipshader, renh, rl.ffi.new('float *', rl.get_render_height()), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
+    renderwidth = rl.ffi.new('float *', rl.get_render_width())
+    renderheight = rl.ffi.new('float *', rl.get_render_height())
+    screenwidth = rl.ffi.new('float *', screensize[0])
+    screenheight = rl.ffi.new('float *', screensize[1])
+    
+    rl.set_shader_value(lclipshader, renw, renderwidth, rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
+    rl.set_shader_value(lclipshader, renh, renderheight, rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
 
     rl.set_shader_value(lclipshader, disablelc, rl.ffi.new("int *", 0), rl.ShaderUniformDataType.SHADER_UNIFORM_INT)
 
-    def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False, off=(0, 0), premult=False, clipoverride=None, skip=False, forcebilinear=False, se2=False, ho=(0, 0), hw=None, clo=0, crb=None):
+    toff = [0, 0]
+    ancestry_dna = [0, 0]
+    def draw_quad(quad : TIFF_Image, tex=white, debug=False, se=False, off=(0, 0), premult=False, clipoverride=None, skip=False, forcebilinear=False, se2=False, ho=(0, 0), hw=None, clo=0, crb=None, crxy=(0, 0)):
         effects = quad.effects
         #rl.set_texture_filter(tex, rl.TextureFilter.TEXTURE_FILTER_POINT)
         plane.materials[0].maps.texture = tex
         if isinstance(quad, Icon):
-            rl.set_texture_filter(tex, rl.TextureFilter.TEXTURE_FILTER_TRILINEAR)
+            rl.set_texture_filter(tex, rl.TextureFilter.TEXTURE_FILTER_BILINEAR)
         qqx, qqy = quad._position
         
         clipoverride_override = False
@@ -917,16 +1117,16 @@ else:
         
         forcebilinear = ((getattr(quad, "optimal_size", quad._size) != quad._size) and isinstance(quad, Icon))
         
-        if isinstance(quad, Clock):
-            if not skip:
-                qqy += quad.descent
-            else:
-                qqy += 2
-            #print(quad.ascent-quad.descent, quad.cimg.height)
-            qqy -= quad.s.count("\n")*quad.fnt.reallineheight
-            if quad.fnt.shadow:
-                #qqx -= quad.fnt.sx
-                qqy -= abs(quad.fnt.sy)+1
+        # if isinstance(quad, Clock):
+        #     if not skip:
+        #         qqy += quad.descent
+        #     else:
+        #         qqy += 2
+        #     #print(quad.ascent-quad.descent, quad.cimg.height)
+        #     qqy -= quad.s.count("\n")*quad.fnt.reallineheight
+        #     if quad.fnt.shadow:
+        #         #qqx -= quad.fnt.sx
+        #         qqy -= abs(quad.fnt.sy)+1
         x_offset = 0
         
         qxbase = qqx + x_offset
@@ -937,6 +1137,9 @@ else:
         qqx = qqx+off[0]+x_offset
         qqy = qqy+off[1]
         
+        wbase = quad.size()[0]
+        hbase = quad.size()[1]
+        
         if drawlevel == 0:
             qqx = round(qqx * activedrawlayer[10])
             qqy = round(qqy * activedrawlayer[11])
@@ -945,15 +1148,12 @@ else:
         else:
             qqx = round(qqx)
             qqy = round(qqy)
-            qxbase = round(qxbase)
-            qybase = round(qybase)
+            qxbase = round(qxbase)+toff[0]
+            qybase = round(qybase)+toff[1]
+            #renderElog(qqx, qqy, qxbase, qybase, wbase, hbase)
         
         qx, qy = qqx*1, qqy*1
         
-        
-        
-        wbase = quad.size()[0]
-        hbase = quad.size()[1]
         #if hw:
         #    wbase, hbase = hw
         if clipoverride:
@@ -1003,8 +1203,8 @@ else:
                 if not se:
                     # xxw -= (effect.dx*effect.frame/720*(xxx*2))
                     # yyw -= (effect.dy*effect.frame/480*(yyy*2))
-                    qx += effect.dx*effect.frame
-                    qy += effect.dy*effect.frame
+                    qx += round(effect.dx*effect.frame)
+                    qy += round(effect.dy*effect.frame)
             elif type(effect) == Fader:
                 dist = (effect.frame/effect.frames)
                 if effect.frames == 1:
@@ -1017,8 +1217,6 @@ else:
                         fader = effect.startAlpha*(1-dist) + effect.endAlpha*dist
             elif type(effect) == Sizer:
                 pX = effect.frame*effect.percentX
-                if pX == 0:
-                    pX = 1
                 pY = effect.frame*effect.percentY
                 
                 q_width *= (1+pX)
@@ -1061,21 +1259,36 @@ else:
                         plane, pos, step = p
                         if (not se) and (not se2):
                             effect.planes[i][1] += step
+                        pos = effect.planes[i][1]
                         if plane == Clipper.CP_LEFT:
-                            absclip_left = pos
+                            absclip_left = pos + crxy[0]
                         if plane == Clipper.CP_RIGHT:
-                            absclip_right = pos
+                            absclip_right = pos + crxy[0]
                         if plane == Clipper.CP_TOP:
-                            absclip_top = pos
+                            absclip_top = screensize[1]-pos - crxy[1]
                         if plane == Clipper.CP_BOTTOM:
-                            absclip_bottom = pos
+                            absclip_bottom = pos + crxy[1]
                 else:
+                    el = (effect.left or 0)
+                    eb = (effect.bottom or 0)
+                    if crb:
+                        if type(quad) is ScrollingCompositeRenderable:
+                            return
+                        #renderElog(toff, "toff", crb)
+                        x_o = crxy[0]
+                        y_o = crxy[1]
+                        clipx = qxbase + el + x_o
+                        clipy = qybase + eb + y_o
+                        clipw = (crb[2]) - el - (effect.right or 0)
+                        cliph = (crb[3]) - eb - (effect.top or 0)
+                        clipoverride_override = True
+                        return
                     clipoverride_override = True
-                    clipx = qxbase + (effect.left or 0)
-                    clipy = qybase + (effect.bottom or 0)
+                    clipx = qxbase + el
+                    clipy = qybase + eb
                     
-                    clipw = wbase - (effect.left or 0) + (effect.right or 0)
-                    cliph = hbase - (effect.bottom or 0) + (effect.top or 0)
+                    clipw = wbase - el - (effect.right or 0)
+                    cliph = hbase - eb - (effect.top or 0)
                 
             # if hasattr(effect, "frame"):
             #     if not effect.frozen and not se:
@@ -1091,8 +1304,8 @@ else:
                     applyeffect(effect)
         loopover(effects)
         
-        xw = q_width/screensize[0]*(xxx*2)
-        yw = q_height/screensize[1]*(yyy*2)
+        xw = q_width*1
+        yw = q_height*1
         if drawlevel == 0:
             xw *= activedrawlayer[10]
             yw *= activedrawlayer[11]
@@ -1103,11 +1316,11 @@ else:
             forcebilinear = True
         mat = rl.matrix_multiply(mat, xyt)
         if drawlevel == 0:
-            xxw = (-qx-(q_width/2*activedrawlayer[10])-activedrawlayer[6]-activedrawlayer[12])/screensize[0]*(xxx*2)
-            yyw = (-qy-(q_height/2*activedrawlayer[11])-activedrawlayer[7]-activedrawlayer[13])/screensize[1]*(yyy*2)
+            xxw = (-qx-(q_width/2*activedrawlayer[10])-activedrawlayer[6]-activedrawlayer[12])
+            yyw = (-qy-(q_height/2*activedrawlayer[11])-activedrawlayer[7]-activedrawlayer[13])
         else:
-            xxw = (-qx-q_width/2)/screensize[0]*(xxx*2)
-            yyw = (-qy-q_height/2)/screensize[1]*(yyy*2)
+            xxw = (-qx-q_width/2)
+            yyw = (-qy-q_height/2)
         plane.transform = mat
         c1, c2, c3, c4 = quad._color
         correct = ((c1 > 1) or (c2 > 1) or (c3 > 1) or (c4 > 1))
@@ -1117,7 +1330,7 @@ else:
             c3 /= 255
             c4 /= 255
         pfader = (1 if not premult else fader)
-        if type(quad) == Box:
+        if type(quad) in [Box, Icon]: #try expanding to all types if it works
             pfader *= c4
         try:
             col = rl.Color(min(round(quad._color[0]*255*pfader), 255), min(round(quad._color[1]*255*pfader), 255), min(round(quad._color[2]*255*pfader), 255), min(round(quad._color[3]*fader*255), 255))
@@ -1148,12 +1361,19 @@ else:
         rl.set_shader_value(lclipshader, blocL, rl.ffi.new('float *', float(absclip_left)), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
         rl.set_shader_value(lclipshader, blocR, rl.ffi.new('float *', float(absclip_right)), rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
         
+        if drawlevel == 0:
+            rl.set_shader_value(lclipshader, renw, renderwidth, rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
+            rl.set_shader_value(lclipshader, renh, renderheight, rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
+        else:
+            rl.set_shader_value(lclipshader, renw, screenwidth, rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
+            rl.set_shader_value(lclipshader, renh, screenheight, rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
+    
         #print(clipx, clipy, clipw, cliph)
         
         if visible:
             plane.materials[0].shader = lclipshader
-            rl.set_texture_filter(tex, rl.TextureFilter.TEXTURE_FILTER_BILINEAR if ((drawlevel == 0 and (activedrawlayer[10] != 1 or activedrawlayer[11] != 1))) else (rl.TextureFilter.TEXTURE_FILTER_POINT if not isinstance(quad, Icon) else rl.TextureFilter.TEXTURE_FILTER_TRILINEAR))
-            rl.draw_model_ex(plane, rl.Vector3(-xxw, -yyw, -zzz), rl.Vector3(0, 0, 0), 0, rl.Vector3(1, 1, 1), col)
+            rl.set_texture_filter(tex, rl.TextureFilter.TEXTURE_FILTER_BILINEAR if ((drawlevel == 0 and (activedrawlayer[10] != 1 or activedrawlayer[11] != 1))) else (rl.TextureFilter.TEXTURE_FILTER_POINT if not isinstance(quad, Icon) else rl.TextureFilter.TEXTURE_FILTER_BILINEAR))
+            rl.draw_model_ex(plane, rl.Vector3(-xxw, -yyw, 0), rl.Vector3(0, 0, 0), 0, rl.Vector3(1, 1, 1), col)
 
     class DummyQuad():
         def __init__(self, x, y, w, h, effects=[], visible=True, seq_start_after=False, added=False, clipping_override=None):
@@ -1186,17 +1406,14 @@ else:
 
     skip_drawing = False
 
-    def draw_poly(quad : TIFF_Image, tex=white):
+    def draw_poly(quad : Polygon, tex=white):
         global drawlevel
         effects = quad.effects
         visible = not not quad.visible
         plane.materials[0].maps.texture = tex
-        qqx, qqy = quad._position
-        qx, qy = qqx*1, qqy*1
-        xw = (xxx*2)/screensize[0]
-        yw = (yyy*2)/screensize[1]
+        qx, qy = quad._position
         
-        mat = rl.matrix_scale(xw, yw, 1)
+        mat = rl.matrix_identity()
         fader = 1
         pts2 = quad.vertices
         def applyeffect(effect : GraphicEffect):
@@ -1248,13 +1465,13 @@ else:
         if not visible:
             return
         
-        xxw = (-qx)/screensize[0]*(xxx*2)
-        yyw = (-qy)/screensize[1]*(yyy*2)
+        xxw = (-qx)
+        yyw = (-qy)
         mat = rl.matrix_multiply(mat, rl.matrix_translate(-xxx, -yyy, 0))
         
-        if drawlevel == 0:
-            xxw -= (activedrawlayer[6]/screensize[0]*(xxx*2))
-            yyw -= (activedrawlayer[7]/screensize[1]*(yyy*2))
+        # if drawlevel == 0:
+        #     xxw -= activedrawlayer[6]
+        #     yyw -= activedrawlayer[7]
         mat = rl.matrix_multiply(mat, rl.matrix_translate(-xxw, -yyw, 0))
         
         pts = []
@@ -1263,6 +1480,7 @@ else:
         for p in pts2:
             a=p[4]*c[3]*fader
             pts.append((rl.vector3_transform(p[0], mat), p[1]*c[0]*a, p[2]*c[1]*a, p[3]*c[2]*a, a))
+        
         #pts = pts2
         #rl.rl_enable_smooth_lines()
         rl.rl_begin(rl.RL_TRIANGLES)
@@ -1448,37 +1666,15 @@ else:
                 renderElog(type(effect).__name__)
     
     def reset_effects_tree(ef, debug=False):
-        if type(ef) not in (Box, Text, Clock, EffectSequencer):
-            renderElog(type(ef).__name__, " reset")
         if type(ef) in [CompositeRenderable, ScrollingCompositeRenderable]:
             for item in ef.items:
                 reset_effects_tree(item)
+        if type(ef) is EffectSequencer:
+            return
         if not hasattr(ef, "effects"):
             return
         for effect in ef.effects:
-            if type(effect) == EffectSequencer:
-                effect.timer = effect.timerdefault+0
-                effect.activeeffects = []
-                reset_effects_tree(effect)
-            else:
-                if type(effect) is tuple:
-                    if hasattr(effect[0], "fired"):
-                        effect[0].fired = False
-                    if hasattr(effect[0], "timer"):
-                        effect[0].timer = 0
-                    if hasattr(effect[0], "frame"):
-                        effect[0].frame = 0
-                    if hasattr(effect[0], "frozen"):
-                        effect[0].frozen = False
-                else:
-                    if hasattr(effect, "fired"):
-                        effect.fired = False
-                    if hasattr(effect, "timer"):
-                        effect.timer = 0
-                    if hasattr(effect, "frame"):
-                        effect.frame = 0
-                    if hasattr(effect, "frozen"):
-                        effect.frozen = False
+            effect.reset()
     
     def draw_item(item, extra={"tex": None, "cam": None, "off": (0, 0), "lloop": 0}, scr=False):
         global mode_3d_tracker
@@ -1586,64 +1782,29 @@ else:
         elif isinstance(item, DummyQuad):
             draw_quad(item)
         elif isinstance(item, Text) or isinstance(item, Clock):
-            if isinstance(item, Clock):
-                def fix_strftime(tm, format):
-                    return tm.strftime(format.replace("%l", str(int(tm.strftime("%I"))).rjust(2))).replace("<z>", item.timezoneDisplay)
-                item.s = fix_strftime(datetime.now(tz=item.tz), item.format)
             rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA_PREMULTIPLY)
-            ccol = tuple([round(c*255) for c in item._color])
-            if item.glist:
-                glist, clist, ctg = item.glist
-            else:
-                glist, clist, ctg = build_glyph_list(*item._position, item.s, ccol, item.fnt, top=(scr and not item.fnt.shadow))
-                item.glist = glist, clist, ctg
             xo = 0
-            yo = item.fnt.sy * (scr and item.fnt.shadow)
             if type(item) == Marquee:
                 item.pos += item.step
                 item.pos %= ((item.ksize or get_text_size(item.s, tuple([round(c*255) for c in item._color]), item.fnt, item))[0]+(720 if not item.bounds else item.bounds[0]))
                 xo = round(item.pos-(720 if not item.bounds else item.bounds[0]))
-            if type(item) == Clock and item.justification != Clock.LEFT:
-                isize = get_text_size(item.s, tuple([round(c*255) for c in item._color]), item.fnt, item)
-                if item.justification == Clock.CENTER:
-                    xo = isize[0]*0.5
-                else:
-                    xo = isize[0]
-                #xo = 0
-            i = 0
-            ho = (0, 0)
-            for g in glist:
-                if g not in clist:
-                    continue
-                char = clist[g]
-                char.load()
-                ciw = char.image.width
-                cih = char.image.height
-                for x, y in ctg[g]:
-                    if i == 0:
-                        ho = (x+0, y+0)
-                    skip = False
-                    clipo = None
-                    if isinstance(item, Marquee):
-                        if (x-xo-item._position[0]) > item.bounds[0]:
-                            skip = True
-                        if (x-xo-item._position[0]+ciw) < 0:
-                            skip = True
-                        clipo = (item._position[0], item._position[1]-5, item.bounds[0], item.bounds[1]+10)
-                    else:
-                        if extra.get("off") and scr:
-                            if (x-xo+extra["off"][0]) > activedrawlayer[8]-activedrawlayer[12]:
-                                skip = True
-                            if (x-xo+extra["off"][0]+ciw) < -activedrawlayer[12]:
-                                skip = True
-                        
-                    if not skip:
-                        draw_quad(DummyQuad(x-xo, y+yo, ciw, cih, item.effects, visible=item.visible, seq_start_after=item.seq_start_after, added=item.added), char.texture, off=extra["off"], premult=True, se2=(i!=0), ho=(x-ho[0], y-ho[1]), hw=item.size(), clo=(xo * 2 * (type(item) is Clock)), clipoverride=clipo)
-                    i += 1
-                    #draw_quad(item, item.cachedtex, off=extra["off"], premult=True, skip=(scr and not item.fnt.shadow))
-            if DEBUG:
-                draw_quad(DummyQuad(item._position[0], item._position[1]-2, item._size[0], 2, [], added=item.added), red if isinstance(item, Text) else orange, off=extra["off"], premult=True)
-            #rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA_PREMULTIPLY)
+            
+            if item.rtex is not None:
+                sc = (scr and (twc.personalityCode > 1))
+                tex = item.rtex.texture
+                ho = (0, 0)
+                if type(item) == Clock:
+                    if item.justification == Clock.CENTER:
+                        xo = item.rtex.texture.width/2
+                    if item.justification == Clock.RIGHT:
+                        xo = item.rtex.texture.width
+                #renderElog(item.draw_off)
+                #renderElog("has rtex", item._position)
+                
+                draw_quad(item, tex, off=(item.draw_off[0]+extra["off"][0]-xo, item.draw_off[1]+extra["off"][1]+item.top_offset*sc), premult=True)
+            else:
+                renderElog("no rtex")
+                rg.text_queue.append(item)
             rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA)
         elif isinstance(item, RichText):
             for i in item.items:
@@ -1674,8 +1835,8 @@ else:
                 
             
             camera2 = rl.Camera3D(
-                rl.Vector3(xx2, yy2, 0),
-                rl.Vector3(xx2, yy2, -10),
+                rl.Vector3(camx+xx2, camy+yy2, zzz),
+                rl.Vector3(camx+xx2, camy+yy2, 0),
                 rl.Vector3(0, 1, 0),
                 fov,
                 rl.CameraProjection.CAMERA_PERSPECTIVE
@@ -1692,13 +1853,24 @@ else:
             camoff = (0, 0)
             xx = 0
             
+            global toff
+            global ancestry_dna
+            old_toff = toff.copy()
             for iii, ch in enumerate(item.items):
+                toff = [old_toff[0]+xx2p, old_toff[1]+yy2p]#[old_toff[0]+xx2p,old_toff[1]+yy2p]
                 if isinstance(item, ScrollingCompositeRenderable):
                     camoff = (720+xx+item.scroll, 0)
                     #if isinstance(ch, Text):
                     xx += ch.size()[0]
                 if isinstance(ch, CompositeRenderable) and not (type(ch) is RichText):
+                    #if VERBOSE and (xx2p != 0 or yy2p != 0):
+                    #    renderElog(xx2p, yy2p)
+                    renderElog("ancestry dna", ancestry_dna)
+                    renderElog("expect", item._position, ch._position)
                     draw_item(ch, extra={"tex": item.rtex, "cam": camera2, "off": camoff})
+                    #ancestry_dna[0] -= xx2p
+                    #ancestry_dna[1] -= yy2p
+                    renderElog("ancestry dna2", ancestry_dna)
                     rl.begin_texture_mode(item.rtex)
                     rl.rl_set_clip_planes(0.01, 10000)
                     # if isinstance(item, RichText):
@@ -1710,7 +1882,8 @@ else:
                     rl.rl_disable_depth_test()
                     rl.rl_disable_depth_mask()
                 else:
-                    draw_item(ch, {"off": camoff}, scr=(type(item) is (ScrollingCompositeRenderable)))
+                    draw_item(ch, {"off": camoff, "cam": extra["cam"], "tex": extra["tex"]}, scr=(type(item) is (ScrollingCompositeRenderable)))
+            toff = old_toff.copy()
             
             rl.end_mode_3d()
             mode_3d_tracker -= 1
@@ -1742,9 +1915,9 @@ else:
                 #     draw_quad(DummyQuad(xxr, yyr, 720, 480, effects=item.effects), item.ftex.texture, se=True)
                 # el
                 #rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA_PREMULTIPLY)
-                clo = None if not type(item) is ScrollingCompositeRenderable else (*item._position, *item.bbox)
                 b = item.bounds()
-                draw_quad(DummyQuad(0, 0, *screensize, effects=item.effects, visible=item.visible, added=item.added, clipping_override=clo), item.ftex.texture, se=True, premult=True, clipoverride=clo, crb=b)
+                clo = None if not type(item) is ScrollingCompositeRenderable else (*item._position, *item.bbox)
+                draw_quad(DummyQuad(0, 0, *screensize, effects=item.effects, visible=item.visible, added=item.added), item.ftex.texture, se=True, premult=True, clipoverride=clo, crb=b, crxy=(xx2p, yy2p))
                 rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA)
             else:
                 #rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA_PREMULTIPLY)
@@ -1755,9 +1928,9 @@ else:
                 rl.rl_disable_depth_test()
                 rl.rl_disable_depth_mask()
                 drawlevel += 1
-                clo = None
                 b = item.bounds()
-                draw_quad(DummyQuad(0, 0, *screensize, effects=item.effects, visible=item.visible, added=item.added, clipping_override=clo), item.ftex.texture, se=True, premult=True, crb=b)
+                clo = None
+                draw_quad(DummyQuad(0, 0, *screensize, effects=item.effects, visible=item.visible, added=item.added), item.ftex.texture, se=True, premult=True, clipoverride=clo, crb=b, crxy=(xx2p, yy2p))
                 drawlevel -= 1
                 rl.end_mode_3d()
                 mode_3d_tracker -= 1
@@ -1914,6 +2087,58 @@ else:
         sortedLayers = sorted(rg.layers, key=lambda layer: layer[4])
         ee += 1
         rl.begin_drawing()
+        #let's look at the text queue
+        for item in rg.text_queue:
+            if item.rtex is not None:
+                continue
+            ccol = tuple([round(c*255) for c in item._color])
+            glist, clist, ctg, top_o = build_glyph_list(0, 0, item.s, ccol, item.fnt)
+            
+            vv = list(ctg.values())
+            try:
+                x_min = min([min(x, key=lambda val: val[0]) for x in vv], key=lambda val: val[0])[0]
+            except:
+                continue
+            y_min = min([min(y, key=lambda val: val[1]) for y in vv], key=lambda val: val[1])[1]
+            x_mx = max([max(x, key=lambda val: val[0]+val[2]) for x in vv], key=lambda val: val[0]+val[2])
+            y_mx = max([max(y, key=lambda val: val[1]+val[3]) for y in vv], key=lambda val: val[1]+val[3])
+            x_max = x_mx[0]+x_mx[2]
+            y_max = y_mx[1]+y_mx[3]
+            x_off = min(
+                x_min,
+                0
+            )
+            y_off = min(
+                y_min,
+                0
+            )
+            rtw = abs(x_max-x_min)
+            rth = abs(y_max-y_min)
+            item.rtex = rl.load_render_texture(rtw, rth)
+            item.text_bounds = (rtw, rth)
+            item._size = (rtw, rth)
+            item.draw_off = (x_min, y_min)
+            item.top_offset = top_o
+            rl.begin_texture_mode(item.rtex)
+            rl.rl_set_blend_mode(rl.BlendMode.BLEND_ALPHA_PREMULTIPLY)
+            #rl.clear_background(rl.RED)
+            for l in glist:
+                if l not in clist:
+                    continue
+                char : Character = clist[l]
+                char.load()
+                for c in ctg[l]:
+                    rl.draw_texture_pro(char.texture, rl.Rectangle(0, 0, char.texture.width, -char.texture.height), rl.Rectangle(c[0]-x_min, c[1]-y_min, char.texture.width, char.texture.height), (0, 0), 0, rl.WHITE)
+                #renderElog(c[0]-x_min, c[1]-y_min)
+            rl.end_texture_mode()
+            #im = rl.load_image_from_texture(item.rtex.texture)
+            #rl.export_image(im, "imm.png")
+            #renderElog(rtw, rth, x_min, y_min, x_max, y_max, item.s, ctg)
+            #exit()
+            
+        rg.text_queue.clear()
+        
+        #end text queue
         rl.clear_background(rl.BLANK)
         rl.rl_set_clip_planes(0.01, 10000)
         rl.begin_mode_3d(camera)

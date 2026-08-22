@@ -37,6 +37,7 @@ runrscfunction = None
 newaccess = None
 newstat = None
 newexists = None
+text_queue = []
 import builtins
 builtins.__dict__["rg_font_cache"] = {}
 
