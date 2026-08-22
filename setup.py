@@ -135,6 +135,7 @@ def processDS(watt=False):
             filepos = expireix + 1
             
             dsdict[name] = [val, expire]
+    
     with open("ds.json", "w") as f:
         f.write(json.dumps(dsdict, indent=4))
     
@@ -148,8 +149,9 @@ def downloadDS():
     if dss.endswith("#"):
         watt = True
         dss = dss[:-1]
-    ds1l = f"https://archive.lewolfyt.cc/{dss}/twc/data/datastore/ds.dat"
-    ds2l = f"https://archive.lewolfyt.cc/{dss}/twc/data/datastore/ds.stat"
+    ds1l = f"https://archive.lewolfyt.cc/{dss+''}/twc/data/datastore/ds.dat"
+    ds2l = f"https://archive.lewolfyt.cc/{dss+''}/twc/data/datastore/ds.stat"
+    print(ds1l, ds2l)
     if watt:
         dss = "WattLive"
     success = True
