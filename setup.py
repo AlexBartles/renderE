@@ -148,7 +148,6 @@ def downloadDS():
     if dss.endswith("#"):
         watt = True
         dss = "WattLive"
-        dss = dss[:-1]
     ds1l = f"https://archive.lewolfyt.cc/{dss}/twc/data/datastore/ds.dat"
     ds2l = f"https://archive.lewolfyt.cc/{dss}/twc/data/datastore/ds.stat"
     success = True
@@ -172,6 +171,12 @@ def downloadDS():
             brand,
             f"https://archive.lewolfyt.cc/{dss}/"
         ]))
+    pp = os.path.join(mypath, "domesticpy", "conf", "playman.py")
+    
+    dt = r.get(page_vars["newsvr"] + "twc/domestic/conf/playman.py")
+    if dt.ok:
+        with open(pp, "w") as f:
+            f.write(dt.text)
     processDS(watt)
 
 def processDSF():
