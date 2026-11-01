@@ -30,10 +30,6 @@ def checkActiveWarnings():
     return 0
     return
 
-def execfile(filename, globa, loca):
-    with open(filename, "r", encoding="windows-1252") as f:
-        exec(compile(f.read(), filename, 'exec'), globa, loca)
-
 def checkRadarPrecip(RadarProductName, imageList=None):
     """Checks for significant radar returns (precip) in a given image
        list. If a list isn't provided, it will look up the latest images

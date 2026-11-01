@@ -5,6 +5,7 @@
 # Compiled at: 2007-01-12 11:33:26
 import time
 from math import *
+import nethandler as nh
 __todaysJulianDate = 0
 
 def __toRad(degrees):
@@ -13,42 +14,75 @@ def __toRad(degrees):
     return
 
 
-def __JDtoDate(jd):
-    event_date = [1, 1, 1, 1, 1, 1, 1, 1, 1]
-    jd = jd + 0.5
-    z = int(jd)
-    f = jd - z
-    if z < 2299161:
-        a = z
-    else:
-        a1 = (z - 1867216.25) / 36524.25
-        a = z + 1 + a1 - int(a1 / 4)
-    b = a + 1524
-    c = int((b - 122.1) / 365.25)
-    d = int(365.25 * c)
-    e = int((b - d) / 30.6001)
-    day = b - d - int(30.6001 * e) + f
-    if e < 14:
-        event_date[1] = e - 1
-    else:
-        event_date[1] = e - 13
-    if event_date[1] > 2:
-        event_date[0] = c - 4716
-    else:
-        event_date[0] = c - 4715
-    event_date[2] = int(day)
-    day = day - event_date[2]
-    day = day * 24
-    event_date[3] = int(day)
-    day = day - event_date[3]
-    day = day * 60
-    event_date[4] = int(day)
-    day = day - event_date[4]
-    day = day * 60
-    event_date[5] = int(day)
-    event_date[8] = -1
-    return time.localtime(time.mktime(tuple(event_date)))
-    return
+if nh.personality != "Watt":
+    def __JDtoDate(jd):
+        event_date = [1, 1, 1, 1, 1, 1, 1, 1, 1]
+        jd = jd + 0.5
+        z = int(jd)
+        f = jd - z
+        if z < 2299161:
+            a = z
+        else:
+            a1 = (z - 1867216.25) / 36524.25
+            a = z + 1 + a1 - int(a1 / 4)
+        b = a + 1524
+        c = int((b - 122.1) / 365.25)
+        d = int(365.25 * c)
+        e = int((b - d) / 30.6001)
+        day = b - d - int(30.6001 * e) + f
+        if e < 14:
+            event_date[1] = e - 1
+        else:
+            event_date[1] = e - 13
+        if event_date[1] > 2:
+            event_date[0] = c - 4716
+        else:
+            event_date[0] = c - 4715
+        event_date[2] = int(day)
+        day = day - event_date[2]
+        day = day * 24
+        event_date[3] = int(day)
+        day = day - event_date[3]
+        day = day * 60
+        event_date[4] = int(day)
+        day = day - event_date[4]
+        day = day * 60
+        event_date[5] = int(day)
+        event_date[8] = -1
+        return time.localtime(time.mktime(tuple(event_date)))
+        return
+else:
+    def __JDtoDate(jd):
+        event_date = [1, 1, 1, 1, 1, 1, 1, 1, 1]
+        jd = jd + 0.5
+        z = int(jd)
+        f = jd - z
+        if z < 2299161:
+            a = z
+        else:
+            a1 = (z - 1867216.25) / 36524.25
+            a = z + 1 + a1 - int(a1 / 4)
+        b = a + 1524
+        c = int((b - 122.1) / 365.25)
+        d = int(365.25 * c)
+        e = int((b - d) / 30.6001)
+        day = b - d - int(30.6001 * e) + f
+        if e < 14:
+            event_date[1] = e - 1
+        else:
+            event_date[1] = e - 13
+        if event_date[1] > 2:
+            event_date[0] = c - 4716
+        else:
+            event_date[0] = c - 4715
+        event_date[2] = int(day)
+        day = day - event_date[2]
+        day = day * 24
+        event_date[3] = 0
+        event_date[4] = 0
+        event_date[5] = 0
+        event_date[8] = -1
+        return time.localtime(time.mktime(event_date))
 
 
 def __DatetoJD(event_date):
@@ -129,7 +163,7 @@ def calcPhases(date=None):
         date = time.localtime(time.time())
     __todaysJulianDate = __DatetoJD(date)
     LUNATION_OFFSET = 953
-    START_LUNATION = 978
+    START_LUNATION = 978 if nh.personality != "Watt" else 1078
     END_LUNATION = 1422
     event_date = [[4, 4, 4, 4, 4, 4, 4, 4, 4], [4, 4, 4, 4, 4, 4, 4, 4, 4], [4, 4, 4, 4, 4, 4, 4, 4, 4], [4, 4, 4, 4, 4, 4, 4, 4, 4]]
     phases = []

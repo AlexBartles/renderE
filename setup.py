@@ -6,6 +6,7 @@ import os
 import sys
 import json
 import subprocess as sp
+import threading as th
 
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
@@ -16,7 +17,8 @@ root.configure(takefocus=False)
 mypath = os.path.dirname(os.path.abspath(__file__))
 
 pg.mixer.init()
-bgm = pg.mixer.Sound(os.path.join(mypath, "setup", "funk.ogg"))
+bgm = pg.mixer.Sound(os.path.join(mypath, "setup", "groove.ogg"))
+bgm.set_volume(0.75)
 
 pg.display.init()
 pg.font.init()
@@ -92,7 +94,18 @@ config_name_map = {
     "WY": "Wyoming"
 }
 
-def processDS():
+def getUniquePath(name):
+    p = os.path.join(mypath, name)
+    if not os.path.exists(p):
+        return p
+    else:
+        p += "."
+        ix = 0
+        while os.path.exists(p+str(ix)):
+            ix += 1
+        return p+str(ix)
+
+def processDS(watt=False):
     dsdat = page_vars["ds1"]
     dsstat = page_vars["ds2"]
     dsdict = {}
@@ -123,12 +136,25 @@ def processDS():
             filepos = expireix + 1
             
             dsdict[name] = [val, expire]
+    
     with open("ds.json", "w") as f:
         f.write(json.dumps(dsdict, indent=4))
+    
+    if watt:
+        sp.call([sys.executable, "loadSCMTconfig.py", os.path.join(mypath, "domesticpy", "util", "defaultEnhancedPlaylist.py")])
 
 def downloadDS():
-    ds1l = f"https://archive.lewolfyt.cc/{page_vars['dssource']}/twc/data/datastore/ds.dat"
-    ds2l = f"https://archive.lewolfyt.cc/{page_vars['dssource']}/twc/data/datastore/ds.stat"
+    dss = page_vars['dssource']
+    brand = page_vars['brand']
+    watt = False
+    if dss.endswith("#"):
+        watt = True
+        dss = dss[:-1]
+    ds1l = f"https://archive.lewolfyt.cc/{dss+''}/twc/data/datastore/ds.dat"
+    ds2l = f"https://archive.lewolfyt.cc/{dss+''}/twc/data/datastore/ds.stat"
+    print(ds1l, ds2l)
+    if watt:
+        dss = "WattLive"
     success = True
     try:
         ds1 = r.get(ds1l).content
@@ -145,7 +171,18 @@ def downloadDS():
     except:
         success = False
     page_vars["dsosuccess"] = success
-    processDS()
+    with open("servers.json", "w") as f:
+        f.write(json.dumps([
+            brand,
+            f"https://archive.lewolfyt.cc/{dss}/"
+        ]))
+    pp = os.path.join(mypath, "domesticpy", "conf", "playman.py")
+    
+    dt = r.get(f"https://archive.lewolfyt.cc/{dss}/twc/conf/playman.py")
+    if dt.ok:
+        with open(pp, "w") as f:
+            f.write(dt.text)
+    processDS(watt)
 
 def processDSF():
     page_vars["dsfsuccess"] = True
@@ -252,18 +289,64 @@ def buildconfigmap():
         }
 
 def serverchange(sv):
-    servers = [["PerrisLive"], ["FlatRockLive"], ["WxScanLive"]]
-    brands = ["Perris", "FlatRock", "WxScan"]
+    servers = [["PerrisLive"], ["FlatRockLive"], ["WxScanLive"], ["WattLive"]]
+    brands = ["Perris", "FlatRock", "WxScan", "Watt"]
     serversel = [f"https://archive.lewolfyt.cc/{i}/" for i in servers[sv]]
+    with open(os.path.join(mypath, "servers.json"), "r") as f:
+        last_brand = json.loads(f.read())[0]
     with open(os.path.join(mypath, "servers.json"), "w") as f:
         f.write(json.dumps([brands[sv]]+serversel, indent=4))
+    
+    page_vars["newbrand"] = brands[sv]
+    page_vars["newsvr"] = servers[sv][-1]
+    
+    page_vars["netalt"] = os.path.exists(os.path.join(mypath, "net"+brands[sv]))
+    page_vars["net_dest"] = getUniquePath(os.path.join(mypath, "net"+last_brand))
+    page_vars["net_swap"] = os.path.join(mypath, "net"+brands[sv])
+    
+    page_vars["playmanalt"] = os.path.exists(os.path.join(mypath, "domesticpy", "conf", "playman"+brands[sv]+".py"))
+    page_vars["playman_dest"] = getUniquePath(os.path.join(mypath, "domesticpy", "conf", "playman"+last_brand+".py"))
+    page_vars["playman_swap"] = os.path.join(mypath, "domesticpy", "conf", "playman"+brands[sv]+".py")
+    if brands[sv] == "WxScan":
+        page_vars["playman_swap"] = None
 
-serveropts = [pg.image.load(os.path.join(mypath, "setup", f"server{i+1}.png")) for i in range(3)]
+def move_ass():
+    np = os.path.join(mypath, "net")
+    if os.path.exists(np):
+        sh.move(np, page_vars["net_dest"])
+
+def swap_ass():
+    np = os.path.join(mypath, "net")
+    if os.path.exists(np):
+        sh.move(np, page_vars["net_dest"])
+        sh.move(page_vars["net_swap"], np)
+
+def move_pm():
+    pp = os.path.join(mypath, "domesticpy", "conf", "playman.py")
+    if os.path.exists(pp):
+        sh.move(pp, page_vars["playman_dest"])
+        if page_vars["newsvr"] == "WxScanLive":
+            return
+        path = "http://archive.lewolfyt.cc/" + page_vars["newsvr"] + "/usr/twc/domestic/conf/playman.py"
+        print(path)
+        dt = r.get(path)
+        if dt.ok:
+            with open(pp, "w") as f:
+                f.write(dt.text)
+
+def swap_pm():
+    pp = os.path.join(mypath, "domesticpy", "conf", "playman.py")
+    if os.path.exists(pp):
+        sh.move(pp, page_vars["playman_dest"])
+        if page_vars["playman_swap"]:
+            sh.move(page_vars["playman_swap"], pp)
+
+serveropts = [pg.image.load(os.path.join(mypath, "setup", f"server{i+1}.png")) for i in range(4)]
 serveracts = []
 i = 0
-for _ in range(3):
+for _ in range(4):
     j = i*1
-    serveracts.append({"type": "multi", "actions": [{"type": "func", "func": serverchange, "args": [int(i*1)]}, {"type": "page", "destination": "main"}]})
+    serveracts.append({"type": "multi", "actions": [{"type": "func", "func": serverchange, "args": [int(i*1)]}, {"type": "valt", "var": "netalt", "main": "netmove", "alt": "netmove_alt"}]})
     i += 1
 
 def clearrs():
@@ -411,10 +494,14 @@ def check_essential_data():
             ]
         }
 
-def download_essential_data():
+e_log = ""
+def d_essential_thread():
     efurl = page_vars["hasEF"]
     url_base = os.path.dirname(efurl)
-    for file in r.get(efurl).text.strip().split("\n"):
+    global e_log
+    files = r.get(efurl).text.strip().split("\n")
+    for i, file in enumerate(files):
+        e_log = f"({i+1}/{len(files)}) {file}"
         try:
             out_name = os.path.join(mypath, "net", file)
             out_dir = os.path.dirname(out_name)
@@ -425,6 +512,18 @@ def download_essential_data():
                     f.write(data)
         except Exception as e:
             print(f"Error downloading {file}: {e}")
+
+def download_essential_data():
+    global e_log
+    e_log = ""
+    t = th.Thread(target=d_essential_thread)
+    t.start()
+    while t.is_alive():
+        pg.event.pump()
+        pg.draw.rect(win, (0, 0, 0), pg.Rect(0, 0, 720, 40))
+        win.blit(pg.transform.smoothscale_by(fn.render(e_log, True, (255, 255, 255)), (0.5, 1)), (0, 5))
+        rwin.flip()
+        pg.time.wait(100)
 
 pagemap = {
     "init": {
@@ -477,17 +576,19 @@ pagemap = {
     "setup3A": {
         "type": "textpage",
         "title": "Datastore Setup",
-        "desc": "Choose which initial i1 datastore to use. Please note that Perris is the only full package currently supported by RenderE, so other datastores may cause issues!",
+        "desc": "Choose which initial i1 package to use. This can be changed later, but for the best experience you should start with the one you will be using most.",
         "options": [
             "Perris",
             "Flat Rock",
             "Weatherscan",
+            "Flat Rock + WATT Patches",
             "Back"
         ],
         "actions": [
-            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "PerrisLive"}, {"type": "page", "destination": "setup3Aload"}]},
-            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "FlatRockLive"}, {"type": "page", "destination": "setup3Aload"}]},
-            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "WxScanLive"}, {"type": "page", "destination": "setup3Aload"}]},
+            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "PerrisLive"}, {"type": "var", "key": "brand", "val": "Perris"}, {"type": "page", "destination": "setup3Aload"}]},
+            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "FlatRockLive"}, {"type": "var", "key": "brand", "val": "FlatRock"}, {"type": "page", "destination": "setup3Aload"}]},
+            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "WxScanLive"}, {"type": "var", "key": "brand", "val": "WxScan"}, {"type": "page", "destination": "setup3Aload"}]},
+            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "FlatRockLive#"}, {"type": "var", "key": "brand", "val": "Watt"}, {"type": "page", "destination": "setup3Aload"}]},
             {"type": "page", "destination": "setup2"}
         ]
     },
@@ -499,12 +600,14 @@ pagemap = {
             "Perris",
             "Flat Rock",
             "Weatherscan",
+            "Flat Rock + WATT Patches",
             "Back"
         ],
         "actions": [
-            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "PerrisLive"}, {"type": "page", "destination": "setup3Aload"}]},
-            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "FlatRockLive"}, {"type": "page", "destination": "setup3Aload"}]},
-            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "WxScanLive"}, {"type": "page", "destination": "setup3Aload"}]},
+            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "PerrisLive"}, {"type": "var", "key": "brand", "val": "Perris"}, {"type": "page", "destination": "setup3Aload"}]},
+            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "FlatRockLive"}, {"type": "var", "key": "brand", "val": "FlatRock"}, {"type": "page", "destination": "setup3Aload"}]},
+            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "WxScanLive"}, {"type": "var", "key": "brand", "val": "WxScan"}, {"type": "page", "destination": "setup3Aload"}]},
+            {"type": "multi", "actions": [{"type": "var", "key": "dssource", "val": "FlatRockLive#"}, {"type": "var", "key": "brand", "val": "Watt"}, {"type": "page", "destination": "setup3Aload"}]},
             {"type": "page", "destination": "setup2_alt"}
         ]
     },
@@ -738,7 +841,7 @@ pagemap = {
         "options": [
             "Reset Datastore",
             "Load Configuration",
-            "Change data server",
+            "Change package",
             "Download Essential Data",
             "RCMT",
             #"Playlist editor",
@@ -833,10 +936,52 @@ pagemap = {
     },
     "dataservers": {
         "type": "imagepage",
-        "title": "Choose Data Server",
-        "desc": "This will affect the graphics package used, products, and more.",
+        "title": "Choose Package",
+        "desc": "This will affect the graphics used, products, and more.",
         "options": serveropts,
         "actions": serveracts
+    },
+    "netmove": {
+        "type": "textpage",
+        "title": "Asset Folder",
+        "desc": "Changing to another package requires new assets to be downloaded in a separate folder to avoid conflicts.\nYou do not have an asset folder for this package yet. What would you like to do with your current asset folder?",
+        "options": ["Move (recommended)", "Keep current"],
+        "actions": [
+            {"type": "multi", "actions": [{"type": "func", "func": move_ass}, {"type": "valt", "var": "playmanalt", "main": "playmanmove", "alt": "playmanmove_alt"}]},
+            {"type": "multi", "actions": [{"type": "valt", "var": "playmanalt", "main": "playmanmove", "alt": "playmanmove_alt"}]}
+        ]
+    },
+    "netmove_alt": {
+        "type": "textpage",
+        "title": "Asset Folder",
+        "desc": "You have a previously-used asset folder for this package. What would you like to do with your current asset folder?",
+        "options": ["Swap for existing (recommended)", "Store current, create new asset folder", "Keep"],
+        "actions": [
+            {"type": "multi", "actions": [{"type": "func", "func": swap_ass}, {"type": "valt", "var": "playmanalt", "main": "playmanmove", "alt": "playmanmove_alt"}]},
+            {"type": "multi", "actions": [{"type": "func", "func": move_ass}, {"type": "valt", "var": "playmanalt", "main": "playmanmove", "alt": "playmanmove_alt"}]},
+            {"type": "multi", "actions": [{"type": "valt", "var": "playmanalt", "main": "playmanmove", "alt": "playmanmove_alt"}]}
+        ]
+    },
+    "playmanmove": {
+        "type": "textpage",
+        "title": "Playman Config",
+        "desc": "What would you like to do with the playman config file? (This manages things like slide names and internal playlists)",
+        "options": ["Move current and download new (recommended)", "Keep current"],
+        "actions": [
+            {"type": "multi", "actions": [{"type": "func", "func": move_pm}, {"type": "page", "destination": "main"}]},
+            {"type": "multi", "actions": [{"type": "page", "destination": "main"}]}
+        ]
+    },
+    "playmanmove_alt": {
+        "type": "textpage",
+        "title": "Asset Folder",
+        "desc": "You already have a copy of the correct playman config for this package. What would you like to do with your current playman config?",
+        "options": ["Swap (recommended)", "Store current, manually add new", "Keep current"],
+        "actions": [
+            {"type": "multi", "actions": [{"type": "func", "func": swap_pm}, {"type": "page", "destination": "main"}]},
+            {"type": "multi", "actions": [{"type": "func", "func": move_pm}, {"type": "page", "destination": "main"}]},
+            {"type": "multi", "actions": [{"type": "page", "destination": "main"}]}
+        ]
     },
     "pedit_load": {
         "type": "autopage",
@@ -1061,6 +1206,11 @@ def doaction(action):
             apage = action["main"]
         else:
             apage = action["setup"]
+    elif action["type"] == "valt":
+            if page_vars[action["var"]]:
+                apage = action["alt"]
+            else:
+                apage = action["main"]
     elif action["type"] == "quit":
         running = False
     elif action["type"] == "picker":

@@ -20,6 +20,20 @@ _defaultDict = {}
 # Posted by ShadowRanger
 # Retrieved 2025-12-18, License - CC BY-SA 4.0
 
+#check port
+
+server = False
+use_remote = False
+
+def check_remote():
+    global use_remote
+    if server:
+        use_remote = False
+        return
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        sock.settimeout(1.0)
+        use_remote = (sock.connect_ex(("localhost", 7245)) == 0)
+        return
 
 def apply(func, args, kwargs=None):
     return func(*args) if kwargs is None else func(*args, **kwargs)
@@ -45,6 +59,8 @@ def datatojson(dt):
 
 def set(key, data, expiration, update=0, session=0):
     print(f"setting {key}")
+    if use_remote:
+        return rset(key, data, expiration, update)
     if isinstance(data, str):
         ds.set([(key, data, expiration)], session)
         return ''
@@ -103,6 +119,9 @@ find it"""
 
 
 def get(key, cachingEnabled=None, session=0):
+    if use_remote:
+        return rget(key, cachingEnabled)
+        return
     try:
         defaultResult = _defaultDict[key]
         if isinstance(defaultResult, twccommon.Data):
@@ -433,8 +452,16 @@ def _makeInst(field, data, moduleName, className, makers):
         return newinstance(cl, dict)
     return
 
+def commit():
+    if use_remote:
+        rcommit()
+    else:
+        ds.commit()
+
 def rcommit():
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect(("localhost", 7245))
     nh._socksend(sock, b"rcommit")
     sock.close()
+
+check_remote()

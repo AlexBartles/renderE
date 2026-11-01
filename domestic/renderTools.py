@@ -20,9 +20,54 @@ from twc.embedded.renderd.RenderScript import Clipper
 import twc
 import twc.dsmarshal as dsm
 from functools import reduce
+import operator
 
 def apply(func, args, kwargs=None):
     return func(*args) if kwargs is None else func(*args, **kwargs)
+
+def slide(p, obj, startTime, duration, destPos):
+    """
+    Slides an object at 'startTime' to 'destPos' over the course of 'duration' frames.
+    """
+    slideDistance = list(map(operator.sub, destPos, obj.position()))
+    xSlideSpeed = slideDistance[0] / duration
+    ySlideSpeed = slideDistance[1] / duration
+    es = EffectSequencer(obj, repeat=0)
+    if startTime > 1:
+        es.addEffect(NullEffect(None), startTime - 1)
+    es.addEffect(Slider(None, xSlideSpeed, ySlideSpeed), duration)
+    p.addItem(es)
+
+
+def clipObj(p, obj, left=0, right=0, top=0, bottom=0):
+    """
+    Common clipping of an object
+    """
+    es = EffectSequencer(obj, repeat=1)
+    es.addEffect(Clipper(None, left, right, top, bottom), 1)
+    p.addItem(es)
+    return
+
+
+def createText(p, txt, font, color, pos):
+    """
+    Create Text Object.
+    """
+    obj = Text(font, txt)
+    obj.setColor(*color)
+    obj.setPosition(*pos)
+    return obj
+
+
+def createBox(p, pos, size, color):
+    """
+    Create Box Object
+    """
+    box = Box()
+    box.setPosition(*pos)
+    box.setSize(*size)
+    box.setColor(*color)
+    return box
 
 def sequenceOnPage(page, grSet, delayList, repeat=0):
     pageCount = len(grSet)
@@ -490,34 +535,3 @@ def ldlWatchSlide(p, grList, duration):
         p.addItem(es)
 
     return
-
-def slide(p, gr, time, dur, dest):
-    #pass
-    sx, sy = gr.position()
-    es = EffectSequencer(gr)
-    es.addEffect(NullEffect(None), int(time))
-    es.addEffect(Slider(None, (dest[0]-sx)/dur, (dest[1]-sy)/dur), int(dur))
-    #p.addItem(gr)
-    p.addItem(es)
-
-def clipObj(p, gr, left=0, right=720, top=720, bottom=0):
-    c = Clipper(gr)
-    c.clip(Clipper.CP_LEFT, left, 0)
-    c.clip(Clipper.CP_RIGHT, right, 0)
-    c.clip(Clipper.CP_TOP, top, 0)
-    c.clip(Clipper.CP_BOTTOM, bottom, 0)
-
-def createBox(p, pos, size, color):
-    gr = Box()
-    gr.setSize(*size)
-    gr.setPosition(*pos)
-    r,g,b,a = color
-    gr.setColor(r,g,b,a)
-    return gr
-
-def createText(p, text, font, color, pos):
-    t = Text(font, text)
-    r,g,b,a = color
-    t.setColor(r,g,b,a)
-    t.setPosition(*pos)
-    return t

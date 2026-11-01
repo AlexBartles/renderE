@@ -132,7 +132,10 @@ def setData(loc, type, data, expiration, update=0):
         log_msg = 'set hdln for location %s' % loc
         twccommon.Log.info(log_msg)
         modifiedHeadlines = []
-        matchCategories = ((4, 'INLAND HURRICANE WATCH', re.compile('INLAND HURRICANE WATCH'), 'HURRICANE WATCH'), (3, 'HURRICANE WATCH', re.compile('(?<!INLAND )HURRICANE WATCH'), 'HURRICANE WATCH'), (2, 'INLAND HURRICANE WARNING', re.compile('INLAND HURRICANE WARNING'), 'HURRICANE WARNING'), (1, 'HURRICANE WARNING', re.compile('(?<!INLAND )HURRICANE WARNING'), 'HURRICANE WARNING'))
+        if twc.personality == "Watt":
+            matchCategories = ((4, 'HURRICANE WIND WATCH', re.compile('HURRICANE WIND WATCH'), 'HURRICANE WATCH'), (3, 'HURRICANE WATCH', re.compile('HURRICANE WATCH'), 'HURRICANE WATCH'), (2, 'HURRICANE WIND WARNING', re.compile('HURRICANE WIND WARNING'), 'HURRICANE WARNING'), (1, 'HURRICANE WARNING', re.compile('HURRICANE WARNING'), 'HURRICANE WARNING'))
+        else:
+            matchCategories = ((4, 'INLAND HURRICANE WATCH', re.compile('INLAND HURRICANE WATCH'), 'HURRICANE WATCH'), (3, 'HURRICANE WATCH', re.compile('(?<!INLAND )HURRICANE WATCH'), 'HURRICANE WATCH'), (2, 'INLAND HURRICANE WARNING', re.compile('INLAND HURRICANE WARNING'), 'HURRICANE WARNING'), (1, 'HURRICANE WARNING', re.compile('(?<!INLAND )HURRICANE WARNING'), 'HURRICANE WARNING'))
         for i in range(len(data.headlines)):
             headline = data.headlines[i]
             compareHeadline = (' ').join(headline.upper().split())
@@ -205,23 +208,70 @@ def cancelBulletin(loc, pil, pilExt):
     return
 
 
-def cancelBulletins(l):
-    setlist = []
+def oldCancelBulletins(l):
     for (loc, pil, pilExt) in l:
-        info = BulletinInfo.getBulletinProperties(pil, pilExt)
-        which = '%s.%d' % (loc, info.group)
-        key = 'bulletin.%s' % (which,)
-        try:
-            dsm.remove(key)
-            ds.commit()
-            setlist.append((loc, info.group))
-        except KeyError:
-            pass
+        b = twccommon.Data()
+        b.pil = pil
+        b.pilExt = pilExt
+        b.group = ''
+        cancelBulletin(loc, b)
 
-    if len(setlist):
-        _signalRPC('playman.playCmd.bulletin.cancelList', (setlist,))
-        twccommon.Log.info('cancel bulletins %s' % setlist)
     return
+
+def oldCancelBulletins(l):
+    for (loc, pil, pilExt) in l:
+        b = twccommon.Data()
+        b.pil = pil
+        b.pilExt = pilExt
+        b.group = ''
+        cancelBulletin(loc, b)
+
+if twc.personality == "Watt":
+    def cancelBulletin(loc, b):
+        cancelBulletins([(loc, b)])
+        return
+
+    def cancelBulletins(l):
+        setlist = []
+        if len(l[0]) > 2:
+            oldCancelBulletins(l)
+        for (loc, data) in l:
+            info = BulletinInfo.getBulletinProperties(data.pil, data.pilExt)
+            groupOverride = getattr(info, 'groupOverride', 0)
+            if groupOverride == 1 and data.group != '':
+                group = data.group
+            else:
+                group = info.group
+            which = '%s.%s' % (loc, group)
+            key = 'bulletin.%s' % (which,)
+            try:
+                dsm.remove(key)
+                ds.commit()
+                setlist.append((loc, group))
+            except KeyError:
+                pass
+
+        if len(setlist):
+            _signalRPC('playman.playCmd.bulletin.cancelList', (setlist,))
+            twccommon.Log.info('cancel bulletins %s' % setlist)
+else:
+    def cancelBulletins(l):
+        setlist = []
+        for (loc, pil, pilExt) in l:
+            info = BulletinInfo.getBulletinProperties(pil, pilExt)
+            which = '%s.%d' % (loc, info.group)
+            key = 'bulletin.%s' % (which,)
+            try:
+                dsm.remove(key)
+                ds.commit()
+                setlist.append((loc, info.group))
+            except KeyError:
+                pass
+
+        if len(setlist):
+            _signalRPC('playman.playCmd.bulletin.cancelList', (setlist,))
+            twccommon.Log.info('cancel bulletins %s' % setlist)
+        return
 
 
 def setImageData(type, fname):
@@ -307,17 +357,14 @@ def setInterestList(*args):
 def setTimeZone(timezone):
     twccommon.Log.info('setting timezone to: %s' % timezone)
     #shutil.copyfile('/usr/share/zoneinfo/%s' % timezone, '/etc/localtime')
-    return
 
 
 def installPackage(pkg, instPath):
     _signalRPC('execd.ipackage.install', (pkg, instPath))
-    return
 
 
 def installMediaPack(pack, replace):
     _signalRPC('execd.mediapack.install', (pack, replace))
-    return
 
 
 def getMediaPackVersion(pack):
@@ -379,6 +426,54 @@ if twc.personalityCode < 2:
         else:
             _runPlayCmd(prodType, 'load', argData)
         return
+elif twc.personalityCode == 4:
+    def loadData(prodType, argData):
+        global _LDLs
+        try:
+            flavor = argData.flavor
+        except:
+            if len(argData.media1) > 0 and prodType == 'SNUP':
+                flavor = argData.media1
+            else:
+                flavor = None
+
+        if isSuppressed(prodType, flavor) == 1:
+            twccommon.Log.info('loadData: ANF suppressed load of %s, flavor %s' % (prodType, flavor))
+            return
+        else:
+            twccommon.Log.info('loadData: allowed load of %s, flavor %s' % (prodType, flavor))
+        if prodType == 'tag':
+            id = 'tag-%s' % argData.id
+            duration = argData.duration * 30 + argData.durationFrames
+            scheds = "[DynamicSchedule('Tag')]"
+            params = twccommon.Data(mediaNum=argData.mediaNum, tagInstanceId=argData.tagInstanceId)
+            params.prodType = prodType
+            _pmLoad(id, duration, argData.expire, scheds, params)
+        elif prodType == 'localAvail':
+            id = 'localAvail-%s' % argData.id
+            duration = 68
+            durationFrames = 0
+            duration = duration * 30 + durationFrames
+            scheds = "[DynamicSchedule('LocalAvail')]"
+            params = twccommon.Data()
+            params.prodType = prodType
+            _pmLoad(id, duration, argData.expire, scheds, params)
+        elif prodType == 'SNUP':
+            _LDLs[argData.id] = flavor
+            _runPlayCmd('ldl', 'load', argData.id, 1, flavor)
+        elif prodType == 'ANFON':
+            anfMode = dsm.defaultedConfigGet('anfMode')
+            if anfMode:
+                setAnfLocalSevere(1)
+            else:
+                twccommon.Log.info('AltFeed: Must be in anfMode (channel successfully switched) to enable Local Severe / ANF Look.')
+        elif prodType == 'ANFOFF':
+            setAnfLocalSevere(0)
+        elif prodType == 'SNDN':
+            pass
+        elif prodType == 'local':
+            _runPlayCmd(prodType, 'load', argData)
+        return
 else:
     def loadData(prodType, argData):
         global _ldlIdList
@@ -409,17 +504,71 @@ else:
             _runPlayCmd(prodType, 'load', argData)
         return
 
-
-def runData(prodType, argData):
-    if prodType == 'tag':
-        id = 'tag-%s' % argData.id
-        _pmRun(id, argData.time, argData.frame)
-    elif prodType == 'localAvail':
-        id = 'localAvail-%s' % argData.id
-        _pmRun(id, argData.time, argData.frame)
-    else:
-        _runPlayCmd(prodType, 'run', argData)
+def setAnfLocalSevere(localSevereEnabled):
+    _signalRPC('execd.altFeed.setLocalSevere', (localSevereEnabled,))
     return
+
+
+def setAnfCommercialSuppression(suppressionEnabled):
+    _signalRPC('execd.altFeed.setCommercialSuppression', (suppressionEnabled,))
+    return
+
+if twc.personality == "Watt":
+    def runData(prodType, argData):
+        try:
+            flavor = argData.flavor
+        except:
+            if prodType == 'SNUP':
+                try:
+                    flavor = _LDLs[argData.id]
+                except KeyError:
+                    twccommon.Log.info('runData: %s id = %s never loaded, probably it was suppressed, so cancelling run' % (prodType, argData.id))
+                    return
+
+            flavor = None
+
+        if isSuppressed(prodType, flavor) == 1:
+            twccommon.Log.info('runData: ANF suppressed run of %s, flavor %s' % (prodType, flavor))
+            return
+        else:
+            twccommon.Log.info('runData: allowed run of %s, flavor %s' % (prodType, flavor))
+        if prodType == 'tag':
+            id = 'tag-%s' % argData.id
+            _pmRun(id, argData.time, argData.frame)
+        elif prodType == 'localAvail':
+            id = 'localAvail-%s' % argData.id
+            _pmRun(id, argData.time, argData.frame)
+        elif prodType == 'SNUP':
+            _runPlayCmd('ldl', 'run', argData.id, argData.time, argData.frame)
+        elif prodType == 'SNDN':
+            if argData.id.upper() == 'LDL' or len(_LDLs) > 2:
+                _removeAllLDLLayers()
+            elif argData.id in _LDLs:
+                del _LDLs[argData.id]
+            _runPlayCmd('ldl', 'load', argData.id, 0, None)
+        elif prodType == 'local':
+            _runPlayCmd(prodType, 'run', argData)
+        elif prodType == 'ANFON':
+            anfMode = dsm.defaultedConfigGet('anfMode')
+            if anfMode:
+                _killSuppressedLDLs(anfSevereEnabled=1)
+            else:
+                twccommon.Log.info('runData: anfMode must be turned on to run ANFON and remove all LDL Layers.')
+        elif prodType == 'ANFOFF':
+            setAnfLocalSevere(0)
+            _killSuppressedLDLs(anfSevereEnabled=0)
+        return
+else:
+    def runData(prodType, argData):
+        if prodType == 'tag':
+            id = 'tag-%s' % argData.id
+            _pmRun(id, argData.time, argData.frame)
+        elif prodType == 'localAvail':
+            id = 'localAvail-%s' % argData.id
+            _pmRun(id, argData.time, argData.frame)
+        else:
+            _runPlayCmd(prodType, 'run', argData)
+        return
 
 
 def processHeartbeat(**kw):
@@ -552,6 +701,61 @@ def _processStateVal(kw, valName):
         toggleNationalLDL(v)
     return
 
+def isLDLSuppressedFlavor(flavor, anfSevereEnabled=None):
+    ldlSuppression = dsm.defaultedConfigGet('SuppressLDL')
+    if anfSevereEnabled == None:
+        anfSevereEnabled = dsm.defaultedConfigGet('localSevereEnabled')
+    anfLDLFlavors = ['J']
+    liveLDLFlavors = ['C', 'D', 'E', 'F', 'G', 'H']
+    longLDLFlavors = ['I']
+    if anfSevereEnabled:
+        suppressedFlavors = liveLDLFlavors + longLDLFlavors
+    else:
+        suppressedFlavors = anfLDLFlavors
+    if flavor in suppressedFlavors or ldlSuppression:
+        return 1
+    else:
+        return 0
+    return
+
+
+def isAFullScreenSuppressedFlavor(flavor):
+    localSuppression = dsm.defaultedConfigGet('SuppressLocals')
+    if localSuppression == 1:
+        suppressedFlavors = ['D', 'E', 'F', 'K', 'L', 'M', 'N', 'O', 'P', 'S', 'U', 'V', 'W', 'X', 'Y']
+        if flavor in suppressedFlavors:
+            return 1
+    return 0
+    return
+
+
+def isALOT8SuppressedFlavor(flavor):
+    localSuppression = dsm.defaultedConfigGet('SuppressLOT8')
+    if localSuppression == 1:
+        suppressedFlavors = ['Z']
+        if flavor in suppressedFlavors:
+            return 1
+    return 0
+    return
+
+
+def isSuppressed(prodType, flavor):
+    if prodType == 'tag':
+        tagSuppression = dsm.defaultedConfigGet('SuppressTags')
+        return tagSuppression
+    elif prodType == 'localAvail':
+        lcomSuppression = dsm.defaultedConfigGet('SuppressLCOM')
+        return lcomSuppression
+    elif prodType == 'local':
+        return 0
+    elif prodType == 'ldl' or prodType == 'SNUP':
+        ldlSuppression = isLDLSuppressedFlavor(flavor)
+        return ldlSuppression
+    elif prodType == 'LFLocal' or prodType == 'LFCc' or prodType == 'LFCrawl':
+        longSuppression = dsm.defaultedConfigGet('SuppressLong')
+        return longSuppression
+    return 0
+
 
 def _pmLoad(id, duration, expire, scheds, params):
     args = (id, duration, expire, scheds, params)
@@ -574,5 +778,21 @@ def _runPlayCmd(prodType, playCmd, *params):
     _signalRPC(fnName, params)
     return
 
-def isAFullScreenSuppressedFlavor(flavor):
-    return False
+def _removeAllLDLLayers():
+    global _LDLs
+    for id in _LDLs:
+        _runPlayCmd('ldl', 'load', id, 0, None)
+
+    _LDLs = {}
+    return
+
+
+def _killSuppressedLDLs(anfSevereEnabled=None):
+    for (id, flavor) in _LDLs.items():
+        twccommon.Log.info('Checking if LDL id: %s, flavor: %s needs to be killed' % (id, flavor))
+        if isLDLSuppressedFlavor(flavor, anfSevereEnabled):
+            twccommon.Log.info('LDL id: %s, flavor %s getting killed' % (id, flavor))
+            _runPlayCmd('ldl', 'load', id, 0, None)
+            del _LDLs[id]
+
+    return
